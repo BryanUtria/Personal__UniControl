@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "UniControl",
+    "slug": "UniControl",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/App.png",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/App.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true
+    },
+    "web": {
+      "favicon": "./assets/Navegador.png"
+    }
+  }
+}
