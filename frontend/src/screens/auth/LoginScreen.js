@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Image } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Image } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
@@ -155,7 +156,7 @@ export default function LoginScreen() {
           </View>
 
           {/* Form Card */}
-          <View style={[styles.formCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
+          <View style={[styles.formCard, { backgroundColor: theme.card, shadowColor: theme.shadow, width: isMobile ? '100%' : '50%' }]}>
             <Text style={[styles.formTitle, { color: theme.text }]}>
               {isRegisterMode
                 ? (isVerifying ? 'Verificar Correo' : 'Crear Cuenta')
@@ -390,8 +391,9 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   formCard: {
+    alignSelf: 'center',
     borderRadius: 20,
-    padding: 24,
+    padding: 20,
     elevation: 6,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.08,

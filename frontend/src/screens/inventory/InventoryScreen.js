@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -17,12 +18,7 @@ const formatNumber = (num) => {
 };
 
 const formatCompact = (num) => {
-  if (num === null || num === undefined || isNaN(num)) return '0';
-  const n = Math.round(num);
-  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2).replace(/\.?0+$/, '') + 'B';
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.?0+$/, '') + 'K';
-  return n.toString();
+  return formatNumber(num);
 };
 
 const formatBatchDate = (dateStr) => {

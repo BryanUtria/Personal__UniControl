@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, SafeAreaView, Platform, Modal, ActivityIndicator, ScrollView, useWindowDimensions, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Platform, Modal, ActivityIndicator, ScrollView, useWindowDimensions, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch } from '../../utils/offlineSync';
@@ -19,11 +20,6 @@ const formatCurrency = (amount, isMobile = false) => {
     sign = '- ';
   } else if (amount < 0) {
     sign = '+ ';
-  }
-
-  if (isMobile && value >= 1000000) {
-    const millions = (value / 1000000).toFixed(3);
-    return `${sign}$ ${millions}M`;
   }
 
   return `${sign}$ ${formatNumber(value)}`;
@@ -58,6 +54,7 @@ export default function DebtorsListScreen({ navigation }) {
   const [identification, setIdentification] = useState('');
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
+  const [type, setType] = useState('deudor'); // 'deudor' | 'deuda' | 'ahorro'
 
   // Modal Confirmación de Eliminación
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -89,7 +86,7 @@ export default function DebtorsListScreen({ navigation }) {
   // Estados para filtros y ordenación
   const [filterMenuVisible, setFilterMenuVisible] = useState(false);
   const [sortBy, setSortBy] = useState('date_desc'); // date_desc, date_asc, name_asc, name_desc, balance_desc
-  const [balanceFilter, setBalanceFilter] = useState('all'); // all, debt, credit, zero
+  const [unifiedFilter, setUnifiedFilter] = useState('all'); // all, deben, deudores, saving, zero
 
   // Cargar filtros del storage al iniciar
   useEffect(() => {
@@ -97,9 +94,22 @@ export default function DebtorsListScreen({ navigation }) {
       try {
         const saved = await AsyncStorage.getItem('@unicontrol_debtors_filter');
         if (saved) {
-          const { sortBy: savedSort, balanceFilter: savedFilter } = JSON.parse(saved);
-          if (savedSort) setSortBy(savedSort);
-          if (savedFilter) setBalanceFilter(savedFilter);
+          const parsed = JSON.parse(saved);
+          if (parsed.sortBy) setSortBy(parsed.sortBy);
+          if (parsed.unifiedFilter) {
+            setUnifiedFilter(parsed.unifiedFilter);
+          } else if (parsed.balanceFilter || parsed.typeFilter) {
+            // Migrar antiguos filtros si existieran
+            if (parsed.balanceFilter === 'zero') {
+              setUnifiedFilter('zero');
+            } else if (parsed.balanceFilter === 'credit') {
+              setUnifiedFilter('saving');
+            } else if (parsed.typeFilter === 'supplier') {
+              setUnifiedFilter('deben');
+            } else if (parsed.typeFilter === 'client') {
+              setUnifiedFilter('deudores');
+            }
+          }
         }
       } catch (e) {
         console.error('Error al cargar filtros de clientes:', e);
@@ -112,13 +122,13 @@ export default function DebtorsListScreen({ navigation }) {
   useEffect(() => {
     const saveFilters = async () => {
       try {
-        await AsyncStorage.setItem('@unicontrol_debtors_filter', JSON.stringify({ sortBy, balanceFilter }));
+        await AsyncStorage.setItem('@unicontrol_debtors_filter', JSON.stringify({ sortBy, unifiedFilter }));
       } catch (e) {
         console.error('Error al guardar filtros de clientes:', e);
       }
     };
     saveFilters();
-  }, [sortBy, balanceFilter]);
+  }, [sortBy, unifiedFilter]);
 
   const getProcessedDebtors = () => {
     let result = [...debtors];
@@ -128,12 +138,18 @@ export default function DebtorsListScreen({ navigation }) {
       result = result.filter(d => d.name.toLowerCase().includes(search.toLowerCase()));
     }
 
-    // 2. Filtrar por tipo de saldo (en contra, a favor, en ceros)
-    if (balanceFilter === 'debt') {
-      result = result.filter(d => d.totalDebt > 0);
-    } else if (balanceFilter === 'credit') {
-      result = result.filter(d => d.totalDebt < 0);
-    } else if (balanceFilter === 'zero') {
+    // 2. Filtrar por el filtro unificado (Todo, Deben, Deudores, Ahorro, Al dia)
+    if (unifiedFilter === 'deben') {
+      // Deben (Deudas / Suppliers con saldo > 0)
+      result = result.filter(d => d.type === 'deuda' && d.totalDebt > 0);
+    } else if (unifiedFilter === 'deudores') {
+      // Deudores (Clients con saldo > 0)
+      result = result.filter(d => (d.type === 'deudor' || !d.type) && d.totalDebt > 0);
+    } else if (unifiedFilter === 'saving') {
+      // Ahorro (type saving o cualquier cuenta con saldo a favor < 0)
+      result = result.filter(d => d.type === 'ahorro' || d.totalDebt < 0);
+    } else if (unifiedFilter === 'zero') {
+      // Al día (saldo 0)
       result = result.filter(d => d.totalDebt === 0 || !d.totalDebt);
     }
 
@@ -172,6 +188,7 @@ export default function DebtorsListScreen({ navigation }) {
       setIdentification(debtor.identification || '');
       setAddress(debtor.address || '');
       setNotes(debtor.notes || '');
+      setType(debtor.type || 'deudor');
     } else {
       setEditingId(null);
       setName('');
@@ -180,6 +197,7 @@ export default function DebtorsListScreen({ navigation }) {
       setIdentification('');
       setAddress('');
       setNotes('');
+      setType('deudor');
     }
     setModalVisible(true);
   };
@@ -197,7 +215,7 @@ export default function DebtorsListScreen({ navigation }) {
             'Content-Type': 'application/json',
             'x-user-id': user ? user.id.toString() : ''
           },
-          body: JSON.stringify({ name, phone, email, identification, address, notes }),
+          body: JSON.stringify({ name, phone, email, identification, address, notes, type }),
         });
         if (response.ok) fetchDebtors();
       } else {
@@ -208,7 +226,7 @@ export default function DebtorsListScreen({ navigation }) {
             'Content-Type': 'application/json',
             'x-user-id': user ? user.id.toString() : ''
           },
-          body: JSON.stringify({ name, phone, email, identification, address, notes }),
+          body: JSON.stringify({ name, phone, email, identification, address, notes, type }),
         });
         if (response.ok) fetchDebtors();
       }
@@ -244,6 +262,95 @@ export default function DebtorsListScreen({ navigation }) {
   const renderItem = ({ item }) => {
     const isDebt = item.totalDebt > 0;
     const isCredit = item.totalDebt < 0;
+    const isSupplier = item.type === 'deuda';
+    const isSaving = item.type === 'ahorro';
+
+    // Determinar colores y etiquetas según tipo
+    let amountColor = theme.textSecondary;
+    let statusLabel = 'Al día';
+
+    if (isSaving) {
+      if (isCredit) {
+        amountColor = '#10B981'; // Verde para ahorro
+        statusLabel = 'Ahorro';
+      } else if (isDebt) {
+        amountColor = '#EF4444'; // Rojo para déficit
+        statusLabel = 'Déficit';
+      }
+    } else if (isSupplier) {
+      if (isDebt) {
+        amountColor = '#EF4444'; // Rojo para proveedor al que le debemos (Deuda)
+        statusLabel = 'Le debo';
+      } else if (isCredit) {
+        amountColor = '#10B981'; // Verde para saldo a favor nuestro
+        statusLabel = 'Ahorro';
+      }
+    } else {
+      // Cliente/Deudor
+      if (isDebt) {
+        amountColor = '#8B5CF6'; // Morado si nos debe (Deudor)
+        statusLabel = 'Me debe';
+      } else if (isCredit) {
+        amountColor = theme.accent; // Azul/Celeste para saldo a favor de cliente
+        statusLabel = 'Ahorro';
+      }
+    }
+
+    // Configurar Badge dinámico
+    let badgeBgColor = '#6B728012';
+    let badgeBorderColor = '#6B728025';
+    let badgeTextColor = '#6B7280';
+    let badgeIcon = 'person-outline';
+    let badgeText = 'Deudor';
+
+    if (isSaving) {
+      badgeBgColor = '#10B98112';
+      badgeBorderColor = '#10B98125';
+      badgeTextColor = '#10B981';
+      badgeIcon = 'wallet-outline';
+      badgeText = 'Ahorro';
+    } else if (isSupplier) {
+      if (isDebt) {
+        badgeBgColor = '#EF444412';
+        badgeBorderColor = '#EF444425';
+        badgeTextColor = '#EF4444';
+        badgeIcon = 'card-outline';
+        badgeText = 'Deuda';
+      } else if (isCredit) {
+        badgeBgColor = '#10B98112';
+        badgeBorderColor = '#10B98125';
+        badgeTextColor = '#10B981';
+        badgeIcon = 'wallet-outline';
+        badgeText = 'Ahorro';
+      } else {
+        badgeBgColor = '#6B728012';
+        badgeBorderColor = '#6B728025';
+        badgeTextColor = '#6B7280';
+        badgeIcon = 'card-outline';
+        badgeText = 'Deuda';
+      }
+    } else {
+      // Deudor/Client
+      if (isDebt) {
+        badgeBgColor = '#8B5CF612';
+        badgeBorderColor = '#8B5CF625';
+        badgeTextColor = '#8B5CF6';
+        badgeIcon = 'person-outline';
+        badgeText = 'Deudor';
+      } else if (isCredit) {
+        badgeBgColor = '#3B82F612';
+        badgeBorderColor = '#3B82F625';
+        badgeTextColor = '#3B82F6';
+        badgeIcon = 'wallet-outline';
+        badgeText = 'Ahorro';
+      } else {
+        badgeBgColor = '#6B728012';
+        badgeBorderColor = '#6B728025';
+        badgeTextColor = '#6B7280';
+        badgeIcon = 'person-outline';
+        badgeText = 'Deudor';
+      }
+    }
 
     return (
       <View style={[styles.card, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
@@ -253,16 +360,41 @@ export default function DebtorsListScreen({ navigation }) {
           onPress={() => navigation.navigate('DebtorDetail', { debtor: item })}
         >
           <View style={styles.cardInfo}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
               <Text style={[styles.name, { color: theme.text, marginBottom: 0, flexShrink: 1 }]} numberOfLines={1} ellipsizeMode="tail">
                 {item.name}
               </Text>
-              {String(item.id).startsWith('temp_') ? (
-                <Ionicons name="cloud-offline-outline" size={16} color="#F59E0B" style={{ marginLeft: 6 }} />
-              ) : (
+              {item.isSynced === 0 && (
                 <Ionicons name="cloud-done-outline" size={16} color="#10B981" style={{ marginLeft: 6 }} />
               )}
             </View>
+
+            {/* Distintivo de Tipo (Deudor, Deuda o Ahorro) */}
+            <View style={{ flexDirection: 'row', marginBottom: 6 }}>
+              <View style={[
+                styles.typeBadge,
+                {
+                  backgroundColor: badgeBgColor,
+                  borderColor: badgeBorderColor
+                }
+              ]}>
+                <Ionicons
+                  name={badgeIcon}
+                  size={10}
+                  color={badgeTextColor}
+                  style={{ marginRight: 4 }}
+                />
+                <Text style={[
+                  styles.typeBadgeText,
+                  {
+                    color: badgeTextColor
+                  }
+                ]}>
+                  {badgeText}
+                </Text>
+              </View>
+            </View>
+
             <Text style={[styles.phone, { color: theme.textSecondary }]}>{item.phone || 'Sin teléfono'}</Text>
             <Text style={[styles.date, { color: theme.textSecondary }]}>
               Creado: {new Date(item.createdAt).toLocaleString()}
@@ -272,7 +404,7 @@ export default function DebtorsListScreen({ navigation }) {
             <Text
               style={[
                 styles.amount,
-                { color: isDebt ? theme.danger : isCredit ? theme.accent : theme.textSecondary }
+                { color: amountColor }
               ]}
               numberOfLines={1}
               adjustsFontSizeToFit
@@ -280,7 +412,7 @@ export default function DebtorsListScreen({ navigation }) {
               {formatCurrency(item.totalDebt, isMobile)}
             </Text>
             <Text style={[styles.status, { color: theme.textSecondary }]}>
-              {isDebt ? 'Debe' : isCredit ? 'A favor' : 'Al día'}
+              {statusLabel}
             </Text>
           </View>
         </TouchableOpacity>
@@ -311,7 +443,7 @@ export default function DebtorsListScreen({ navigation }) {
           <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow, marginRight: 10 }]}>
             <Ionicons name="chevron-back" size={22} color={theme.text} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: theme.text }]}>Deudas y deudores</Text>
+          <Text style={[styles.title, { color: theme.text }]}>Deudas, Deudores y Ahorros</Text>
         </View>
 
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: isMobile ? 5 : 10 }}>
@@ -327,7 +459,7 @@ export default function DebtorsListScreen({ navigation }) {
       <View style={[styles.searchContainer, { paddingHorizontal: isMobile ? 10 : 20 }]}>
         <TextInput
           style={[styles.searchInput, { backgroundColor: theme.card, color: theme.text, borderColor: theme.card }]}
-          placeholder="Buscar cliente..."
+          placeholder="Buscar deudor o deuda..."
           placeholderTextColor={theme.textSecondary}
           value={search}
           onChangeText={setSearch}
@@ -370,8 +502,54 @@ export default function DebtorsListScreen({ navigation }) {
         <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
           <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
             <Text style={[styles.modalTitle, { color: theme.text }]}>
-              {editingId ? 'Editar Cliente' : 'Nuevo Cliente'}
+              {editingId ? (type === 'deudor' ? 'Editar Deudor' : (type === 'ahorro' ? 'Editar Ahorro' : 'Editar Deuda')) : (type === 'deudor' ? 'Nuevo Deudor' : (type === 'ahorro' ? 'Nuevo Ahorro' : 'Nueva Deuda'))}
             </Text>
+
+            {/* Selector de Tipo (Deudor vs Deuda vs Ahorro) */}
+            <View style={[styles.typeSelectorContainer, { backgroundColor: isDarkMode ? '#1e1e1e' : '#F3F4F6' }]}>
+              <TouchableOpacity
+                style={[
+                  styles.typeSelectorBtn,
+                  type === 'deudor' && { backgroundColor: '#8B5CF6' }
+                ]}
+                onPress={() => setType('deudor')}
+              >
+                <Text style={[
+                  styles.typeSelectorBtnText,
+                  { color: type === 'deudor' ? '#FFF' : theme.textSecondary }
+                ]}>
+                  Deudor
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.typeSelectorBtn,
+                  type === 'deuda' && { backgroundColor: '#EF4444' }
+                ]}
+                onPress={() => setType('deuda')}
+              >
+                <Text style={[
+                  styles.typeSelectorBtnText,
+                  { color: type === 'deuda' ? '#FFF' : theme.textSecondary }
+                ]}>
+                  Deuda
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.typeSelectorBtn,
+                  type === 'ahorro' && { backgroundColor: '#10B981' }
+                ]}
+                onPress={() => setType('ahorro')}
+              >
+                <Text style={[
+                  styles.typeSelectorBtnText,
+                  { color: type === 'ahorro' ? '#FFF' : theme.textSecondary }
+                ]}>
+                  Ahorro
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
               <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginBottom: 5 }}>Nombre *</Text>
@@ -454,9 +632,9 @@ export default function DebtorsListScreen({ navigation }) {
       >
         <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
           <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
-            <Text style={[styles.modalTitle, { color: theme.text }]}>Eliminar Cliente</Text>
+            <Text style={[styles.modalTitle, { color: theme.text }]}>Eliminar Registro</Text>
             <Text style={{ color: theme.textSecondary, marginBottom: 20, textAlign: 'center', fontSize: 16 }}>
-              ¿Seguro que deseas eliminar este cliente? Se borrará todo su historial.
+              ¿Seguro que deseas eliminar este registro? Se borrará todo su historial.
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setDeleteModalVisible(false)}>
@@ -502,7 +680,7 @@ export default function DebtorsListScreen({ navigation }) {
             </View>
 
             {/* Categoría: Nombre */}
-            <Text style={[styles.subFilterLabel, { color: theme.textSecondary }]}>Nombre del Cliente</Text>
+            <Text style={[styles.subFilterLabel, { color: theme.textSecondary }]}>Nombre</Text>
             <View style={styles.filterGroupRow}>
               <TouchableOpacity
                 style={[styles.filterBadge, sortBy === 'name_asc' && { backgroundColor: theme.accent, borderColor: theme.accent }]}
@@ -535,35 +713,42 @@ export default function DebtorsListScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            {/* FILTRAR POR SALDO */}
-            <Text style={[styles.filterLabel, { color: theme.textSecondary, marginTop: 15 }]}>Filtrar por saldo</Text>
+            {/* FILTRAR POR ESTADO */}
+            <Text style={[styles.filterLabel, { color: theme.textSecondary, marginTop: 15 }]}>Filtrar por estado</Text>
             <View style={styles.filterGroupRow}>
               <TouchableOpacity
-                style={[styles.filterBadge, balanceFilter === 'all' && { backgroundColor: theme.accent, borderColor: theme.accent }]}
-                onPress={() => setBalanceFilter('all')}
+                style={[styles.filterBadge, unifiedFilter === 'all' && { backgroundColor: theme.accent, borderColor: theme.accent }]}
+                onPress={() => setUnifiedFilter('all')}
               >
-                <Text style={[styles.filterBadgeText, { color: balanceFilter === 'all' ? '#FFF' : theme.textSecondary, fontWeight: balanceFilter === 'all' ? '700' : 'normal' }]}>Todos</Text>
+                <Text style={[styles.filterBadgeText, { color: unifiedFilter === 'all' ? '#FFF' : theme.textSecondary, fontWeight: unifiedFilter === 'all' ? '700' : 'normal' }]}>Todo</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.filterBadge, balanceFilter === 'debt' && { backgroundColor: theme.danger, borderColor: theme.danger }]}
-                onPress={() => setBalanceFilter('debt')}
+                style={[styles.filterBadge, unifiedFilter === 'deben' && { backgroundColor: '#EF4444', borderColor: '#EF4444' }]}
+                onPress={() => setUnifiedFilter('deben')}
               >
-                <Text style={[styles.filterBadgeText, { color: balanceFilter === 'debt' ? '#FFF' : theme.textSecondary, fontWeight: balanceFilter === 'debt' ? '700' : 'normal' }]}>Deben</Text>
+                <Text style={[styles.filterBadgeText, { color: unifiedFilter === 'deben' ? '#FFF' : theme.textSecondary, fontWeight: unifiedFilter === 'deben' ? '700' : 'normal' }]}>Deuda</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.filterBadge, balanceFilter === 'credit' && { backgroundColor: theme.accent, borderColor: theme.accent }]}
-                onPress={() => setBalanceFilter('credit')}
+                style={[styles.filterBadge, unifiedFilter === 'deudores' && { backgroundColor: '#8B5CF6', borderColor: '#8B5CF6' }]}
+                onPress={() => setUnifiedFilter('deudores')}
               >
-                <Text style={[styles.filterBadgeText, { color: balanceFilter === 'credit' ? '#FFF' : theme.textSecondary, fontWeight: balanceFilter === 'credit' ? '700' : 'normal' }]}>A favor</Text>
+                <Text style={[styles.filterBadgeText, { color: unifiedFilter === 'deudores' ? '#FFF' : theme.textSecondary, fontWeight: unifiedFilter === 'deudores' ? '700' : 'normal' }]}>Deudores</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.filterBadge, balanceFilter === 'zero' && { backgroundColor: isDarkMode ? '#444' : '#CCC', borderColor: isDarkMode ? '#444' : '#CCC' }]}
-                onPress={() => setBalanceFilter('zero')}
+                style={[styles.filterBadge, unifiedFilter === 'saving' && { backgroundColor: '#10B981', borderColor: '#10B981' }]}
+                onPress={() => setUnifiedFilter('saving')}
               >
-                <Text style={[styles.filterBadgeText, { color: balanceFilter === 'zero' ? '#FFF' : theme.textSecondary, fontWeight: balanceFilter === 'zero' ? '700' : 'normal' }]}>Al día</Text>
+                <Text style={[styles.filterBadgeText, { color: unifiedFilter === 'saving' ? '#FFF' : theme.textSecondary, fontWeight: unifiedFilter === 'saving' ? '700' : 'normal' }]}>Ahorro</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.filterBadge, unifiedFilter === 'zero' && { backgroundColor: isDarkMode ? '#444' : '#CCC', borderColor: isDarkMode ? '#444' : '#CCC' }]}
+                onPress={() => setUnifiedFilter('zero')}
+              >
+                <Text style={[styles.filterBadgeText, { color: unifiedFilter === 'zero' ? '#FFF' : theme.textSecondary, fontWeight: unifiedFilter === 'zero' ? '700' : 'normal' }]}>Al día</Text>
               </TouchableOpacity>
             </View>
 
@@ -776,5 +961,34 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 5,
     marginTop: 5,
+  },
+  typeSelectorContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+    borderRadius: 12,
+    padding: 4,
+  },
+  typeSelectorBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  typeSelectorBtnText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  typeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+  },
+  typeBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
   },
 });

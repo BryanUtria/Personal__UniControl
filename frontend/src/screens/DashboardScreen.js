@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, SafeAreaView, StatusBar, ScrollView, Platform, useWindowDimensions, ActivityIndicator, RefreshControl, Modal, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, StatusBar, ScrollView, Platform, useWindowDimensions, ActivityIndicator, RefreshControl, Modal, Alert, Switch } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { apiFetch, getOfflineQueue, clearOfflineQueue, syncOfflineQueue, isConnected } from '../utils/offlineSync';
 import { useToast } from '../context/ToastContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -15,12 +17,7 @@ const formatNumber = (num) => {
 };
 
 const formatCompact = (num) => {
-  if (num === null || num === undefined || isNaN(num)) return '0';
-  const n = Math.round(num);
-  if (n >= 1_000_000_000) return (n / 1_000_000_000).toFixed(2).replace(/\.?0+$/, '') + 'B';
-  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2).replace(/\.?0+$/, '') + 'M';
-  if (n >= 1_000) return (n / 1_000).toFixed(1).replace(/\.?0+$/, '') + 'K';
-  return n.toString();
+  return formatNumber(num);
 };
 
 export default function DashboardScreen({ navigation }) {
@@ -35,6 +32,38 @@ export default function DashboardScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState('indicators'); // 'indicators' | 'shortcuts'
+
+  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
+  const [moduleSettings, setModuleSettings] = useState({
+    showShop: true,
+    showDebtors: true,
+  });
+
+  const loadModuleSettings = async () => {
+    try {
+      const saved = await AsyncStorage.getItem('@unicontrol_module_settings');
+      if (saved) {
+        setModuleSettings(JSON.parse(saved));
+      }
+    } catch (e) {
+      console.error('Error cargando ajustes de módulos:', e);
+    }
+  };
+
+  const saveModuleSettings = async (settings) => {
+    try {
+      await AsyncStorage.setItem('@unicontrol_module_settings', JSON.stringify(settings));
+      setModuleSettings(settings);
+    } catch (e) {
+      console.error('Error guardando ajustes de módulos:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (isFocused) {
+      loadModuleSettings();
+    }
+  }, [isFocused]);
 
   const [syncModalVisible, setSyncModalVisible] = useState(false);
   const [pendingQueue, setPendingQueue] = useState([]);
@@ -100,13 +129,19 @@ export default function DashboardScreen({ navigation }) {
       return `Eliminar Producto`;
     }
     if (lowerUrl.includes('/debtors') && method === 'POST') {
-      return `Crear Cliente: "${parsedBody.name || ''}"`;
+      const isDeuda = parsedBody.type === 'deuda' || parsedBody.type === 'supplier';
+      const isAhorro = parsedBody.type === 'ahorro' || parsedBody.type === 'saving';
+      const roleText = isDeuda ? 'Deuda' : (isAhorro ? 'Ahorro' : 'Deudor');
+      return `Crear ${roleText}: "${parsedBody.name || ''}"`;
     }
     if (lowerUrl.includes('/debtors') && method === 'PUT') {
-      return `Editar Cliente: "${parsedBody.name || ''}"`;
+      const isDeuda = parsedBody.type === 'deuda' || parsedBody.type === 'supplier';
+      const isAhorro = parsedBody.type === 'ahorro' || parsedBody.type === 'saving';
+      const roleText = isDeuda ? 'Deuda' : (isAhorro ? 'Ahorro' : 'Deudor');
+      return `Editar ${roleText}: "${parsedBody.name || ''}"`;
     }
     if (lowerUrl.includes('/debtors') && method === 'DELETE') {
-      return `Eliminar Cliente`;
+      return `Eliminar Cuenta`;
     }
     if (lowerUrl.includes('/debts') && method === 'POST') {
       const typeText = parsedBody.type === 'debt' ? 'Deuda' : 'Abono';
@@ -348,177 +383,216 @@ export default function DashboardScreen({ navigation }) {
                 )}
 
                 {/* FILA 1: Ventas de hoy + Pedidos en curso */}
-                <View style={styles.row}>
-                  <View style={[styles.bigStatCard, { backgroundColor: theme.accent, flex: 1.5 }]}>
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                      <View>
-                        <Text style={styles.bigStatLabel}>Ventas Hoy</Text>
-                        <Text style={styles.bigStatValue}>
-                          $ {isMobile ? formatCompact(stats?.today_sales_total || 0) : formatNumber(stats?.today_sales_total || 0)}
-                        </Text>
-                      </View>
-                      <View style={styles.bigStatIcon}>
-                        <Ionicons name="trending-up" size={22} color="rgba(255,255,255,0.9)" />
-                      </View>
-                    </View>
-                    <Text style={styles.bigStatSub}>{stats?.today_sales_count || 0} transacciones</Text>
-                  </View>
-
-                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
-                    <View style={[styles.statIconBg, { backgroundColor: '#6366F115' }]}>
-                      <Ionicons name="receipt-outline" size={20} color="#6366F1" />
-                    </View>
-                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Pedidos en curso</Text>
-                    <Text style={[styles.statValue, { color: stats?.pending_orders_count > 0 ? '#6366F1' : theme.text }]}>
-                      {stats?.pending_orders_count || 0}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* FILA 2: Semana + Mes */}
-                <View style={styles.row}>
-                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
-                    <View style={[styles.statIconBg, { backgroundColor: '#10B98115' }]}>
-                      <Ionicons name="calendar-outline" size={20} color="#10B981" />
-                    </View>
-                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Esta semana</Text>
-                    <Text style={[styles.statValue, { color: '#10B981' }]}>
-                      $ {isMobile ? formatCompact(stats?.week_sales_total || 0) : formatNumber(stats?.week_sales_total || 0)}
-                    </Text>
-                  </View>
-
-                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
-                    <View style={[styles.statIconBg, { backgroundColor: '#F59E0B15' }]}>
-                      <Ionicons name="stats-chart-outline" size={20} color="#F59E0B" />
-                    </View>
-                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Este mes</Text>
-                    <Text style={[styles.statValue, { color: '#F59E0B' }]}>
-                      $ {isMobile ? formatCompact(stats?.month_sales_total || 0) : formatNumber(stats?.month_sales_total || 0)}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* FILA 3: Cuentas por cobrar y Saldo a Favor */}
-                <Text style={[styles.sectionLabel, { color: theme.textSecondary, marginTop: 15 }]}>DEUDAS Y DEUDORES</Text>
-                <View style={styles.row}>
-                  {/* Card 1: Deuda total de clientes */}
-                  <TouchableOpacity
-                    style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}
-                    onPress={() => navigation.navigate('DebtorsList')}
-                  >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <View style={[styles.statIconBg, { backgroundColor: stats?.total_debt > 0 ? '#EF444415' : '#10B98115', marginVertical: 0 }]}>
-                        <Ionicons name="people" size={18} color={stats?.total_debt > 0 ? '#EF4444' : '#10B981'} />
-                      </View>
-                      <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
-                    </View>
-                    <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Por Cobrar (Deuda)</Text>
-                    <Text style={[styles.statValue, { color: stats?.total_debt > 0 ? '#EF4444' : theme.text, fontSize: 16 }]} numberOfLines={1}>
-                      $ {isMobile ? formatCompact(stats?.total_debt || 0) : formatNumber(stats?.total_debt || 0)}
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Card 2: Saldo a favor total */}
-                  <TouchableOpacity
-                    style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}
-                    onPress={() => navigation.navigate('DebtorsList')}
-                  >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-                      <View style={[styles.statIconBg, { backgroundColor: '#10B98115', marginVertical: 0 }]}>
-                        <Ionicons name="wallet-outline" size={18} color="#10B981" />
-                      </View>
-                      <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
-                    </View>
-                    <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Saldo a Favor</Text>
-                    <Text style={[styles.statValue, { color: '#10B981', fontSize: 16 }]} numberOfLines={1}>
-                      $ {isMobile ? formatCompact(stats?.total_credit || 0) : formatNumber(stats?.total_credit || 0)}
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-
-                {/* FILA 3: Inventario */}
-                <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>INVENTARIO</Text>
-                <View style={styles.row}>
-                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
-                    <View style={[styles.statIconBg, { backgroundColor: '#8B5CF615' }]}>
-                      <Ionicons name="cube-outline" size={20} color="#8B5CF6" />
-                    </View>
-                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Productos únicos</Text>
-                    <Text style={[styles.statValue, { color: '#8B5CF6' }]}>{stats?.total_products || 0}</Text>
-                  </View>
-
-                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1.5 }]}>
-                    <View style={[styles.statIconBg, { backgroundColor: theme.accent + '20' }]}>
-                      <Ionicons name="wallet-outline" size={20} color={theme.accent} />
-                    </View>
-                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Valor estimado inventario</Text>
-                    <Text style={[styles.statValue, { color: theme.accent }]}>
-                      $ {isMobile ? formatCompact(stats?.inventory_value || 0) : formatNumber(stats?.inventory_value || 0)}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* ALERTAS DE STOCK BAJO */}
-                {stats?.low_stock_products?.length > 0 && (
+                {moduleSettings.showShop && (
                   <>
-                    <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>⚠️ ALERTAS DE STOCK</Text>
-                    <View style={[styles.alertCard, { backgroundColor: theme.card }]}>
-                      {stats.low_stock_products.map((p, i) => (
-                        <View key={p.id} style={[
-                          styles.alertRow,
-                          i < stats.low_stock_products.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.background }
-                        ]}>
-                          <View style={[styles.alertDot, { backgroundColor: p.stock === 0 ? '#EF4444' : '#F59E0B' }]} />
-                          <Text style={[styles.alertName, { color: theme.text }]} numberOfLines={1}>{p.name}</Text>
-                          <View style={[styles.alertBadge, { backgroundColor: p.stock === 0 ? '#EF444420' : '#F59E0B20' }]}>
-                            <Text style={[styles.alertBadgeText, { color: p.stock === 0 ? '#EF4444' : '#F59E0B' }]}>
-                              {p.stock === 0 ? 'Agotado' : `${p.stock} u.`}
+                    <View style={styles.row}>
+                      <View style={[styles.bigStatCard, { backgroundColor: theme.accent, flex: 1.5 }]}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <View>
+                            <Text style={styles.bigStatLabel}>Ventas Hoy</Text>
+                            <Text style={styles.bigStatValue}>
+                              $ {isMobile ? formatCompact(stats?.today_sales_total || 0) : formatNumber(stats?.today_sales_total || 0)}
                             </Text>
                           </View>
+                          <View style={styles.bigStatIcon}>
+                            <Ionicons name="trending-up" size={22} color="rgba(255,255,255,0.9)" />
+                          </View>
                         </View>
-                      ))}
+                        <Text style={styles.bigStatSub}>{stats?.today_sales_count || 0} transacciones</Text>
+                      </View>
+
+                      <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
+                        <View style={[styles.statIconBg, { backgroundColor: '#6366F115' }]}>
+                          <Ionicons name="receipt-outline" size={20} color="#6366F1" />
+                        </View>
+                        <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Pedidos en curso</Text>
+                        <Text style={[styles.statValue, { color: stats?.pending_orders_count > 0 ? '#6366F1' : theme.text }]}>
+                          {stats?.pending_orders_count || 0}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* FILA 2: Semana + Mes */}
+                    <View style={styles.row}>
+                      <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
+                        <View style={[styles.statIconBg, { backgroundColor: '#10B98115' }]}>
+                          <Ionicons name="calendar-outline" size={20} color="#10B981" />
+                        </View>
+                        <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Esta semana</Text>
+                        <Text style={[styles.statValue, { color: '#10B981' }]}>
+                          $ {isMobile ? formatCompact(stats?.week_sales_total || 0) : formatNumber(stats?.week_sales_total || 0)}
+                        </Text>
+                      </View>
+
+                      <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
+                        <View style={[styles.statIconBg, { backgroundColor: '#F59E0B15' }]}>
+                          <Ionicons name="stats-chart-outline" size={20} color="#F59E0B" />
+                        </View>
+                        <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Este mes</Text>
+                        <Text style={[styles.statValue, { color: '#F59E0B' }]}>
+                          $ {isMobile ? formatCompact(stats?.month_sales_total || 0) : formatNumber(stats?.month_sales_total || 0)}
+                        </Text>
+                      </View>
+                    </View>
+                  </>
+                )}
+
+                {/* FILA 3: Cuentas por cobrar y Saldo a Favor */}
+                {moduleSettings.showDebtors && (
+                  <>
+                    <Text style={[styles.sectionLabel, { color: theme.textSecondary, marginTop: 15 }]}>DEUDAS, DEUDORES Y AHORROS</Text>
+                    <View style={styles.row}>
+                      {/* Card 1: Deuda total de clientes */}
                       <TouchableOpacity
-                        onPress={() => navigation.navigate('Inventory')}
-                        style={[styles.alertLink, { borderTopColor: theme.background }]}
+                        style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}
+                        onPress={() => navigation.navigate('DebtorsList')}
                       >
-                        <Text style={{ color: theme.accent, fontSize: 13, fontWeight: '700' }}>Ver inventario →</Text>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <View style={[styles.statIconBg, { backgroundColor: stats?.total_debt > 0 ? '#8B5CF615' : '#10B98115', marginVertical: 0 }]}>
+                            <Ionicons name="people" size={18} color={stats?.total_debt > 0 ? '#8B5CF6' : '#10B981'} />
+                          </View>
+                          <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
+                        </View>
+                        <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Deudores (Por Cobrar)</Text>
+                        <Text style={[styles.statValue, { color: stats?.total_debt > 0 ? '#8B5CF6' : theme.text, fontSize: 16 }]} numberOfLines={1}>
+                          $ {isMobile ? formatCompact(stats?.total_debt || 0) : formatNumber(stats?.total_debt || 0)}
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* Card 2: Saldo a favor total */}
+                      <TouchableOpacity
+                        style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}
+                        onPress={() => navigation.navigate('DebtorsList')}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <View style={[styles.statIconBg, { backgroundColor: '#10B98115', marginVertical: 0 }]}>
+                            <Ionicons name="wallet-outline" size={18} color="#10B981" />
+                          </View>
+                          <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
+                        </View>
+                        <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Ahorro</Text>
+                        <Text style={[styles.statValue, { color: '#10B981', fontSize: 16 }]} numberOfLines={1}>
+                          $ {isMobile ? formatCompact(stats?.total_credit || 0) : formatNumber(stats?.total_credit || 0)}
+                        </Text>
+                      </TouchableOpacity>
+
+                      {/* Card 3: Deudas por pagar a proveedores */}
+                      <TouchableOpacity
+                        style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}
+                        onPress={() => navigation.navigate('DebtorsList')}
+                      >
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                          <View style={[styles.statIconBg, { backgroundColor: '#EF444415', marginVertical: 0 }]}>
+                            <Ionicons name="card-outline" size={18} color="#EF4444" />
+                          </View>
+                          <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
+                        </View>
+                        <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Deudas (Por Pagar)</Text>
+                        <Text style={[styles.statValue, { color: '#EF4444', fontSize: 16 }]} numberOfLines={1}>
+                          $ {isMobile ? formatCompact(stats?.total_payable || 0) : formatNumber(stats?.total_payable || 0)}
+                        </Text>
                       </TouchableOpacity>
                     </View>
                   </>
                 )}
 
-                {/* ÚLTIMAS VENTAS */}
-                {stats?.recent_sales?.length > 0 && (
+                {/* FILA 4: Inventario */}
+                {moduleSettings.showShop && (
                   <>
-                    <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>ÚLTIMAS VENTAS</Text>
-                    <View style={[styles.alertCard, { backgroundColor: theme.card }]}>
-                      {stats.recent_sales.map((s, i) => (
-                        <View key={s.id} style={[
-                          styles.alertRow,
-                          i < stats.recent_sales.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.background }
-                        ]}>
-                          <Ionicons
-                            name={s.payment_type === 'cash' ? 'cash-outline' : 'people-outline'}
-                            size={16}
-                            color={s.payment_type === 'cash' ? '#10B981' : '#EF4444'}
-                            style={{ marginRight: 8 }}
-                          />
-                          <Text style={[styles.alertName, { color: theme.textSecondary, fontSize: 11 }]}>
-                            {new Date(s.created_at).toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}
-                          </Text>
-                          <Text style={[styles.alertBadgeText, { color: theme.accent, fontWeight: '800', marginLeft: 'auto' }]}>
-                            $ {formatNumber(s.total)}
-                          </Text>
+                    <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>INVENTARIO</Text>
+                    <View style={styles.row}>
+                      <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
+                        <View style={[styles.statIconBg, { backgroundColor: '#8B5CF615' }]}>
+                          <Ionicons name="cube-outline" size={20} color="#8B5CF6" />
                         </View>
-                      ))}
-                      <TouchableOpacity
-                        onPress={() => navigation.navigate('SalesHistory')}
-                        style={[styles.alertLink, { borderTopColor: theme.background }]}
-                      >
-                        <Text style={{ color: theme.accent, fontSize: 13, fontWeight: '700' }}>Ver historial →</Text>
-                      </TouchableOpacity>
+                        <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Productos únicos</Text>
+                        <Text style={[styles.statValue, { color: '#8B5CF6' }]}>{stats?.total_products || 0}</Text>
+                      </View>
+
+                      <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1.5 }]}>
+                        <View style={[styles.statIconBg, { backgroundColor: theme.accent + '20' }]}>
+                          <Ionicons name="wallet-outline" size={20} color={theme.accent} />
+                        </View>
+                        <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Valor estimado inventario</Text>
+                        <Text style={[styles.statValue, { color: theme.accent }]}>
+                          $ {isMobile ? formatCompact(stats?.inventory_value || 0) : formatNumber(stats?.inventory_value || 0)}
+                        </Text>
+                      </View>
                     </View>
+
+                    {/* ALERTAS DE STOCK BAJO */}
+                    {stats?.low_stock_products?.length > 0 && (
+                      <>
+                        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>⚠️ ALERTAS DE STOCK</Text>
+                        <View style={[styles.alertCard, { backgroundColor: theme.card }]}>
+                          {stats.low_stock_products.map((p, i) => (
+                            <View key={p.id} style={[
+                              styles.alertRow,
+                              i < stats.low_stock_products.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.background }
+                            ]}>
+                              <View style={[styles.alertDot, { backgroundColor: p.stock === 0 ? '#EF4444' : '#F59E0B' }]} />
+                              <Text style={[styles.alertName, { color: theme.text }]} numberOfLines={1}>{p.name}</Text>
+                              <View style={[styles.alertBadge, { backgroundColor: p.stock === 0 ? '#EF444420' : '#F59E0B20' }]}>
+                                <Text style={[styles.alertBadgeText, { color: p.stock === 0 ? '#EF4444' : '#F59E0B' }]}>
+                                  {p.stock === 0 ? 'Agotado' : `${p.stock} u.`}
+                                </Text>
+                              </View>
+                            </View>
+                          ))}
+                          <TouchableOpacity
+                            onPress={() => navigation.navigate('Inventory')}
+                            style={[styles.alertLink, { borderTopColor: theme.background }]}
+                          >
+                            <Text style={{ color: theme.accent, fontSize: 13, fontWeight: '700' }}>Ver inventario →</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    )}
+
+                    {/* ÚLTIMAS VENTAS */}
+                    {stats?.recent_sales?.length > 0 && (
+                      <>
+                        <Text style={[styles.sectionLabel, { color: theme.textSecondary }]}>ÚLTIMAS VENTAS</Text>
+                        <View style={[styles.alertCard, { backgroundColor: theme.card }]}>
+                          {stats.recent_sales.map((s, i) => (
+                            <View key={s.id} style={[
+                              styles.alertRow,
+                              i < stats.recent_sales.length - 1 && { borderBottomWidth: 1, borderBottomColor: theme.background }
+                            ]}>
+                              <Ionicons
+                                name={s.payment_type === 'cash' ? 'cash-outline' : 'people-outline'}
+                                size={16}
+                                color={s.payment_type === 'cash' ? '#10B981' : '#EF4444'}
+                                style={{ marginRight: 8 }}
+                              />
+                              <Text style={[styles.alertName, { color: theme.textSecondary, fontSize: 11 }]}>
+                                {new Date(s.created_at).toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}
+                              </Text>
+                              <Text style={[styles.alertBadgeText, { color: theme.accent, fontWeight: '800', marginLeft: 'auto' }]}>
+                                $ {formatNumber(s.total)}
+                              </Text>
+                            </View>
+                          ))}
+                          <TouchableOpacity
+                            onPress={() => navigation.navigate('SalesHistory')}
+                            style={[styles.alertLink, { borderTopColor: theme.background }]}
+                          >
+                            <Text style={{ color: theme.accent, fontSize: 13, fontWeight: '700' }}>Ver historial →</Text>
+                          </TouchableOpacity>
+                        </View>
+                      </>
+                    )}
                   </>
+                )}
+
+                {!moduleSettings.showShop && !moduleSettings.showDebtors && (
+                  <View style={{ paddingVertical: 60, alignItems: 'center' }}>
+                    <Ionicons name="information-circle-outline" size={48} color={theme.textSecondary} style={{ marginBottom: 12 }} />
+                    <Text style={{ color: theme.text, fontWeight: 'bold', fontSize: 16 }}>No hay módulos activos</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 12, textAlign: 'center', marginTop: 6, paddingHorizontal: 30 }}>
+                      Habilita la Tienda o la Gestión de Deudas haciendo clic en el engranaje de Ajustes en la cabecera o en la pestaña de Accesos Rápidos.
+                    </Text>
+                  </View>
                 )}
               </>
             ) : (
@@ -527,61 +601,69 @@ export default function DashboardScreen({ navigation }) {
                 <Text style={[styles.sectionLabel, { color: theme.textSecondary, marginTop: 8 }]}>ACCESOS RÁPIDOS</Text>
                 <View style={isMobile ? styles.menuList : styles.menuGrid}>
 
-                  <TouchableOpacity
-                    style={[isMobile ? styles.menuItemRow : styles.menuItemCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
-                    onPress={() => navigation.navigate('POS')}
-                  >
-                    <View style={[styles.menuIconWrap, { backgroundColor: '#3B82F620' }]}>
-                      <Ionicons name="cart" size={26} color="#3B82F6" />
-                    </View>
-                    <View style={styles.menuTextContainer}>
-                      <Text style={[styles.menuText, { color: theme.text }]}>Punto de Venta</Text>
-                      <Text style={[styles.menuDesc, { color: theme.textSecondary }]}>Registrar una nueva venta</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-                  </TouchableOpacity>
+                  {moduleSettings.showShop && (
+                    <>
+                      <TouchableOpacity
+                        style={[isMobile ? styles.menuItemRow : styles.menuItemCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
+                        onPress={() => navigation.navigate('POS')}
+                      >
+                        <View style={[styles.menuIconWrap, { backgroundColor: '#3B82F620' }]}>
+                          <Ionicons name="cart" size={26} color="#3B82F6" />
+                        </View>
+                        <View style={styles.menuTextContainer}>
+                          <Text style={[styles.menuText, { color: theme.text }]}>Punto de Venta</Text>
+                          <Text style={[styles.menuDesc, { color: theme.textSecondary }]}>Registrar una nueva venta</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                      </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[isMobile ? styles.menuItemRow : styles.menuItemCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
-                    onPress={() => navigation.navigate('Inventory')}
-                  >
-                    <View style={[styles.menuIconWrap, { backgroundColor: '#F59E0B20' }]}>
-                      <Ionicons name="cube" size={26} color="#F59E0B" />
-                    </View>
-                    <View style={styles.menuTextContainer}>
-                      <Text style={[styles.menuText, { color: theme.text }]}>Inventario</Text>
-                      <Text style={[styles.menuDesc, { color: theme.textSecondary }]}>Gestionar productos y stock</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-                  </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[isMobile ? styles.menuItemRow : styles.menuItemCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
+                        onPress={() => navigation.navigate('Inventory')}
+                      >
+                        <View style={[styles.menuIconWrap, { backgroundColor: '#F59E0B20' }]}>
+                          <Ionicons name="cube" size={26} color="#F59E0B" />
+                        </View>
+                        <View style={styles.menuTextContainer}>
+                          <Text style={[styles.menuText, { color: theme.text }]}>Inventario</Text>
+                          <Text style={[styles.menuDesc, { color: theme.textSecondary }]}>Gestionar productos y stock</Text>
+                        </View>
+                        <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                      </TouchableOpacity>
+                    </>
+                  )}
 
-                  <TouchableOpacity
-                    style={[isMobile ? styles.menuItemRow : styles.menuItemCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
-                    onPress={() => navigation.navigate('DebtorsList')}
-                  >
-                    <View style={[styles.menuIconWrap, { backgroundColor: '#EF444420' }]}>
-                      <Ionicons name="people" size={26} color="#EF4444" />
-                    </View>
-                    <View style={styles.menuTextContainer}>
-                      <Text style={[styles.menuText, { color: theme.text }]}>Deudas y Deudores</Text>
-                      <Text style={[styles.menuDesc, { color: theme.textSecondary }]}>Control de cuentas pendientes</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-                  </TouchableOpacity>
+                  {moduleSettings.showDebtors && (
+                    <TouchableOpacity
+                      style={[isMobile ? styles.menuItemRow : styles.menuItemCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
+                      onPress={() => navigation.navigate('DebtorsList')}
+                    >
+                      <View style={[styles.menuIconWrap, { backgroundColor: '#EF444420' }]}>
+                        <Ionicons name="people" size={26} color="#EF4444" />
+                      </View>
+                      <View style={styles.menuTextContainer}>
+                        <Text style={[styles.menuText, { color: theme.text }]}>Deudas, Deudores y Ahorros</Text>
+                        <Text style={[styles.menuDesc, { color: theme.textSecondary }]}>Control de cuentas pendientes</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                  )}
 
-                  <TouchableOpacity
-                    style={[isMobile ? styles.menuItemRow : styles.menuItemCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
-                    onPress={() => navigation.navigate('SalesHistory')}
-                  >
-                    <View style={[styles.menuIconWrap, { backgroundColor: '#10B98120' }]}>
-                      <Ionicons name="receipt" size={26} color="#10B981" />
-                    </View>
-                    <View style={styles.menuTextContainer}>
-                      <Text style={[styles.menuText, { color: theme.text }]}>Historial de Ventas</Text>
-                      <Text style={[styles.menuDesc, { color: theme.textSecondary }]}>Ver ventas y detalles de cobros</Text>
-                    </View>
-                    <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
-                  </TouchableOpacity>
+                  {moduleSettings.showShop && (
+                    <TouchableOpacity
+                      style={[isMobile ? styles.menuItemRow : styles.menuItemCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
+                      onPress={() => navigation.navigate('SalesHistory')}
+                    >
+                      <View style={[styles.menuIconWrap, { backgroundColor: '#10B98120' }]}>
+                        <Ionicons name="receipt" size={26} color="#10B981" />
+                      </View>
+                      <View style={styles.menuTextContainer}>
+                        <Text style={[styles.menuText, { color: theme.text }]}>Historial de Ventas</Text>
+                        <Text style={[styles.menuDesc, { color: theme.textSecondary }]}>Ver ventas y detalles de cobros</Text>
+                      </View>
+                      <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                    </TouchableOpacity>
+                  )}
 
                   <TouchableOpacity
                     style={[isMobile ? styles.menuItemRow : styles.menuItemCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
@@ -600,6 +682,20 @@ export default function DashboardScreen({ navigation }) {
                         )}
                       </View>
                       <Text style={[styles.menuDesc, { color: theme.textSecondary }]}>Ver y subir cambios locales pendientes</Text>
+                    </View>
+                    <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[isMobile ? styles.menuItemRow : styles.menuItemCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}
+                    onPress={() => setSettingsModalVisible(true)}
+                  >
+                    <View style={[styles.menuIconWrap, { backgroundColor: '#6B728020' }]}>
+                      <Ionicons name="settings" size={26} color="#6B7280" />
+                    </View>
+                    <View style={styles.menuTextContainer}>
+                      <Text style={[styles.menuText, { color: theme.text }]}>Ajustes de Módulos</Text>
+                      <Text style={[styles.menuDesc, { color: theme.textSecondary }]}>Configurar visibilidad de aplicaciones</Text>
                     </View>
                     <Ionicons name="chevron-forward" size={18} color={theme.textSecondary} />
                   </TouchableOpacity>
@@ -650,28 +746,28 @@ export default function DashboardScreen({ navigation }) {
                     <View key={req.id || idx} style={[styles.queueItemCard, { backgroundColor: theme.background, borderColor: isDarkMode ? '#333' : '#E5E7EB', padding: 14, borderRadius: 12, borderWidth: 1 }]}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                          <Ionicons 
+                          <Ionicons
                             name={
                               req.method === 'POST' ? 'add-circle-outline' :
-                              req.method === 'PUT' ? 'create-outline' :
-                              'trash-outline'
-                            } 
-                            size={16} 
+                                req.method === 'PUT' ? 'create-outline' :
+                                  'trash-outline'
+                            }
+                            size={16}
                             color={
                               req.method === 'POST' ? '#10B981' :
-                              req.method === 'PUT' ? '#3B82F6' :
-                              '#EF4444'
-                            } 
+                                req.method === 'PUT' ? '#3B82F6' :
+                                  '#EF4444'
+                            }
                           />
-                          <Text style={{ 
-                            color: req.method === 'POST' ? '#10B981' : req.method === 'PUT' ? '#3B82F6' : '#EF4444', 
-                            fontSize: 11, 
-                            fontWeight: '800' 
+                          <Text style={{
+                            color: req.method === 'POST' ? '#10B981' : req.method === 'PUT' ? '#3B82F6' : '#EF4444',
+                            fontSize: 11,
+                            fontWeight: '800'
                           }}>
                             {
                               req.method === 'POST' ? 'Adición' :
-                              req.method === 'PUT' ? 'Modificación' :
-                              'Eliminación'
+                                req.method === 'PUT' ? 'Modificación' :
+                                  'Eliminación'
                             }
                           </Text>
                         </View>
@@ -711,6 +807,77 @@ export default function DashboardScreen({ navigation }) {
                     Sincronizar Ahora
                   </Text>
                 )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* MODAL DE AJUSTES DE MÓDULOS */}
+      <Modal
+        visible={settingsModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSettingsModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card }]}>
+            <View style={[styles.modalHeader, { borderBottomColor: isDarkMode ? '#333' : '#F0F0F0', borderBottomWidth: 1 }]}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Ionicons name="settings-outline" size={22} color={theme.text} />
+                <Text style={[styles.modalTitle, { color: theme.text }]}>Ajustes de Módulos</Text>
+              </View>
+              <TouchableOpacity onPress={() => setSettingsModalVisible(false)} style={styles.modalCloseBtn}>
+                <Ionicons name="close" size={24} color={theme.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ padding: 20 }}>
+              <Text style={[styles.modalSubtitle, { color: theme.textSecondary, marginBottom: 20, fontSize: 13, textAlign: 'left' }]}>
+                Configura qué secciones e indicadores quieres ver en el panel principal y accesos rápidos de la aplicación.
+              </Text>
+
+              {/* Ajuste 1: Tienda e Inventario */}
+              <View style={[styles.settingsRow, { borderBottomColor: isDarkMode ? '#333' : '#F0F0F0', borderBottomWidth: 1, paddingBottom: 15 }]}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={[styles.settingsLabel, { color: theme.text }]}>Tienda, POS e Inventario</Text>
+                  <Text style={[styles.settingsDesc, { color: theme.textSecondary }]}>
+                    Habilita el Punto de Venta, Gestión de Lotes, Inventario e Historial de Ventas.
+                  </Text>
+                </View>
+                <Switch
+                  value={moduleSettings.showShop}
+                  onValueChange={(val) => saveModuleSettings({ ...moduleSettings, showShop: val })}
+                  trackColor={{ false: '#767577', true: theme.accent }}
+                  thumbColor={moduleSettings.showShop ? '#FFF' : '#f4f3f4'}
+                />
+              </View>
+
+              {/* Ajuste 2: Deudas, Deudores y Ahorros */}
+              <View style={[styles.settingsRow, { paddingTop: 15 }]}>
+                <View style={{ flex: 1, paddingRight: 10 }}>
+                  <Text style={[styles.settingsLabel, { color: theme.text }]}>Deudas, Deudores y Ahorros</Text>
+                  <Text style={[styles.settingsDesc, { color: theme.textSecondary }]}>
+                    Habilita el control de deudas, deudores, ahorros, abonos e historial de movimientos.
+                  </Text>
+                </View>
+                <Switch
+                  value={moduleSettings.showDebtors}
+                  onValueChange={(val) => saveModuleSettings({ ...moduleSettings, showDebtors: val })}
+                  trackColor={{ false: '#767577', true: theme.accent }}
+                  thumbColor={moduleSettings.showDebtors ? '#FFF' : '#f4f3f4'}
+                />
+              </View>
+            </ScrollView>
+
+            <View style={[styles.modalActions, { borderTopColor: isDarkMode ? '#333' : '#F0F0F0', borderTopWidth: 1 }]}>
+              <TouchableOpacity
+                style={[styles.modalBtn, { backgroundColor: theme.accent, flex: 1 }]}
+                onPress={() => setSettingsModalVisible(false)}
+              >
+                <Text style={{ color: '#FFF', fontWeight: 'bold', fontSize: 14, textAlign: 'center' }}>
+                  Aceptar
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -884,5 +1051,19 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     borderRadius: 8,
     justifyContent: 'center',
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  settingsLabel: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  settingsDesc: {
+    fontSize: 11,
+    marginTop: 3,
+    lineHeight: 14,
   }
 });

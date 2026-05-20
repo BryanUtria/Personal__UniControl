@@ -11,6 +11,12 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+const mapType = (t) => {
+    if (t === 'supplier' || t === 'deuda') return 'deuda';
+    if (t === 'saving' || t === 'ahorro') return 'ahorro';
+    return 'deudor';
+};
+
 // Transporter dinámico para nodemailer
 const createTransporter = () => {
     if (process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS) {
@@ -351,7 +357,7 @@ app.get('/api/dashboard', async (req, res) => {
 
         // Total deuda pendiente y saldo a favor (deudores)
         const debtRows = await db.query(
-            `SELECT d.debtor_id, d.type, d.amount, d.quantity FROM debts d JOIN debtors dr ON d.debtor_id = dr.id WHERE (dr.user_id = ? OR (dr.user_id IS NULL AND ? IS NULL)) AND dr.active = 1`,
+            `SELECT d.debtor_id, d.type, d.amount, d.quantity, dr.type AS debtor_type FROM debts d JOIN debtors dr ON d.debtor_id = dr.id WHERE (dr.user_id = ? OR (dr.user_id IS NULL AND ? IS NULL)) AND dr.active = 1`,
             [userId, userId]
         );
 
@@ -363,20 +369,36 @@ app.get('/api/dashboard', async (req, res) => {
             const change = row.type === 'debt' ? val : -val;
 
             if (!debtorBalances[debtorId]) {
-                debtorBalances[debtorId] = 0;
+                debtorBalances[debtorId] = {
+                    balance: 0,
+                    type: mapType(row.debtor_type)
+                };
             }
-            debtorBalances[debtorId] += change;
+            debtorBalances[debtorId].balance += change;
         }
 
-        let totalDebt = 0;   // Suma de saldos pendientes a cobrar
-        let totalCredit = 0; // Suma de saldos a favor de clientes (pagos de más)
+        let totalDebt = 0;   // Suma de saldos pendientes a cobrar (Clientes)
+        let totalCredit = 0; // Suma de saldos a favor de clientes (Clientes)
+        let totalPayable = 0; // Suma de cuentas por pagar (Proveedores)
 
         for (const debtorId in debtorBalances) {
-            const balance = debtorBalances[debtorId];
-            if (balance > 0) {
-                totalDebt += balance;
-            } else if (balance < 0) {
-                totalCredit += Math.abs(balance);
+            const item = debtorBalances[debtorId];
+            const type = mapType(item.type);
+            if (type === 'deuda') {
+                if (item.balance > 0) {
+                    totalPayable += item.balance;
+                }
+            } else if (type === 'ahorro') {
+                if (item.balance < 0) {
+                    totalCredit += Math.abs(item.balance);
+                }
+            } else {
+                // deudor
+                if (item.balance > 0) {
+                    totalDebt += item.balance;
+                } else if (item.balance < 0) {
+                    totalCredit += Math.abs(item.balance);
+                }
             }
         }
 
@@ -412,6 +434,7 @@ app.get('/api/dashboard', async (req, res) => {
             pending_orders_count: parseInt(pendingOrders.count),
             total_debt: totalDebt,
             total_credit: totalCredit,
+            total_payable: totalPayable,
             low_stock_products: lowStockProducts,
             total_products: parseInt(totalProducts.count),
             inventory_value: parseFloat(inventoryValue.total),
@@ -963,14 +986,12 @@ app.post('/api/orders/:id/checkout', async (req, res) => {
     }
 });
 
-
 // --- DEUDORES (CLIENTES) ---
 
-// Obtener todos los clientes activos con su deuda acumulada calculada dinámicamente
 app.get('/api/debtors', async (req, res) => {
     const userId = req.headers['x-user-id'] || null;
     const sql = `
-        SELECT d.id, d.name, d.phone, d.email, d.identification, d.address, d.notes, d.created_at as createdAt,
+        SELECT d.id, d.name, d.phone, d.email, d.identification, d.address, d.notes, d.type, d.created_at as createdAt,
                COALESCE(SUM(CASE WHEN t.type = 'debt' THEN t.amount * t.quantity ELSE -(t.amount * t.quantity) END), 0) as totalDebt
         FROM debtors d
         LEFT JOIN debts t ON d.id = t.debtor_id
@@ -989,6 +1010,7 @@ app.get('/api/debtors', async (req, res) => {
             identification: r.identification,
             address: r.address,
             notes: r.notes,
+            type: mapType(r.type),
             createdAt: r.createdAt,
             totalDebt: parseFloat(r.totalDebt)
         }));
@@ -1000,14 +1022,14 @@ app.get('/api/debtors', async (req, res) => {
 
 // Crear un cliente
 app.post('/api/debtors', async (req, res) => {
-    const { name, phone, email, identification, address, notes } = req.body;
+    const { name, phone, email, identification, address, notes, type } = req.body;
     const userId = req.headers['x-user-id'] || null;
     if (!name) return res.status(400).json({ error: 'El nombre es obligatorio.' });
 
     try {
         const result = await db.query(
-            'INSERT INTO debtors (name, phone, email, identification, address, notes, user_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            [name, phone || null, email || null, identification || null, address || null, notes || null, userId]
+            'INSERT INTO debtors (name, phone, email, identification, address, notes, type, user_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+            [name, phone || null, email || null, identification || null, address || null, notes || null, mapType(type), userId]
         );
         res.json({
             id: result.insertId.toString(),
@@ -1017,6 +1039,7 @@ app.post('/api/debtors', async (req, res) => {
             identification,
             address,
             notes,
+            type: mapType(type),
             totalDebt: 0,
             createdAt: new Date().toISOString()
         });
@@ -1027,13 +1050,13 @@ app.post('/api/debtors', async (req, res) => {
 
 // Actualizar un cliente
 app.put('/api/debtors/:id', async (req, res) => {
-    const { name, phone, email, identification, address, notes } = req.body;
+    const { name, phone, email, identification, address, notes, type } = req.body;
     try {
         await db.query(
-            'UPDATE debtors SET name = ?, phone = ?, email = ?, identification = ?, address = ?, notes = ? WHERE id = ?',
-            [name, phone || null, email || null, identification || null, address || null, notes || null, req.params.id]
+            'UPDATE debtors SET name = ?, phone = ?, email = ?, identification = ?, address = ?, notes = ?, type = ? WHERE id = ?',
+            [name, phone || null, email || null, identification || null, address || null, notes || null, mapType(type), req.params.id]
         );
-        res.json({ id: req.params.id, name, phone, email, identification, address, notes });
+        res.json({ id: req.params.id, name, phone, email, identification, address, notes, type: mapType(type) });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

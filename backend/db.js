@@ -113,6 +113,7 @@ async function initDB() {
             identification VARCHAR(100),
             address VARCHAR(255),
             notes TEXT,
+            type VARCHAR(20) NOT NULL DEFAULT 'client',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB;
     `;
@@ -148,6 +149,8 @@ async function initDB() {
     try { await pool.query('ALTER TABLE debtors ADD COLUMN identification VARCHAR(100) NULL'); } catch (e) {}
     try { await pool.query('ALTER TABLE debtors ADD COLUMN address VARCHAR(255) NULL'); } catch (e) {}
     try { await pool.query('ALTER TABLE debtors ADD COLUMN notes TEXT NULL'); } catch (e) {}
+    try { await pool.query('ALTER TABLE debtors ADD COLUMN user_id INT NULL'); } catch (e) {}
+    try { await pool.query("ALTER TABLE debtors ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'client'"); } catch (e) {}
 
     // Isolación multiusuario (user_id)
     try { await pool.query('ALTER TABLE products ADD COLUMN user_id INT NULL'); } catch (e) {}

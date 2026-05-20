@@ -4,6 +4,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { ThemeProvider, useTheme } from './src/theme/ThemeContext';
 import { AuthProvider } from './src/context/AuthContext';
 import { ToastProvider, useToast } from './src/context/ToastContext';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import NetInfo from '@react-native-community/netinfo';
 import { syncOfflineQueue, getOfflineQueue, isConnected } from './src/utils/offlineSync';
@@ -196,15 +197,17 @@ const styles = StyleSheet.create({
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ThemeProvider>
-        <ToastProvider>
-          <NavigationContainer>
-            <AppNavigator />
-          </NavigationContainer>
-          <OfflineSyncManager />
-        </ToastProvider>
-      </ThemeProvider>
-    </AuthProvider>
+    <SafeAreaProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <ToastProvider>
+            <NavigationContainer>
+              <AppNavigator />
+            </NavigationContainer>
+            <OfflineSyncManager />
+          </ToastProvider>
+        </ThemeProvider>
+      </AuthProvider>
+    </SafeAreaProvider>
   );
 }

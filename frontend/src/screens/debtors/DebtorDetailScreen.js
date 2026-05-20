@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Platform, Modal, TextInput, ActivityIndicator, Linking, Switch, useWindowDimensions, RefreshControl } from 'react-native';
+import React, { useState, useEffect, useMemo } from 'react';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, Linking, Switch, useWindowDimensions, RefreshControl } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useToast } from '../../context/ToastContext';
@@ -151,6 +152,35 @@ export default function DebtorDetailScreen({ route, navigation }) {
   const isGlobalDebt = currentBalance > 0;
   const isGlobalCredit = currentBalance < 0;
 
+  // Obtener los IDs de transacciones que pusieron la cuenta al día (saldo en 0)
+  const zeroBalanceIds = useMemo(() => {
+    // Las transacciones en el estado vienen ordenadas de más nuevas a más antiguas (id DESC).
+    // Invertimos el arreglo para recorrerlas cronológicamente de forma 100% segura.
+    const chronological = [...transactions]
+      .filter(t => !disabledTxIds.includes(t.id))
+      .reverse();
+
+    const zeroIds = new Set();
+    let runningBalance = 0;
+    let hadHistory = false;
+
+    for (const t of chronological) {
+      const val = t.amount * (t.quantity || 1);
+      const change = t.type === 'debt' ? val : -val;
+      runningBalance += change;
+      
+      if (Math.abs(runningBalance) > 0.01) {
+        hadHistory = true;
+      }
+      
+      if (hadHistory && Math.abs(runningBalance) < 0.01) {
+        zeroIds.add(t.id);
+        hadHistory = false; // Reiniciar para detectar la siguiente vez que se mueva de 0 y vuelva a 0
+      }
+    }
+    return zeroIds;
+  }, [transactions, disabledTxIds]);
+
   // Filtrado y ordenación de movimientos
   const getProcessedTransactions = () => {
     let result = [...transactions];
@@ -204,13 +234,16 @@ export default function DebtorDetailScreen({ route, navigation }) {
         const total = t.amount * t.quantity;
         const totalSigned = t.type === 'debt' ? total : -total;
         const isDisabled = disabledTxIds.includes(t.id);
+        const typeLabel = t.type === 'debt' 
+          ? (debtor.type === 'deuda' ? 'Compra' : 'Deuda') 
+          : (debtor.type === 'deuda' ? 'Pago' : 'Abono');
         return {
           'Fecha': t.date,
           'Descripción': t.description || 'Sin descripción',
           'Cantidad': t.quantity || 1,
           'Valor Unidad ($)': t.amount,
           'Total ($)': totalSigned,
-          'Tipo': t.type === 'debt' ? 'Deuda' : 'Abono',
+          'Tipo': typeLabel,
           'Estado para Saldo': isDisabled ? 'Omitido' : 'Activo'
         };
       });
@@ -278,23 +311,29 @@ export default function DebtorDetailScreen({ route, navigation }) {
     const isGlobalDebt = currentBalance > 0;
 
     // 2. Construir el cuerpo del mensaje de forma extremadamente limpia y compatible sin emojis
+    const labelRole = debtor.type === 'deuda' ? 'Deuda con' : 'Deudor';
+    const labelDebts = 'Total Deudas';
+    const labelPayments = debtor.type === 'deuda' ? 'Total Pagos' : 'Total Abonos';
+    
     let message = `*ESTADO DE CUENTA - UNICONTROL*\n\n`;
-    message += `*Cliente:* ${debtor.name}\n`;
+    message += `*${labelRole}:* ${debtor.name}\n`;
     if (debtor.identification) message += `*Identificación:* ${debtor.identification}\n`;
     if (debtor.phone) message += `*Teléfono:* ${debtor.phone}\n`;
     message += `*Fecha de Reporte:* ${new Date().toLocaleDateString()}\n\n`;
 
     message += `-----------------------------------\n`;
     message += `*Resumen Financiero:*\n`;
-    message += `*Total Deudas:* $ ${totalDebts.toLocaleString()}\n`;
-    message += `*Total Abonos:* $ ${totalPayments.toLocaleString()}\n`;
+    message += `*${labelDebts}:* $ ${totalDebts.toLocaleString()}\n`;
+    message += `*${labelPayments}:* $ ${totalPayments.toLocaleString()}\n`;
 
     if (currentBalance === 0) {
       message += `*Saldo Actual:* $ 0 (Al día)\n`;
     } else if (isGlobalDebt) {
-      message += `*Saldo Pendiente:* $ ${Math.abs(currentBalance).toLocaleString()}\n`;
+      const balanceLabel = debtor.type === 'deuda' ? 'Deuda (Por Pagar)' : 'Deudor (Por Cobrar)';
+      message += `*${balanceLabel}:* $ ${Math.abs(currentBalance).toLocaleString()}\n`;
     } else {
-      message += `*Saldo a Favor:* $ ${Math.abs(currentBalance).toLocaleString()}\n`;
+      const balanceLabel = 'Ahorro';
+      message += `*${balanceLabel}:* $ ${Math.abs(currentBalance).toLocaleString()}\n`;
     }
     message += `-----------------------------------\n\n`;
 
@@ -303,7 +342,9 @@ export default function DebtorDetailScreen({ route, navigation }) {
       message += `*Detalle de Movimientos:*\n`;
       transactions.forEach(t => {
         const isDebt = t.type === 'debt';
-        const typeLabel = isDebt ? 'DEUDA' : 'ABONO';
+        const typeLabel = isDebt 
+          ? 'DEUDA' 
+          : (debtor.type === 'deuda' ? 'PAGO' : 'ABONO');
         const sign = isDebt ? '-' : '+';
         const itemTotal = t.amount * (t.quantity || 1);
         const isDisabled = disabledTxIds.includes(t.id);
@@ -419,6 +460,15 @@ export default function DebtorDetailScreen({ route, navigation }) {
     const qty = item.quantity || 1;
     const totalItem = item.amount * qty;
     const isEnabled = !disabledTxIds.includes(item.id);
+    const isSupplier = debtor.type === 'deuda';
+
+    // Determinar color de monto según rol y tipo de transacción
+    let tAmountColor = theme.textSecondary;
+    if (isSupplier) {
+      tAmountColor = isDebt ? '#8B5CF6' : '#10B981';
+    } else {
+      tAmountColor = isDebt ? theme.danger : theme.accent;
+    }
 
     return (
       <View style={[styles.transactionCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]} key={item.id}>
@@ -440,7 +490,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
               <Text style={[styles.tDate, { color: theme.textSecondary }]}>{item.date}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[styles.tAmount, { color: isDebt ? theme.danger : theme.accent, textDecorationLine: isEnabled ? 'none' : 'line-through' }]}>
+              <Text style={[styles.tAmount, { color: tAmountColor, textDecorationLine: isEnabled ? 'none' : 'line-through' }]}>
                 {isDebt ? '-' : '+'}$ {formatNumber(totalItem)}
               </Text>
               <Text style={[styles.tSubDesc, { color: theme.textSecondary, marginTop: 4, textAlign: 'right' }]}>
@@ -512,7 +562,9 @@ export default function DebtorDetailScreen({ route, navigation }) {
             <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow, marginRight: 10 }]}>
               <Ionicons name="chevron-back" size={22} color={theme.text} />
             </TouchableOpacity>
-            <Text style={[styles.title, { color: theme.text }]}>Detalle Cliente</Text>
+            <Text style={[styles.title, { color: theme.text }]}>
+              {debtor.type === 'deuda' ? 'Detalle Deuda' : (debtor.type === 'ahorro' ? 'Detalle Ahorro' : 'Detalle Deudor')}
+            </Text>
           </View>
           <View style={{ flexDirection: 'row', gap: isMobile ? 5 : 10, alignItems: 'center' }}>
             <TouchableOpacity onPress={handleRefresh} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
@@ -534,24 +586,38 @@ export default function DebtorDetailScreen({ route, navigation }) {
           {/* Tarjetas Pequeñas de Resumen */}
           <View style={styles.summaryRow}>
             <View style={[styles.summaryCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Total Deudas</Text>
-              <Text style={[styles.summaryValue, { color: theme.danger }]} numberOfLines={1} adjustsFontSizeToFit>$ {formatNumber(totalDebts)}</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+                {debtor.type === 'ahorro' ? 'Total Retiros' : 'Total Deudas'}
+              </Text>
+              <Text style={[styles.summaryValue, { color: debtor.type === 'deuda' ? '#EF4444' : (debtor.type === 'ahorro' ? '#EF4444' : '#8B5CF6') }]} numberOfLines={1} adjustsFontSizeToFit>$ {formatNumber(totalDebts)}</Text>
             </View>
             <View style={[styles.summaryCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Total Abonos</Text>
-              <Text style={[styles.summaryValue, { color: theme.accent }]} numberOfLines={1} adjustsFontSizeToFit>$ {formatNumber(totalPayments)}</Text>
+              <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>
+                {debtor.type === 'ahorro' ? 'Total Ahorrado' : (debtor.type === 'deuda' ? 'Total Pagos' : 'Total Abonos')}
+              </Text>
+              <Text style={[styles.summaryValue, { color: debtor.type === 'deuda' ? '#10B981' : (debtor.type === 'ahorro' ? '#10B981' : theme.accent) }]} numberOfLines={1} adjustsFontSizeToFit>$ {formatNumber(totalPayments)}</Text>
             </View>
           </View>
 
           {/* Tarjeta del Saldo Dinámico */}
           <View style={[styles.balanceCard, { backgroundColor: isDarkMode ? '#2A2A2A' : '#E5E7EB' }]}>
             <Text style={[styles.balanceLabel, { color: theme.textSecondary }]}>
-              {isGlobalCredit ? 'Saldo total a favor' : 'Saldo total pendiente'}
+              {debtor.type === 'ahorro'
+                ? (isGlobalDebt ? 'Déficit (Retiros exceden ahorros)' : 'Ahorro')
+                : (isGlobalCredit
+                  ? 'Ahorro'
+                  : (debtor.type === 'deuda' ? 'Deuda (Por Pagar)' : 'Deudor (Por Cobrar)'))}
             </Text>
             <Text
               style={[
                 styles.balanceAmount,
-                { color: isGlobalDebt ? theme.danger : isGlobalCredit ? theme.accent : theme.textSecondary }
+                { color: debtor.type === 'ahorro'
+                  ? (isGlobalDebt ? theme.danger : '#10B981')
+                  : (isGlobalDebt 
+                    ? (debtor.type === 'deuda' ? '#EF4444' : '#8B5CF6') 
+                    : isGlobalCredit 
+                      ? (debtor.type === 'deuda' ? '#10B981' : theme.accent) 
+                      : theme.textSecondary) }
               ]}
               numberOfLines={1}
               adjustsFontSizeToFit
@@ -560,10 +626,12 @@ export default function DebtorDetailScreen({ route, navigation }) {
             </Text>
           </View>
 
-          {/* Información Adicional del Cliente */}
+          {/* Información Adicional */}
           {(debtor.identification || debtor.email || debtor.address || debtor.notes) && (
             <View style={[styles.infoCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-              <Text style={[styles.infoCardTitle, { color: theme.textSecondary }]}>Información del Cliente</Text>
+              <Text style={[styles.infoCardTitle, { color: theme.textSecondary }]}>
+                {debtor.type === 'deuda' ? 'Información de la Deuda' : 'Información del Deudor'}
+              </Text>
 
               {debtor.identification ? (
                 <View style={styles.infoRow}>
@@ -613,7 +681,43 @@ export default function DebtorDetailScreen({ route, navigation }) {
                 No hay movimientos para este filtro.
               </Text>
             ) : (
-              filteredTransactions.map(item => renderItem({ item }))
+              filteredTransactions.map((item, idx) => {
+                const isZeroBalance = zeroBalanceIds.has(item.id);
+                const isOldestFirst = sortBy === 'date_asc';
+                return (
+                  <View key={item.id}>
+                    {/* Mostrar divisor ARRIBA del elemento si es orden descendente (más nuevo arriba) */}
+                    {isZeroBalance && !isOldestFirst && (
+                      <View style={styles.settledDividerContainer}>
+                        <View style={[styles.settledDividerLine, { backgroundColor: '#10B98140' }]} />
+                        <View style={[styles.settledDividerBadge, { backgroundColor: '#10B98115', borderColor: '#10B98150' }]}>
+                          <Ionicons name="checkmark-circle" size={14} color="#10B981" style={{ marginRight: 5 }} />
+                          <Text style={[styles.settledDividerText, { color: '#10B981' }]}>
+                            {debtor.type === 'ahorro' ? 'Cuenta en Ceros' : 'Puesto al Día'}
+                          </Text>
+                        </View>
+                        <View style={[styles.settledDividerLine, { backgroundColor: '#10B98140' }]} />
+                      </View>
+                    )}
+
+                    {renderItem({ item })}
+
+                    {/* Mostrar divisor ABAJO del elemento si es orden ascendente (más antiguo arriba) */}
+                    {isZeroBalance && isOldestFirst && (
+                      <View style={styles.settledDividerContainer}>
+                        <View style={[styles.settledDividerLine, { backgroundColor: '#10B98140' }]} />
+                        <View style={[styles.settledDividerBadge, { backgroundColor: '#10B98115', borderColor: '#10B98150' }]}>
+                          <Ionicons name="checkmark-circle" size={14} color="#10B981" style={{ marginRight: 5 }} />
+                          <Text style={[styles.settledDividerText, { color: '#10B981' }]}>
+                            {debtor.type === 'ahorro' ? 'Cuenta en Ceros' : 'Puesto al Día'}
+                          </Text>
+                        </View>
+                        <View style={[styles.settledDividerLine, { backgroundColor: '#10B98140' }]} />
+                      </View>
+                    )}
+                  </View>
+                );
+              })
             )}
           </View>
         )}
@@ -634,13 +738,34 @@ export default function DebtorDetailScreen({ route, navigation }) {
         <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
           <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
             <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 15 }]}>
-              {editingId ? 'Editar Movimiento' : (type === 'debt' ? 'Nueva Deuda' : 'Nuevo Abono')}
+              {editingId 
+                ? 'Editar Movimiento' 
+                : (type === 'debt' 
+                  ? 'Nueva Deuda' 
+                  : (debtor.type === 'deuda' ? 'Nuevo Pago' : 'Nuevo Abono'))}
             </Text>
 
             {editingId && (
-              <View style={{ alignSelf: 'flex-start', marginBottom: 15, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, backgroundColor: type === 'debt' ? theme.danger + '20' : theme.accent + '20' }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: type === 'debt' ? theme.danger : theme.accent }}>
-                  Tipo: {type === 'debt' ? 'Deuda' : 'Abono'}
+              <View style={{ 
+                alignSelf: 'flex-start', 
+                marginBottom: 15, 
+                paddingHorizontal: 12, 
+                paddingVertical: 6, 
+                borderRadius: 20, 
+                backgroundColor: type === 'debt' 
+                  ? (debtor.type === 'deuda' ? '#8B5CF620' : theme.danger + '20') 
+                  : (debtor.type === 'deuda' ? '#10B98120' : theme.accent + '20') 
+              }}>
+                <Text style={{ 
+                  fontSize: 13, 
+                  fontWeight: '700', 
+                  color: type === 'debt' 
+                    ? (debtor.type === 'deuda' ? '#8B5CF6' : theme.danger) 
+                    : (debtor.type === 'deuda' ? '#10B981' : theme.accent) 
+                }}>
+                  Tipo: {type === 'debt' 
+                    ? 'Deuda' 
+                    : (debtor.type === 'deuda' ? 'Pago' : 'Abono')}
                 </Text>
               </View>
             )}
@@ -648,7 +773,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
             <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Descripción del ítem</Text>
             <TextInput
               style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text }]}
-              placeholder="Ej. Pantalón"
+              placeholder="Ej. Pantalón o Materiales"
               placeholderTextColor={theme.textSecondary}
               value={description}
               onChangeText={setDescription}
@@ -684,16 +809,26 @@ export default function DebtorDetailScreen({ route, navigation }) {
             {!editingId && (
               <View style={styles.typeSelector}>
                 <TouchableOpacity
-                  style={[styles.typeBtn, type === 'debt' && { backgroundColor: theme.danger }]}
+                  style={[
+                    styles.typeBtn, 
+                    type === 'debt' && { backgroundColor: debtor.type === 'ahorro' ? '#EF4444' : (debtor.type === 'deuda' ? '#EF4444' : '#8B5CF6') }
+                  ]}
                   onPress={() => setType('debt')}
                 >
-                  <Text style={[styles.typeBtnText, { color: type === 'debt' ? '#FFF' : theme.textSecondary }]}>Deuda</Text>
+                  <Text style={[styles.typeBtnText, { color: type === 'debt' ? '#FFF' : theme.textSecondary }]}>
+                    {debtor.type === 'ahorro' ? 'Retiro' : 'Deuda'}
+                  </Text>
                 </TouchableOpacity>
                 <TouchableOpacity
-                  style={[styles.typeBtn, type === 'payment' && { backgroundColor: theme.accent }]}
+                  style={[
+                    styles.typeBtn, 
+                    type === 'payment' && { backgroundColor: debtor.type === 'ahorro' ? '#10B981' : (debtor.type === 'deuda' ? '#10B981' : theme.accent) }
+                  ]}
                   onPress={() => setType('payment')}
                 >
-                  <Text style={[styles.typeBtnText, { color: type === 'payment' ? '#FFF' : theme.textSecondary }]}>Abono</Text>
+                  <Text style={[styles.typeBtnText, { color: type === 'payment' ? '#FFF' : theme.textSecondary }]}>
+                    {debtor.type === 'ahorro' ? 'Ahorro' : (debtor.type === 'deuda' ? 'Pago' : 'Abono')}
+                  </Text>
                 </TouchableOpacity>
               </View>
             )}
@@ -721,7 +856,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
           <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
             <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 15 }]}>Eliminar Movimiento</Text>
             <Text style={{ color: theme.textSecondary, marginBottom: 20, textAlign: 'center', fontSize: 16 }}>
-              ¿Seguro que deseas eliminar este movimiento? Afectará el saldo del cliente.
+              ¿Seguro que deseas eliminar este movimiento? Afectará el saldo del {debtor.type === 'deuda' ? 'proveedor' : 'cliente'}.
             </Text>
             <View style={styles.modalButtons}>
               <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setDeleteModalVisible(false)}>
@@ -811,17 +946,45 @@ export default function DebtorDetailScreen({ route, navigation }) {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.filterBadge, filterType === 'debt' && { backgroundColor: theme.danger, borderColor: theme.danger }]}
+                style={[
+                  styles.filterBadge, 
+                  filterType === 'debt' && { 
+                    backgroundColor: debtor.type === 'deudor' ? '#8B5CF6' : '#EF4444', 
+                    borderColor: debtor.type === 'deudor' ? '#8B5CF6' : '#EF4444' 
+                  }
+                ]}
                 onPress={() => setFilterType('debt')}
               >
-                <Text style={[styles.filterBadgeText, { color: filterType === 'debt' ? '#FFF' : theme.textSecondary, fontWeight: filterType === 'debt' ? '700' : 'normal' }]}>Deudas</Text>
+                <Text style={[
+                  styles.filterBadgeText, 
+                  { 
+                    color: filterType === 'debt' ? '#FFF' : theme.textSecondary, 
+                    fontWeight: filterType === 'debt' ? '700' : 'normal' 
+                  }
+                ]}>
+                  {debtor.type === 'ahorro' ? 'Retiros' : 'Deudas'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={[styles.filterBadge, filterType === 'payment' && { backgroundColor: theme.accent, borderColor: theme.accent }]}
+                style={[
+                  styles.filterBadge, 
+                  filterType === 'payment' && { 
+                    backgroundColor: '#10B981', 
+                    borderColor: '#10B981' 
+                  }
+                ]}
                 onPress={() => setFilterType('payment')}
               >
-                <Text style={[styles.filterBadgeText, { color: filterType === 'payment' ? '#FFF' : theme.textSecondary, fontWeight: filterType === 'payment' ? '700' : 'normal' }]}>Abonos</Text>
+                <Text style={[
+                  styles.filterBadgeText, 
+                  { 
+                    color: filterType === 'payment' ? '#FFF' : theme.textSecondary, 
+                    fontWeight: filterType === 'payment' ? '700' : 'normal' 
+                  }
+                ]}>
+                  {debtor.type === 'ahorro' ? 'Ahorros' : (debtor.type === 'deuda' ? 'Pagos' : 'Abonos')}
+                </Text>
               </TouchableOpacity>
             </View>
 
@@ -1237,5 +1400,31 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 5,
     marginTop: 5,
+  },
+  settledDividerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginVertical: 15,
+    paddingHorizontal: 10,
+  },
+  settledDividerLine: {
+    flex: 1,
+    height: 1,
+  },
+  settledDividerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1,
+    marginHorizontal: 10,
+  },
+  settledDividerText: {
+    fontSize: 11,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
 });

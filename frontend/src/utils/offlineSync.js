@@ -415,6 +415,7 @@ async function applyOfflineQueueToData(getUrl, data) {
                 identification: reqBody.identification || '',
                 address: reqBody.address || '',
                 notes: reqBody.notes || '',
+                type: reqBody.type || 'deudor',
                 totalDebt: 0,
                 createdAt: req.timestamp || new Date().toISOString()
               });
@@ -431,6 +432,7 @@ async function applyOfflineQueueToData(getUrl, data) {
                 identification: reqBody.identification !== undefined ? reqBody.identification : data[idx].identification,
                 address: reqBody.address !== undefined ? reqBody.address : data[idx].address,
                 notes: reqBody.notes !== undefined ? reqBody.notes : data[idx].notes,
+                type: reqBody.type !== undefined ? reqBody.type : data[idx].type,
               };
             }
           } else if (method === 'DELETE' && cleanReqPath.startsWith('/api/debtors/')) {

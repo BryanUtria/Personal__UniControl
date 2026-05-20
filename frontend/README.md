@@ -110,3 +110,39 @@ Una vez que cargue el servidor de desarrollo en la consola:
 - Presiona **`w`** para abrir la versión Web en tu navegador predeterminado.
 - Presiona **`a`** para correr en un emulador de Android conectado.
 - Presiona **`i`** para correr en el simulador de iOS.
+
+
+## 📦 Compilación Local del APK (Android) sin EAS en la Nube
+
+Si deseas compilar el archivo `.apk` de manera local en tu propia computadora de forma 100% gratuita y sin usar los servidores de Expo en la nube, sigue estos pasos:
+
+### 1. Requisitos Previos en tu PC
+* **Java Development Kit (JDK 17)** instalado.
+* **Android Studio** y el **Android SDK** instalados.
+* Variable de entorno `ANDROID_HOME` configurada apuntando a tu SDK de Android.
+
+### 2. Configurar la URL de Producción
+Antes de compilar, abre el archivo [.env](file:///c:/Users/braya/OneDrive/Documentos/Trabajo/Apps%20Propias/UniControl/frontend/.env) en `frontend/` y asegúrate de dejar activa la URL de tu API de producción en Render (comentando la IP local):
+
+```env
+# EXPO_PUBLIC_API_URL=http://192.168.20.22:3001/api
+EXPO_PUBLIC_API_URL=https://unicontrol-backend.onrender.com/api
+```
+
+### 3. Generar y Compilar el Proyecto Nativo
+Ejecuta los siguientes comandos desde la carpeta `frontend/`:
+
+```bash
+# 1. Generar/Limpiar el directorio nativo de Android
+npx expo prebuild --clean
+
+# 2. Entrar a la carpeta nativa
+cd android
+
+# 3. Compilar el APK de producción (Release)
+./gradlew assembleRelease
+```
+
+### 4. Descargar tu APK
+Una vez completada la compilación, encontrarás tu archivo instalable `.apk` en:
+`frontend/android/app/build/outputs/apk/release/app-release.apk`
