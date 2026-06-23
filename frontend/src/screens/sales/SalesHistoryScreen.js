@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Platform, Modal, ScrollView, TextInput } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Platform, Modal, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +9,9 @@ import { useIsFocused } from '@react-navigation/native';
 import { useWindowDimensions } from 'react-native';
 import { apiFetch } from '../../utils/offlineSync';
 import { exportToExcel } from '../../utils/excelExport';
+import SidebarLayout from '../../navigation/SidebarLayout';
+import Input from '../../components/Input';
+import Button from '../../components/Button';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -222,41 +225,42 @@ export default function SalesHistoryScreen({ navigation }) {
     );
   };
 
+  const headerRightComponent = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Button
+        onPress={() => setExportModalVisible(true)}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="download-outline" size={20} color={theme.text} />}
+      />
+      <Button
+        onPress={handleRefresh}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="refresh" size={20} color={theme.text} />}
+      />
+    </View>
+  );
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      {/* Cabecera */}
-      <View style={[styles.header, { borderBottomColor: theme.card, paddingHorizontal: isMobile ? 10 : 15 }]}>
-        <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-          <Ionicons name="chevron-back" size={22} color={theme.text} />
-        </TouchableOpacity>
-        <Text style={[styles.headerTitle, { color: theme.text }]}>Historial de Ventas</Text>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: isMobile ? 5 : 10 }}>
-          <TouchableOpacity onPress={() => setExportModalVisible(true)} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-            <Ionicons name="download-outline" size={22} color={theme.text} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleRefresh} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-            <Ionicons name="refresh" size={22} color={theme.text} />
-          </TouchableOpacity>
-        </View>
-      </View>
+    <SidebarLayout navigation={navigation} title="Historial de Ventas" activeRoute="SalesHistory" headerRight={headerRightComponent}>
 
       {/* Buscador */}
       <View style={[styles.filterSection, { paddingHorizontal: isMobile ? 10 : 15 }]}>
-        <View style={[styles.searchContainer, { backgroundColor: theme.card }]}>
-          <Ionicons name="search" size={20} color={theme.textSecondary} style={{ marginRight: 8 }} />
-          <TextInput
-            style={[styles.searchInput, { color: theme.text }]}
-            placeholder="Buscar por # venta, pedido o deudor..."
-            placeholderTextColor={theme.textSecondary}
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-          />
-          {searchQuery ? (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
-            </TouchableOpacity>
-          ) : null}
-        </View>
+        <Input
+          icon="search"
+          placeholder="Buscar por # venta, pedido o deudor..."
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          rightElement={
+            searchQuery ? (
+              <TouchableOpacity onPress={() => setSearchQuery('')} style={{ paddingRight: 8 }}>
+                <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+              </TouchableOpacity>
+            ) : null
+          }
+          containerStyle={{ marginBottom: 0 }}
+        />
 
         {/* Filtros Rápidos */}
         <View style={styles.filterButtonsRow}>
@@ -492,7 +496,7 @@ export default function SalesHistoryScreen({ navigation }) {
           </View>
         </View>
       </Modal>
-    </SafeAreaView >
+    </SidebarLayout>
   );
 }
 

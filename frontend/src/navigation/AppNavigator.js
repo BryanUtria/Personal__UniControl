@@ -10,6 +10,7 @@ import DebtorDetailScreen from '../screens/debtors/DebtorDetailScreen';
 import InventoryScreen from '../screens/inventory/InventoryScreen';
 import POSScreen from '../screens/pos/POSScreen';
 import SalesHistoryScreen from '../screens/sales/SalesHistoryScreen';
+import SettingsScreen from '../screens/settings/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -37,6 +38,7 @@ export default function AppNavigator() {
           <Stack.Screen name="Inventory" component={InventoryScreen} />
           <Stack.Screen name="POS" component={POSScreen} />
           <Stack.Screen name="SalesHistory" component={SalesHistoryScreen} />
+          <Stack.Screen name="Settings" component={SettingsScreen} />
         </>
       )}
     </Stack.Navigator>

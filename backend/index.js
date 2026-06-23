@@ -1091,7 +1091,7 @@ app.get('/api/debtors/:id/debts', async (req, res) => {
             quantity: r.quantity,
             description: r.description,
             type: r.type,
-            date: new Date(r.date).toLocaleString()
+            date: r.date ? new Date(r.date).toISOString() : new Date().toISOString()
         }));
         res.json(formatted);
     } catch (err) {
@@ -1115,7 +1115,7 @@ app.post('/api/debtors/:id/debts', async (req, res) => {
             quantity: quantity || 1,
             description,
             type,
-            date: new Date().toLocaleString()
+            date: new Date().toISOString()
         });
     } catch (err) {
         res.status(500).json({ error: err.message });

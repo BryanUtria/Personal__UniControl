@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, Linking, Switch, useWindowDimensions, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, ActivityIndicator, Linking, Switch, useWindowDimensions, RefreshControl, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -10,12 +10,33 @@ import { apiFetch } from '../../utils/offlineSync';
 import * as FileSystem from 'expo-file-system/legacy';
 import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
+import Input from '../../components/Input';
+import Button from '../../components/Button';
+import SidebarLayout from '../../navigation/SidebarLayout';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 const formatNumber = (num) => {
   if (num === null || num === undefined || isNaN(num)) return '0';
   return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+};
+
+const formatTxDate = (dateStr) => {
+  if (!dateStr) return '';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    return d.toLocaleString('es-CO', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+  } catch (e) {
+    return dateStr;
+  }
 };
 
 export default function DebtorDetailScreen({ route, navigation }) {
@@ -168,11 +189,11 @@ export default function DebtorDetailScreen({ route, navigation }) {
       const val = t.amount * (t.quantity || 1);
       const change = t.type === 'debt' ? val : -val;
       runningBalance += change;
-      
+
       if (Math.abs(runningBalance) > 0.01) {
         hadHistory = true;
       }
-      
+
       if (hadHistory && Math.abs(runningBalance) < 0.01) {
         zeroIds.add(t.id);
         hadHistory = false; // Reiniciar para detectar la siguiente vez que se mueva de 0 y vuelva a 0
@@ -234,11 +255,11 @@ export default function DebtorDetailScreen({ route, navigation }) {
         const total = t.amount * t.quantity;
         const totalSigned = t.type === 'debt' ? total : -total;
         const isDisabled = disabledTxIds.includes(t.id);
-        const typeLabel = t.type === 'debt' 
-          ? (debtor.type === 'deuda' ? 'Compra' : 'Deuda') 
+        const typeLabel = t.type === 'debt'
+          ? (debtor.type === 'deuda' ? 'Compra' : 'Deuda')
           : (debtor.type === 'deuda' ? 'Pago' : 'Abono');
         return {
-          'Fecha': t.date,
+          'Fecha': formatTxDate(t.date),
           'Descripción': t.description || 'Sin descripción',
           'Cantidad': t.quantity || 1,
           'Valor Unidad ($)': t.amount,
@@ -314,7 +335,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
     const labelRole = debtor.type === 'deuda' ? 'Deuda con' : 'Deudor';
     const labelDebts = 'Total Deudas';
     const labelPayments = debtor.type === 'deuda' ? 'Total Pagos' : 'Total Abonos';
-    
+
     let message = `*ESTADO DE CUENTA - UNICONTROL*\n\n`;
     message += `*${labelRole}:* ${debtor.name}\n`;
     if (debtor.identification) message += `*Identificación:* ${debtor.identification}\n`;
@@ -342,18 +363,18 @@ export default function DebtorDetailScreen({ route, navigation }) {
       message += `*Detalle de Movimientos:*\n`;
       transactions.forEach(t => {
         const isDebt = t.type === 'debt';
-        const typeLabel = isDebt 
-          ? 'DEUDA' 
+        const typeLabel = isDebt
+          ? 'DEUDA'
           : (debtor.type === 'deuda' ? 'PAGO' : 'ABONO');
         const sign = isDebt ? '-' : '+';
         const itemTotal = t.amount * (t.quantity || 1);
         const isDisabled = disabledTxIds.includes(t.id);
 
         if (isDisabled) {
-          message += `• *[${typeLabel}]* (Omitido para Saldo) ${t.date}\n`;
+          message += `• *[${typeLabel}]* (Omitido para Saldo) ${formatTxDate(t.date)}\n`;
           message += `  ~${t.description || 'Sin descripción'} (x${t.quantity || 1} a $ ${t.amount.toLocaleString()}): ${sign}$ ${itemTotal.toLocaleString()}~\n\n`;
         } else {
-          message += `• *[${typeLabel}]* ${t.date}\n`;
+          message += `• *[${typeLabel}]* ${formatTxDate(t.date)}\n`;
           message += `  ${t.description || 'Sin descripción'} (x${t.quantity || 1} a $ ${t.amount.toLocaleString()}): ${sign}$ ${itemTotal.toLocaleString()}\n\n`;
         }
       });
@@ -487,7 +508,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
                   <Ionicons name="cloud-done-outline" size={13} color="#10B981" style={{ marginLeft: 5 }} />
                 )}
               </View>
-              <Text style={[styles.tDate, { color: theme.textSecondary }]}>{item.date}</Text>
+              <Text style={[styles.tDate, { color: theme.textSecondary }]}>{formatTxDate(item.date)}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={[styles.tAmount, { color: tAmountColor, textDecorationLine: isEnabled ? 'none' : 'line-through' }]}>
@@ -543,8 +564,38 @@ export default function DebtorDetailScreen({ route, navigation }) {
     );
   };
 
+  const screenTitle = debtor.type === 'deuda' ? 'Detalle Deuda' : (debtor.type === 'ahorro' ? 'Detalle Ahorro' : 'Detalle Deudor');
+
+  const headerRightComponent = (
+    <View style={{ flexDirection: 'row', gap: isMobile ? 5 : 8, alignItems: 'center' }}>
+      <Button
+        onPress={handleRefresh}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="refresh" size={22} color={theme.text} />}
+      />
+      <Button
+        onPress={() => setFilterMenuVisible(true)}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="options-outline" size={22} color={theme.text} />}
+      />
+      <Button
+        onPress={() => setShareMenuVisible(true)}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="menu" size={24} color={theme.text} />}
+      />
+    </View>
+  );
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SidebarLayout
+      navigation={navigation}
+      title="Deudas y Ahorros"
+      activeRoute="DebtorsList"
+      headerRight={headerRightComponent}
+    >
       <ScrollView
         contentContainerStyle={{ paddingBottom: 100 }}
         showsVerticalScrollIndicator={false}
@@ -557,26 +608,16 @@ export default function DebtorDetailScreen({ route, navigation }) {
           />
         }
       >
-        <View style={[styles.header, { paddingHorizontal: isMobile ? 10 : 20, paddingTop: 20 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow, marginRight: 10 }]}>
-              <Ionicons name="chevron-back" size={22} color={theme.text} />
-            </TouchableOpacity>
-            <Text style={[styles.title, { color: theme.text }]}>
-              {debtor.type === 'deuda' ? 'Detalle Deuda' : (debtor.type === 'ahorro' ? 'Detalle Ahorro' : 'Detalle Deudor')}
-            </Text>
-          </View>
-          <View style={{ flexDirection: 'row', gap: isMobile ? 5 : 10, alignItems: 'center' }}>
-            <TouchableOpacity onPress={handleRefresh} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-              <Ionicons name="refresh" size={22} color={theme.text} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setFilterMenuVisible(true)} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-              <Ionicons name="options-outline" size={22} color={theme.text} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setShareMenuVisible(true)} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-              <Ionicons name="menu" size={24} color={theme.text} />
-            </TouchableOpacity>
-          </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', padding: isMobile ? 10 : 20 }}>
+          <Button
+            onPress={() => navigation.goBack()}
+            variant="secondary"
+            style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, marginRight: 10, borderWidth: 0 }]}
+            icon={<Ionicons name="chevron-back" size={22} color={theme.text} />}
+          />
+          <Text style={[styles.title, { color: theme.text }]}>
+            {screenTitle}
+          </Text>
         </View>
 
         <View style={[styles.clientHeader, { paddingHorizontal: isMobile ? 10 : 20 }]}>
@@ -611,13 +652,15 @@ export default function DebtorDetailScreen({ route, navigation }) {
             <Text
               style={[
                 styles.balanceAmount,
-                { color: debtor.type === 'ahorro'
-                  ? (isGlobalDebt ? theme.danger : '#10B981')
-                  : (isGlobalDebt 
-                    ? (debtor.type === 'deuda' ? '#EF4444' : '#8B5CF6') 
-                    : isGlobalCredit 
-                      ? (debtor.type === 'deuda' ? '#10B981' : theme.accent) 
-                      : theme.textSecondary) }
+                {
+                  color: debtor.type === 'ahorro'
+                    ? (isGlobalDebt ? theme.danger : '#10B981')
+                    : (isGlobalDebt
+                      ? (debtor.type === 'deuda' ? '#EF4444' : '#8B5CF6')
+                      : isGlobalCredit
+                        ? (debtor.type === 'deuda' ? '#10B981' : theme.accent)
+                        : theme.textSecondary)
+                }
               ]}
               numberOfLines={1}
               adjustsFontSizeToFit
@@ -735,57 +778,61 @@ export default function DebtorDetailScreen({ route, navigation }) {
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
+        <Pressable
+          style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}
+          onPress={() => setModalVisible(false)}
+        >
+          <Pressable
+            style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}
+            onPress={(e) => {
+              if (Platform.OS === 'web') e.stopPropagation();
+            }}
+          >
             <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 15 }]}>
-              {editingId 
-                ? 'Editar Movimiento' 
-                : (type === 'debt' 
-                  ? 'Nueva Deuda' 
+              {editingId
+                ? 'Editar Movimiento'
+                : (type === 'debt'
+                  ? 'Nueva Deuda'
                   : (debtor.type === 'deuda' ? 'Nuevo Pago' : 'Nuevo Abono'))}
             </Text>
 
             {editingId && (
-              <View style={{ 
-                alignSelf: 'flex-start', 
-                marginBottom: 15, 
-                paddingHorizontal: 12, 
-                paddingVertical: 6, 
-                borderRadius: 20, 
-                backgroundColor: type === 'debt' 
-                  ? (debtor.type === 'deuda' ? '#8B5CF620' : theme.danger + '20') 
-                  : (debtor.type === 'deuda' ? '#10B98120' : theme.accent + '20') 
+              <View style={{
+                alignSelf: 'flex-start',
+                marginBottom: 15,
+                paddingHorizontal: 12,
+                paddingVertical: 6,
+                borderRadius: 20,
+                backgroundColor: type === 'debt'
+                  ? (debtor.type === 'deuda' ? '#8B5CF620' : theme.danger + '20')
+                  : (debtor.type === 'deuda' ? '#10B98120' : theme.accent + '20')
               }}>
-                <Text style={{ 
-                  fontSize: 13, 
-                  fontWeight: '700', 
-                  color: type === 'debt' 
-                    ? (debtor.type === 'deuda' ? '#8B5CF6' : theme.danger) 
-                    : (debtor.type === 'deuda' ? '#10B981' : theme.accent) 
+                <Text style={{
+                  fontSize: 13,
+                  fontWeight: '700',
+                  color: type === 'debt'
+                    ? (debtor.type === 'deuda' ? '#8B5CF6' : theme.danger)
+                    : (debtor.type === 'deuda' ? '#10B981' : theme.accent)
                 }}>
-                  Tipo: {type === 'debt' 
-                    ? 'Deuda' 
+                  Tipo: {type === 'debt'
+                    ? 'Deuda'
                     : (debtor.type === 'deuda' ? 'Pago' : 'Abono')}
                 </Text>
               </View>
             )}
 
             <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Descripción del ítem</Text>
-            <TextInput
-              style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text }]}
+            <Input
               placeholder="Ej. Pantalón o Materiales"
-              placeholderTextColor={theme.textSecondary}
               value={description}
               onChangeText={setDescription}
             />
 
             <View style={styles.rowInputs}>
               <View style={styles.halfInput}>
-                <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Cantidad</Text>
-                <TextInput
-                  style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text }]}
+                <Input
+                  label="Cantidad"
                   placeholder="1"
-                  placeholderTextColor={theme.textSecondary}
                   keyboardType="numeric"
                   value={quantity}
                   onChangeText={setQuantity}
@@ -793,11 +840,9 @@ export default function DebtorDetailScreen({ route, navigation }) {
               </View>
 
               <View style={styles.halfInput}>
-                <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Valor Unidad ($)</Text>
-                <TextInput
-                  style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text }]}
+                <Input
+                  label="Valor Unidad ($)"
                   placeholder="0.00"
-                  placeholderTextColor={theme.textSecondary}
                   keyboardType="numeric"
                   value={amount}
                   onChangeText={setAmount}
@@ -810,7 +855,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
               <View style={styles.typeSelector}>
                 <TouchableOpacity
                   style={[
-                    styles.typeBtn, 
+                    styles.typeBtn,
                     type === 'debt' && { backgroundColor: debtor.type === 'ahorro' ? '#EF4444' : (debtor.type === 'deuda' ? '#EF4444' : '#8B5CF6') }
                   ]}
                   onPress={() => setType('debt')}
@@ -821,7 +866,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[
-                    styles.typeBtn, 
+                    styles.typeBtn,
                     type === 'payment' && { backgroundColor: debtor.type === 'ahorro' ? '#10B981' : (debtor.type === 'deuda' ? '#10B981' : theme.accent) }
                   ]}
                   onPress={() => setType('payment')}
@@ -841,8 +886,8 @@ export default function DebtorDetailScreen({ route, navigation }) {
                 <Text style={styles.modalBtnTextSave}>Guardar</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Modal de Confirmación de Eliminación */}
@@ -852,8 +897,16 @@ export default function DebtorDetailScreen({ route, navigation }) {
         animationType="fade"
         onRequestClose={() => setDeleteModalVisible(false)}
       >
-        <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
+        <Pressable
+          style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}
+          onPress={() => setDeleteModalVisible(false)}
+        >
+          <Pressable
+            style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}
+            onPress={(e) => {
+              if (Platform.OS === 'web') e.stopPropagation();
+            }}
+          >
             <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 15 }]}>Eliminar Movimiento</Text>
             <Text style={{ color: theme.textSecondary, marginBottom: 20, textAlign: 'center', fontSize: 16 }}>
               ¿Seguro que deseas eliminar este movimiento? Afectará el saldo del {debtor.type === 'deuda' ? 'proveedor' : 'cliente'}.
@@ -866,8 +919,8 @@ export default function DebtorDetailScreen({ route, navigation }) {
                 <Text style={styles.modalBtnTextSave}>Eliminar</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Modal de Filtros y Ordenamiento */}
@@ -877,8 +930,16 @@ export default function DebtorDetailScreen({ route, navigation }) {
         animationType="fade"
         onRequestClose={() => setFilterMenuVisible(false)}
       >
-        <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.card, maxWidth: 360, padding: isMobile ? 10 : 20 }]}>
+        <Pressable
+          style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}
+          onPress={() => setFilterMenuVisible(false)}
+        >
+          <Pressable
+            style={[styles.modalContent, { backgroundColor: theme.card, maxWidth: 360, padding: isMobile ? 10 : 20 }]}
+            onPress={(e) => {
+              if (Platform.OS === 'web') e.stopPropagation();
+            }}
+          >
             <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 15 }]}>Organizar y Filtrar</Text>
 
             {/* ORDENAR POR CATEGORÍA */}
@@ -947,19 +1008,19 @@ export default function DebtorDetailScreen({ route, navigation }) {
 
               <TouchableOpacity
                 style={[
-                  styles.filterBadge, 
-                  filterType === 'debt' && { 
-                    backgroundColor: debtor.type === 'deudor' ? '#8B5CF6' : '#EF4444', 
-                    borderColor: debtor.type === 'deudor' ? '#8B5CF6' : '#EF4444' 
+                  styles.filterBadge,
+                  filterType === 'debt' && {
+                    backgroundColor: debtor.type === 'deudor' ? '#8B5CF6' : '#EF4444',
+                    borderColor: debtor.type === 'deudor' ? '#8B5CF6' : '#EF4444'
                   }
                 ]}
                 onPress={() => setFilterType('debt')}
               >
                 <Text style={[
-                  styles.filterBadgeText, 
-                  { 
-                    color: filterType === 'debt' ? '#FFF' : theme.textSecondary, 
-                    fontWeight: filterType === 'debt' ? '700' : 'normal' 
+                  styles.filterBadgeText,
+                  {
+                    color: filterType === 'debt' ? '#FFF' : theme.textSecondary,
+                    fontWeight: filterType === 'debt' ? '700' : 'normal'
                   }
                 ]}>
                   {debtor.type === 'ahorro' ? 'Retiros' : 'Deudas'}
@@ -968,19 +1029,19 @@ export default function DebtorDetailScreen({ route, navigation }) {
 
               <TouchableOpacity
                 style={[
-                  styles.filterBadge, 
-                  filterType === 'payment' && { 
-                    backgroundColor: '#10B981', 
-                    borderColor: '#10B981' 
+                  styles.filterBadge,
+                  filterType === 'payment' && {
+                    backgroundColor: '#10B981',
+                    borderColor: '#10B981'
                   }
                 ]}
                 onPress={() => setFilterType('payment')}
               >
                 <Text style={[
-                  styles.filterBadgeText, 
-                  { 
-                    color: filterType === 'payment' ? '#FFF' : theme.textSecondary, 
-                    fontWeight: filterType === 'payment' ? '700' : 'normal' 
+                  styles.filterBadgeText,
+                  {
+                    color: filterType === 'payment' ? '#FFF' : theme.textSecondary,
+                    fontWeight: filterType === 'payment' ? '700' : 'normal'
                   }
                 ]}>
                   {debtor.type === 'ahorro' ? 'Ahorros' : (debtor.type === 'deuda' ? 'Pagos' : 'Abonos')}
@@ -995,8 +1056,8 @@ export default function DebtorDetailScreen({ route, navigation }) {
             >
               <Text style={styles.filterApplyBtnText}>Aplicar Filtros</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Modal de Menú de Compartir / Reportes */}
@@ -1006,8 +1067,16 @@ export default function DebtorDetailScreen({ route, navigation }) {
         animationType="fade"
         onRequestClose={() => setShareMenuVisible(false)}
       >
-        <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
-          <View style={[styles.shareMenuContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
+        <Pressable
+          style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}
+          onPress={() => setShareMenuVisible(false)}
+        >
+          <Pressable
+            style={[styles.shareMenuContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}
+            onPress={(e) => {
+              if (Platform.OS === 'web') e.stopPropagation();
+            }}
+          >
             <View style={styles.shareMenuHeader}>
               <Text style={[styles.shareMenuTitle, { color: theme.text }]}>Opciones de Reporte</Text>
               <TouchableOpacity onPress={() => setShareMenuVisible(false)}>
@@ -1047,11 +1116,11 @@ export default function DebtorDetailScreen({ route, navigation }) {
             >
               <Text style={[styles.shareMenuBtnCancelText, { color: theme.textSecondary }]}>Cerrar</Text>
             </TouchableOpacity>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
-    </SafeAreaView>
+    </SidebarLayout>
   );
 }
 

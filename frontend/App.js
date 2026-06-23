@@ -9,6 +9,7 @@ import AppNavigator from './src/navigation/AppNavigator';
 import NetInfo from '@react-native-community/netinfo';
 import { syncOfflineQueue, getOfflineQueue, isConnected } from './src/utils/offlineSync';
 import { Ionicons } from '@expo/vector-icons';
+import { ModuleProvider } from './src/context/ModuleContext';
 
 function OfflineSyncManager() {
   const { showToast } = useToast();
@@ -200,12 +201,14 @@ export default function App() {
     <SafeAreaProvider>
       <AuthProvider>
         <ThemeProvider>
-          <ToastProvider>
-            <NavigationContainer>
-              <AppNavigator />
-            </NavigationContainer>
-            <OfflineSyncManager />
-          </ToastProvider>
+          <ModuleProvider>
+            <ToastProvider>
+              <NavigationContainer>
+                <AppNavigator />
+              </NavigationContainer>
+              <OfflineSyncManager />
+            </ToastProvider>
+          </ModuleProvider>
         </ThemeProvider>
       </AuthProvider>
     </SafeAreaProvider>

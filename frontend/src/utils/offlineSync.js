@@ -17,7 +17,7 @@ async function getIdMap() {
 async function saveIdMap(map) {
   try {
     await AsyncStorage.setItem(ID_MAP_KEY, JSON.stringify(map));
-  } catch (e) {}
+  } catch (e) { }
 }
 
 // Verificar el estado de la conexión a internet
@@ -56,7 +56,7 @@ async function calculateOfflineOrderTotal(orderId) {
         }
       }
     }
-    
+
     const queue = await getOfflineQueue();
     const cachedProducts = await getCachedProducts();
     for (const r of queue) {
@@ -69,7 +69,7 @@ async function calculateOfflineOrderTotal(orderId) {
             const price = product ? parseFloat(product.price) : 0;
             total += price * parseInt(rBody.quantity || 1);
           }
-        } catch (e) {}
+        } catch (e) { }
       }
     }
   } catch (e) {
@@ -95,7 +95,7 @@ export async function apiFetch(url, options = {}) {
           const clone = response.clone();
           const text = await clone.text();
           await AsyncStorage.setItem(cacheKey, text);
-          
+
           // Aplicar operaciones encoladas en caliente sobre el resultado fresco
           let parsedData = JSON.parse(text);
           parsedData = await applyOfflineQueueToData(url, parsedData);
@@ -144,7 +144,7 @@ export async function apiFetch(url, options = {}) {
     } catch (err) {
       console.warn(`[OfflineSync] Error al enviar ${method} ${url}. Encolando petición...`);
       const reqId = await enqueueRequest(url, options);
-      
+
       let extraData = {};
       const cleanPath = getCleanPath(url);
       if (cleanPath.startsWith('/api/orders/') && cleanPath.endsWith('/checkout') && method === 'POST') {
@@ -152,11 +152,11 @@ export async function apiFetch(url, options = {}) {
         const total = await calculateOfflineOrderTotal(orderId);
         extraData = { total };
       }
-      
-      return createMockResponse(JSON.stringify({ 
-        id: reqId ? `temp_${reqId}` : undefined, 
-        success: true, 
-        offline: true, 
+
+      return createMockResponse(JSON.stringify({
+        id: reqId ? `temp_${reqId}` : undefined,
+        success: true,
+        offline: true,
         message: 'Guardado localmente. Se sincronizará al recuperar internet.',
         ...extraData
       }), 200, true);
@@ -164,7 +164,7 @@ export async function apiFetch(url, options = {}) {
   } else {
     console.log(`[OfflineSync] Dispositivo offline. Encolando petición ${method} ${url}`);
     const reqId = await enqueueRequest(url, options);
-    
+
     let extraData = {};
     const cleanPath = getCleanPath(url);
     if (cleanPath.startsWith('/api/orders/') && cleanPath.endsWith('/checkout') && method === 'POST') {
@@ -172,11 +172,11 @@ export async function apiFetch(url, options = {}) {
       const total = await calculateOfflineOrderTotal(orderId);
       extraData = { total };
     }
-    
-    return createMockResponse(JSON.stringify({ 
-      id: reqId ? `temp_${reqId}` : undefined, 
-      success: true, 
-      offline: true, 
+
+    return createMockResponse(JSON.stringify({
+      id: reqId ? `temp_${reqId}` : undefined,
+      success: true,
+      offline: true,
       message: 'Guardado localmente. Se sincronizará al recuperar internet.',
       ...extraData
     }), 200, true);
@@ -204,7 +204,7 @@ function getCleanPath(urlStr) {
 async function calculateOfflineTotalDebt(debtorId, baseTotalDebt) {
   const cacheKey = `${CACHE_PREFIX}/api/debtors/${debtorId}/debts`;
   const cachedData = await AsyncStorage.getItem(cacheKey);
-  
+
   if (cachedData === null && !debtorId.startsWith('temp_')) {
     // Si no hay caché y no es un deudor temporal, devolvemos el saldo base + los POST pendientes
     const queue = await getOfflineQueue();
@@ -217,7 +217,7 @@ async function calculateOfflineTotalDebt(debtorId, baseTotalDebt) {
         if (req.body) {
           try {
             reqBody = typeof req.body === 'string' ? JSON.parse(req.body) : req.body;
-          } catch (e) {}
+          } catch (e) { }
         }
         if (reqBody) {
           const amount = parseFloat(reqBody.amount || 0) * parseInt(reqBody.quantity || 1);
@@ -231,17 +231,17 @@ async function calculateOfflineTotalDebt(debtorId, baseTotalDebt) {
     }
     return baseTotalDebt + additionalDebt;
   }
-  
+
   // Si hay caché o es temporal, calculamos el saldo sumando todas las transacciones locales mezcladas
   let transactions = [];
   if (cachedData !== null) {
     try {
       transactions = JSON.parse(cachedData);
-    } catch (e) {}
+    } catch (e) { }
   }
-  
+
   transactions = await applyOfflineQueueToData(`/api/debtors/${debtorId}/debts`, transactions);
-  
+
   return transactions.reduce((sum, tx) => {
     const amt = parseFloat(tx.amount || 0) * parseInt(tx.quantity || 1);
     return tx.type === 'debt' ? sum + amt : sum - amt;
@@ -260,7 +260,7 @@ async function getCachedProducts() {
         return Array.isArray(parsed) ? parsed : [];
       }
     }
-  } catch (e) {}
+  } catch (e) { }
   return [];
 }
 
@@ -271,11 +271,11 @@ async function applyOfflineQueueToData(getUrl, data) {
     if (queue.length === 0) return data;
 
     const cleanGetPath = getCleanPath(getUrl);
-    
+
     for (const req of queue) {
       const cleanReqPath = getCleanPath(req.url);
       const method = req.method.toUpperCase();
-      
+
       let reqBody = null;
       if (req.body) {
         try {
@@ -284,7 +284,7 @@ async function applyOfflineQueueToData(getUrl, data) {
           reqBody = null;
         }
       }
-      
+
       // PRODUCTOS
       if (cleanGetPath === '/api/products') {
         if (Array.isArray(data)) {
@@ -375,7 +375,7 @@ async function applyOfflineQueueToData(getUrl, data) {
                       data[idx].stock = (data[idx].stock || 0) + qty;
                     }
                   }
-                } catch (e) {}
+                } catch (e) { }
               }
             }
           }
@@ -454,7 +454,7 @@ async function applyOfflineQueueToData(getUrl, data) {
               quantity: parseInt(reqBody.quantity || 1),
               type: reqBody.type || 'debt',
               description: reqBody.description || '',
-              date: new Date(req.timestamp || new Date()).toLocaleString()
+              date: req.timestamp || new Date().toISOString()
             });
           } else if (method === 'PUT' && cleanReqPath.startsWith('/api/debts/') && reqBody) {
             const txId = cleanReqPath.split('/').pop();
@@ -502,7 +502,7 @@ async function applyOfflineQueueToData(getUrl, data) {
             if (!exists) {
               let total = 0;
               const debtorId = reqBody ? reqBody.debtor_id : null;
-              
+
               // Buscar todos los items que se agregaron a este pedido en la cola
               const cachedProducts = await getCachedProducts();
               for (const r of queue) {
@@ -515,10 +515,10 @@ async function applyOfflineQueueToData(getUrl, data) {
                       const price = product ? parseFloat(product.price) : 0;
                       total += price * parseInt(rBody.quantity || 1);
                     }
-                  } catch (e) {}
+                  } catch (e) { }
                 }
               }
-              
+
               data.unshift({
                 id: `temp_${req.id}`,
                 order_id: reqOrderId,
@@ -577,7 +577,7 @@ async function applyOfflineQueueToData(getUrl, data) {
                           product_name: product ? product.name : `Producto #${rBody.product_id}`
                         });
                       }
-                    } catch (e) {}
+                    } catch (e) { }
                   }
                 }
                 data = itemsList;
@@ -617,15 +617,15 @@ async function applyOfflineQueueToData(getUrl, data) {
       if (cleanGetPath.startsWith('/api/orders/') && cleanGetPath.endsWith('/items')) {
         if (Array.isArray(data)) {
           const getOrderId = cleanGetPath.split('/')[3];
-          
+
           if (method === 'POST' && cleanReqPath === `/api/orders/${getOrderId}/items` && reqBody) {
             const cachedProducts = await getCachedProducts();
             const product = cachedProducts.find(p => String(p.id) === String(reqBody.product_id));
             const price = product ? parseFloat(product.price) : 0;
             const qty = parseInt(reqBody.quantity || 1);
-            
+
             const existingIdx = data.findIndex(item => String(item.product_id) === String(reqBody.product_id) && parseFloat(item.price) === price);
-            
+
             if (existingIdx !== -1) {
               data[existingIdx].quantity += qty;
               data[existingIdx].subtotal = data[existingIdx].quantity * price;
@@ -669,7 +669,7 @@ async function applyOfflineQueueToData(getUrl, data) {
         const p = getCleanPath(req.url);
         return p.includes('/debts') || p.startsWith('/api/debts/');
       });
-      
+
       if (hasTxModifications) {
         for (let i = 0; i < data.length; i++) {
           const debtorId = data[i].id;
@@ -677,7 +677,7 @@ async function applyOfflineQueueToData(getUrl, data) {
         }
       }
     }
-    
+
     return data;
   } catch (error) {
     console.error('[OfflineSync] Error applying offline queue to data:', error);
@@ -782,7 +782,7 @@ export async function syncOfflineQueue(onSuccessItem, onFailureItem) {
           console.warn(`[OfflineSync] Ignorando petición con ID temporal no resuelto para evitar bloqueo: ${req.method} ${resolvedUrl}`);
           await removeRequestFromQueue(req.id);
           processed++;
-          
+
           const resolvedReq = {
             ...req,
             url: resolvedUrl,

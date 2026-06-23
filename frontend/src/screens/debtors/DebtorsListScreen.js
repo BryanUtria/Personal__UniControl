@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Platform, Modal, ActivityIndicator, ScrollView, useWindowDimensions, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, Modal, ActivityIndicator, ScrollView, useWindowDimensions, RefreshControl, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Button from '../../components/Button';
 import { useIsFocused } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch } from '../../utils/offlineSync';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { Ionicons } from '@expo/vector-icons';
+import SidebarLayout from '../../navigation/SidebarLayout';
+import Input from '../../components/Input';
 
 const formatNumber = (num) => {
   if (num === null || num === undefined || isNaN(num)) return '0';
@@ -436,33 +439,41 @@ export default function DebtorsListScreen({ navigation }) {
     );
   };
 
+  const headerRightComponent = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Button
+        onPress={handleRefresh}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="refresh" size={20} color={theme.text} />}
+      />
+      <Button
+        onPress={() => setFilterMenuVisible(true)}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="options-outline" size={20} color={theme.text} />}
+      />
+    </View>
+  );
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <View style={[styles.header, { paddingHorizontal: isMobile ? 10 : 20, paddingTop: 20 }]}>
-        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow, marginRight: 10 }]}>
-            <Ionicons name="chevron-back" size={22} color={theme.text} />
-          </TouchableOpacity>
-          <Text style={[styles.title, { color: theme.text }]}>Deudas, Deudores y Ahorros</Text>
-        </View>
+    <SidebarLayout navigation={navigation} title="Deudas y Ahorros" activeRoute="DebtorsList" headerRight={headerRightComponent}>
 
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: isMobile ? 5 : 10 }}>
-          <TouchableOpacity onPress={handleRefresh} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-            <Ionicons name="refresh" size={22} color={theme.text} />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => setFilterMenuVisible(true)} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-            <Ionicons name="options-outline" size={22} color={theme.text} />
-          </TouchableOpacity>
-        </View>
-      </View>
-
-      <View style={[styles.searchContainer, { paddingHorizontal: isMobile ? 10 : 20 }]}>
-        <TextInput
-          style={[styles.searchInput, { backgroundColor: theme.card, color: theme.text, borderColor: theme.card }]}
+      <View style={{ paddingHorizontal: isMobile ? 10 : 20, paddingTop: 8, paddingBottom: 4 }}>
+        <Input
+          icon="search-outline"
           placeholder="Buscar deudor o deuda..."
-          placeholderTextColor={theme.textSecondary}
           value={search}
           onChangeText={setSearch}
+          backgroundColor={theme.card}
+          rightElement={
+            search.length > 0 ? (
+              <TouchableOpacity onPress={() => setSearch('')} style={{ paddingRight: 8 }}>
+                <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+              </TouchableOpacity>
+            ) : null
+          }
+          containerStyle={{ marginBottom: 0 }}
         />
       </View>
 
@@ -475,7 +486,7 @@ export default function DebtorsListScreen({ navigation }) {
           data={filteredDebtors}
           keyExtractor={item => item.id}
           renderItem={renderItem}
-          contentContainerStyle={[styles.list, { padding: isMobile ? 10 : 20 }]}
+          contentContainerStyle={[styles.list, { paddingHorizontal: isMobile ? 10 : 20, paddingBottom: isMobile ? 10 : 20, paddingTop: 5 }]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -499,8 +510,16 @@ export default function DebtorsListScreen({ navigation }) {
         animationType="fade"
         onRequestClose={() => setModalVisible(false)}
       >
-        <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
+        <Pressable
+          style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}
+          onPress={() => setModalVisible(false)}
+        >
+          <Pressable
+            style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}
+            onPress={(e) => {
+              if (Platform.OS === 'web') e.stopPropagation();
+            }}
+          >
             <Text style={[styles.modalTitle, { color: theme.text }]}>
               {editingId ? (type === 'deudor' ? 'Editar Deudor' : (type === 'ahorro' ? 'Editar Ahorro' : 'Editar Deuda')) : (type === 'deudor' ? 'Nuevo Deudor' : (type === 'ahorro' ? 'Nuevo Ahorro' : 'Nueva Deuda'))}
             </Text>
@@ -552,58 +571,46 @@ export default function DebtorsListScreen({ navigation }) {
             </View>
 
             <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
-              <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginBottom: 5 }}>Nombre *</Text>
-              <TextInput
-                style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text }]}
+              <Input
+                label="Nombre *"
                 placeholder="Nombre completo"
-                placeholderTextColor={theme.textSecondary}
                 value={name}
                 onChangeText={setName}
               />
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginBottom: 5 }}>Teléfono</Text>
-              <TextInput
-                style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text }]}
+              <Input
+                label="Teléfono"
                 placeholder="Ej. +57 300 123 4567"
-                placeholderTextColor={theme.textSecondary}
                 keyboardType="phone-pad"
                 value={phone}
                 onChangeText={setPhone}
               />
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginBottom: 5 }}>N° Identificación</Text>
-              <TextInput
-                style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text }]}
+              <Input
+                label="N° Identificación"
                 placeholder="Cédula, NIT o Pasaporte"
-                placeholderTextColor={theme.textSecondary}
                 value={identification}
                 onChangeText={setIdentification}
               />
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginBottom: 5 }}>Correo Electrónico</Text>
-              <TextInput
-                style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text }]}
+              <Input
+                label="Correo Electrónico"
                 placeholder="Ej. cliente@correo.com"
-                placeholderTextColor={theme.textSecondary}
                 keyboardType="email-address"
                 value={email}
                 onChangeText={setEmail}
               />
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginBottom: 5 }}>Dirección</Text>
-              <TextInput
-                style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text }]}
+              <Input
+                label="Dirección"
                 placeholder="Ej. Calle 10 # 5-20"
-                placeholderTextColor={theme.textSecondary}
                 value={address}
                 onChangeText={setAddress}
               />
 
-              <Text style={{ fontSize: 13, fontWeight: '600', color: theme.textSecondary, marginBottom: 5 }}>Notas / Observaciones</Text>
-              <TextInput
-                style={[styles.modalInput, { backgroundColor: theme.background, color: theme.text, height: 80, textAlignVertical: 'top' }]}
+              <Input
+                label="Notas / Observaciones"
                 placeholder="Notas adicionales..."
-                placeholderTextColor={theme.textSecondary}
                 multiline={true}
                 numberOfLines={3}
                 value={notes}
@@ -612,15 +619,21 @@ export default function DebtorsListScreen({ navigation }) {
             </ScrollView>
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setModalVisible(false)}>
-                <Text style={[styles.modalBtnText, { color: theme.textSecondary }]}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.accent }]} onPress={saveClient}>
-                <Text style={styles.modalBtnTextSave}>Guardar</Text>
-              </TouchableOpacity>
+              <Button
+                title="Cancelar"
+                onPress={() => setModalVisible(false)}
+                variant="secondary"
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Guardar"
+                onPress={saveClient}
+                variant="primary"
+                style={{ flex: 1 }}
+              />
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Modal de Confirmación de Eliminación */}
@@ -630,22 +643,36 @@ export default function DebtorsListScreen({ navigation }) {
         animationType="fade"
         onRequestClose={() => setDeleteModalVisible(false)}
       >
-        <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
+        <Pressable
+          style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}
+          onPress={() => setDeleteModalVisible(false)}
+        >
+          <Pressable
+            style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}
+            onPress={(e) => {
+              if (Platform.OS === 'web') e.stopPropagation();
+            }}
+          >
             <Text style={[styles.modalTitle, { color: theme.text }]}>Eliminar Registro</Text>
             <Text style={{ color: theme.textSecondary, marginBottom: 20, textAlign: 'center', fontSize: 16 }}>
               ¿Seguro que deseas eliminar este registro? Se borrará todo su historial.
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setDeleteModalVisible(false)}>
-                <Text style={[styles.modalBtnText, { color: theme.textSecondary }]}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.danger }]} onPress={confirmDelete}>
-                <Text style={styles.modalBtnTextSave}>Eliminar</Text>
-              </TouchableOpacity>
+              <Button
+                title="Cancelar"
+                onPress={() => setDeleteModalVisible(false)}
+                variant="secondary"
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Eliminar"
+                onPress={confirmDelete}
+                variant="danger"
+                style={{ flex: 1 }}
+              />
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* Modal de Filtros y Ordenamiento */}
@@ -655,8 +682,16 @@ export default function DebtorsListScreen({ navigation }) {
         animationType="fade"
         onRequestClose={() => setFilterMenuVisible(false)}
       >
-        <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.card, maxWidth: 360, padding: isMobile ? 10 : 20 }]}>
+        <Pressable
+          style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}
+          onPress={() => setFilterMenuVisible(false)}
+        >
+          <Pressable
+            style={[styles.modalContent, { backgroundColor: theme.card, maxWidth: 360, padding: isMobile ? 10 : 20 }]}
+            onPress={(e) => {
+              if (Platform.OS === 'web') e.stopPropagation();
+            }}
+          >
             <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 15 }]}>Organizar y Filtrar</Text>
 
             {/* ORDENAR POR CATEGORÍA */}
@@ -753,17 +788,17 @@ export default function DebtorsListScreen({ navigation }) {
             </View>
 
             {/* BOTÓN APLICAR */}
-            <TouchableOpacity
-              style={[styles.filterApplyBtn, { backgroundColor: theme.accent }]}
+            <Button
+              title="Aplicar Filtros"
               onPress={() => setFilterMenuVisible(false)}
-            >
-              <Text style={styles.filterApplyBtnText}>Aplicar Filtros</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+              variant="primary"
+              style={{ marginTop: 15 }}
+            />
+          </Pressable>
+        </Pressable>
       </Modal>
 
-    </SafeAreaView>
+    </SidebarLayout>
   );
 }
 
@@ -992,3 +1027,4 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 });
+

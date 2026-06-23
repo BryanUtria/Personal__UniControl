@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -9,6 +9,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { exportToExcel } from '../../utils/excelExport';
 import { apiFetch } from '../../utils/offlineSync';
+import SidebarLayout from '../../navigation/SidebarLayout';
+import Input from '../../components/Input';
+import Button from '../../components/Button';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -500,33 +503,35 @@ export default function InventoryScreen({ navigation }) {
 
   const processedProducts = getProcessedProducts();
 
+  const headerRightComponent = (
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Button
+        onPress={handleRefresh}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="refresh" size={20} color={theme.text} />}
+      />
+      <Button
+        onPress={() => setExportModalVisible(true)}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="download-outline" size={20} color={theme.text} />}
+      />
+      <Button
+        onPress={() => setFilterMenuVisible(true)}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="options-outline" size={20} color={theme.text} />}
+      />
+    </View>
+  );
+
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
+    <SidebarLayout navigation={navigation} title="Inventario" activeRoute="Inventory" headerRight={headerRightComponent}>
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         style={{ flex: 1 }}
       >
-        {/* CABECERA */}
-        <View style={[styles.header, { padding: isMobile ? 10 : 15 }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow, marginRight: isMobile ? 10 : 15 }]}>
-              <Ionicons name="chevron-back" size={22} color={theme.text} />
-            </TouchableOpacity>
-            <Text style={[styles.headerTitle, { color: theme.text }]}>Inventario</Text>
-          </View>
-
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: isMobile ? 5 : 10 }}>
-            <TouchableOpacity onPress={handleRefresh} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-              <Ionicons name="refresh" size={22} color={theme.text} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setExportModalVisible(true)} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-              <Ionicons name="download-outline" size={22} color={theme.text} />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setFilterMenuVisible(true)} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-              <Ionicons name="options-outline" size={22} color={theme.text} />
-            </TouchableOpacity>
-          </View>
-        </View>
 
         <ScrollView
           contentContainerStyle={[styles.scrollContent, { paddingHorizontal: isMobile ? 10 : 15 }]}
@@ -562,21 +567,20 @@ export default function InventoryScreen({ navigation }) {
           </View>
 
           {/* BARRA DE BÚSQUEDA */}
-          <View style={[styles.searchContainer, { backgroundColor: theme.card }]}>
-            <Ionicons name="search" size={20} color={theme.textSecondary} style={{ marginRight: 10 }} />
-            <TextInput
-              style={[styles.searchInput, { color: theme.text }]}
-              placeholder="Buscar producto o descripción..."
-              placeholderTextColor={theme.textSecondary}
-              value={search}
-              onChangeText={setSearch}
-            />
-            {search.length > 0 && (
-              <TouchableOpacity onPress={() => setSearch('')}>
-                <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
-              </TouchableOpacity>
-            )}
-          </View>
+          <Input
+            icon="search"
+            placeholder="Buscar producto o descripción..."
+            value={search}
+            onChangeText={setSearch}
+            rightElement={
+              search.length > 0 ? (
+                <TouchableOpacity onPress={() => setSearch('')} style={{ paddingRight: 8 }}>
+                  <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+                </TouchableOpacity>
+              ) : null
+            }
+            containerStyle={{ marginBottom: 8, marginHorizontal: 0 }}
+          />
 
           {/* LISTADO DE PRODUCTOS */}
           {loading ? (
@@ -784,38 +788,33 @@ export default function InventoryScreen({ navigation }) {
                 {editingId ? 'Editar Producto' : 'Nuevo Producto'}
               </Text>
 
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                 <View style={{ width: '38%' }}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Código *</Text>
-                  <TextInput
-                    style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text, marginBottom: 0 }]}
+                  <Input
+                    label="Código *"
                     placeholder="Ej. CER01"
-                    placeholderTextColor={theme.textSecondary}
                     value={code}
                     onChangeText={setCode}
                   />
                 </View>
 
                 <View style={{ width: '58%' }}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Nombre *</Text>
-                  <TextInput
-                    style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text, marginBottom: 0 }]}
+                  <Input
+                    label="Nombre *"
                     placeholder="Ej. Cerveza Corona 355ml"
-                    placeholderTextColor={theme.textSecondary}
                     value={name}
                     onChangeText={setName}
                   />
                 </View>
               </View>
 
-              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Descripción (Opcional)</Text>
-              <TextInput
-                style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text, height: 70, textAlignVertical: 'top' }]}
+              <Input
+                label="Descripción (Opcional)"
                 placeholder="Ej. Bebida embotellada fría"
-                placeholderTextColor={theme.textSecondary}
                 value={description}
                 onChangeText={setDescription}
                 multiline={true}
+                numberOfLines={3}
               />
 
               {/* Campos condicionales para Stock / Costo sólo en creación */}
@@ -826,13 +825,11 @@ export default function InventoryScreen({ navigation }) {
                     Carga de Stock Inicial (Opcional)
                   </Text>
 
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                     <View style={{ width: '48%' }}>
-                      <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Costo Neto ($)</Text>
-                      <TextInput
-                        style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text, marginBottom: 0 }]}
+                      <Input
+                        label="Costo Neto ($)"
                         placeholder="Ej. 2000"
-                        placeholderTextColor={theme.textSecondary}
                         value={costPrice}
                         onChangeText={handleCostPriceChange}
                         keyboardType="numeric"
@@ -840,11 +837,9 @@ export default function InventoryScreen({ navigation }) {
                     </View>
 
                     <View style={{ width: '48%' }}>
-                      <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Ganancia (%)</Text>
-                      <TextInput
-                        style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text, marginBottom: 0 }]}
+                      <Input
+                        label="Ganancia (%)"
                         placeholder="Ej. 30"
-                        placeholderTextColor={theme.textSecondary}
                         value={profitMargin}
                         onChangeText={handleProfitMarginChange}
                         keyboardType="numeric"
@@ -854,11 +849,9 @@ export default function InventoryScreen({ navigation }) {
 
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
                     <View style={{ width: '34%' }}>
-                      <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Precio Público ($)</Text>
-                      <TextInput
-                        style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text }]}
+                      <Input
+                        label="Precio Público ($)"
                         placeholder="Ej. 2600"
-                        placeholderTextColor={theme.textSecondary}
                         value={price}
                         onChangeText={handlePriceChange}
                         keyboardType="numeric"
@@ -866,11 +859,9 @@ export default function InventoryScreen({ navigation }) {
                     </View>
 
                     <View style={{ width: '31%' }}>
-                      <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Stock Inicial</Text>
-                      <TextInput
-                        style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text }]}
+                      <Input
+                        label="Stock Inicial"
                         placeholder="Ej. 24"
-                        placeholderTextColor={theme.textSecondary}
                         value={stock}
                         onChangeText={setStock}
                         keyboardType="numeric"
@@ -878,11 +869,9 @@ export default function InventoryScreen({ navigation }) {
                     </View>
 
                     <View style={{ width: '31%' }}>
-                      <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Alerta Stock *</Text>
-                      <TextInput
-                        style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text }]}
+                      <Input
+                        label="Alerta Stock *"
                         placeholder="Ej. 5"
-                        placeholderTextColor={theme.textSecondary}
                         value={minStock}
                         onChangeText={setMinStock}
                         keyboardType="numeric"
@@ -892,11 +881,9 @@ export default function InventoryScreen({ navigation }) {
                 </>
               ) : (
                 <View style={{ width: '100%', marginTop: 5 }}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Alerta Stock *</Text>
-                  <TextInput
-                    style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text }]}
+                  <Input
+                    label="Alerta Stock *"
                     placeholder="Ej. 5"
-                    placeholderTextColor={theme.textSecondary}
                     value={minStock}
                     onChangeText={setMinStock}
                     keyboardType="numeric"
@@ -959,13 +946,11 @@ export default function InventoryScreen({ navigation }) {
                 Producto: {selectedProductForRecharge?.name}
               </Text>
 
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                 <View style={{ width: '48%' }}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Costo Neto ($) *</Text>
-                  <TextInput
-                    style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text, marginBottom: 0 }]}
+                  <Input
+                    label="Costo Neto ($) *"
                     placeholder="Ej. 2000"
-                    placeholderTextColor={theme.textSecondary}
                     value={rechargeCost}
                     onChangeText={handleRechargeCostChange}
                     keyboardType="numeric"
@@ -973,11 +958,9 @@ export default function InventoryScreen({ navigation }) {
                 </View>
 
                 <View style={{ width: '48%' }}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Ganancia (%) *</Text>
-                  <TextInput
-                    style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text, marginBottom: 0 }]}
+                  <Input
+                    label="Ganancia (%) *"
                     placeholder="Ej. 30"
-                    placeholderTextColor={theme.textSecondary}
                     value={rechargeMargin}
                     onChangeText={handleRechargeMarginChange}
                     keyboardType="numeric"
@@ -985,13 +968,11 @@ export default function InventoryScreen({ navigation }) {
                 </View>
               </View>
 
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 }}>
                 <View style={{ width: '48%' }}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Precio Público ($) *</Text>
-                  <TextInput
-                    style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text, marginBottom: 0 }]}
+                  <Input
+                    label="Precio Público ($) *"
                     placeholder="Ej. 2600"
-                    placeholderTextColor={theme.textSecondary}
                     value={rechargePrice}
                     onChangeText={handleRechargePriceChange}
                     keyboardType="numeric"
@@ -999,11 +980,9 @@ export default function InventoryScreen({ navigation }) {
                 </View>
 
                 <View style={{ width: '48%' }}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Cant. a Cargar *</Text>
-                  <TextInput
-                    style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text, marginBottom: 0 }]}
+                  <Input
+                    label="Cant. a Cargar *"
                     placeholder="Ej. 50"
-                    placeholderTextColor={theme.textSecondary}
                     value={rechargeQty}
                     onChangeText={setRechargeQty}
                     keyboardType="numeric"
@@ -1251,7 +1230,7 @@ export default function InventoryScreen({ navigation }) {
         </Modal>
 
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SidebarLayout>
   );
 }
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, TextInput, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -7,6 +7,9 @@ import { useToast } from '../../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { apiFetch } from '../../utils/offlineSync';
+import SidebarLayout from '../../navigation/SidebarLayout';
+import Input from '../../components/Input';
+import Button from '../../components/Button';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -446,20 +449,18 @@ export default function POSScreen({ navigation }) {
     }, {})
   );
 
-  return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+  const headerRightComponent = (
+    <Button
+      onPress={clearSelection}
+      variant="secondary"
+      style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+      icon={<Ionicons name="refresh-outline" size={20} color={theme.text} />}
+    />
+  );
 
-        {/* Cabecera */}
-        <View style={[styles.header, { borderBottomColor: theme.card, paddingHorizontal: isMobile ? 10 : 15 }]}>
-          <TouchableOpacity onPress={() => navigation.goBack()} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-            <Ionicons name="chevron-back" size={22} color={theme.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.text }]}>Punto de Venta (POS)</Text>
-          <TouchableOpacity onPress={clearSelection} style={[styles.backCircleBtn, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-            <Ionicons name="refresh-outline" size={22} color={theme.text} />
-          </TouchableOpacity>
-        </View>
+  return (
+    <SidebarLayout navigation={navigation} title="Punto de Venta" activeRoute="POS" headerRight={headerRightComponent}>
+      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
 
         {/* --- SECCIÓN DE PEDIDOS / CUENTAS PENDIENTES --- */}
         <View style={[styles.ordersBar, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
@@ -566,21 +567,20 @@ export default function POSScreen({ navigation }) {
               <View style={[styles.productsPane, isMobile ? { width: '100%', flex: 1 } : { width: '60%' }, { padding: isMobile ? 10 : 20 }]}>
 
                 {/* Buscador de Productos */}
-                <View style={[styles.searchContainer, { backgroundColor: theme.card }]}>
-                  <Ionicons name="search" size={20} color={theme.textSecondary} style={{ marginRight: 8 }} />
-                  <TextInput
-                    style={[styles.searchInput, { color: theme.text }]}
-                    placeholder="Buscar por nombre o código..."
-                    placeholderTextColor={theme.textSecondary}
-                    value={search}
-                    onChangeText={setSearch}
-                  />
-                  {search.length > 0 && (
-                    <TouchableOpacity onPress={() => setSearch('')}>
-                      <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
-                    </TouchableOpacity>
-                  )}
-                </View>
+                <Input
+                  icon="search"
+                  placeholder="Buscar por nombre o código..."
+                  value={search}
+                  onChangeText={setSearch}
+                  rightElement={
+                    search.length > 0 ? (
+                      <TouchableOpacity onPress={() => setSearch('')} style={{ paddingRight: 8 }}>
+                        <Ionicons name="close-circle" size={20} color={theme.textSecondary} />
+                      </TouchableOpacity>
+                    ) : null
+                  }
+                  containerStyle={{ marginBottom: 8 }}
+                />
 
                 {/* Grid / Lista de Productos */}
                 <ScrollView contentContainerStyle={styles.productList}>
@@ -760,17 +760,8 @@ export default function POSScreen({ navigation }) {
 
                       <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                         <View style={{ flex: 1, position: 'relative' }}>
-                          <TextInput
-                            style={[
-                              styles.debtorSearchInput,
-                              {
-                                backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6',
-                                color: theme.text,
-                                borderColor: theme.border
-                              }
-                            ]}
+                          <Input
                             placeholder="Buscar cliente..."
-                            placeholderTextColor={theme.textSecondary}
                             value={debtorSearch}
                             onFocus={() => setDebtorDropdownVisible(true)}
                             onChangeText={(text) => {
@@ -780,6 +771,7 @@ export default function POSScreen({ navigation }) {
                                 setSelectedDebtor(null);
                               }
                             }}
+                            containerStyle={{ marginBottom: 0 }}
                           />
                           {debtorDropdownVisible && debtorSearch.length > 0 && (
                             <View style={[styles.dropdownContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
@@ -872,11 +864,9 @@ export default function POSScreen({ navigation }) {
             <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>Abrir Nuevo Pedido / Cuenta</Text>
 
-              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Referencia del Pedido / Cuenta *</Text>
-              <TextInput
-                style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text }]}
+              <Input
+                label="Referencia del Pedido / Cuenta *"
                 placeholder="Ej. Pedido 4, Barra, Brayan A., Mesa 2"
-                placeholderTextColor={theme.textSecondary}
                 value={newOrderReference}
                 onChangeText={setNewOrderReference}
                 autoFocus={true}
@@ -905,20 +895,16 @@ export default function POSScreen({ navigation }) {
             <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>Registrar Deudor Express</Text>
 
-              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Nombre del Cliente *</Text>
-              <TextInput
-                style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text }]}
+              <Input
+                label="Nombre del Cliente *"
                 placeholder="Ej. Juan Pérez"
-                placeholderTextColor={theme.textSecondary}
                 value={newDebtorName}
                 onChangeText={setNewDebtorName}
               />
 
-              <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Celular (Opcional)</Text>
-              <TextInput
-                style={[styles.modalInput, { backgroundColor: isDarkMode ? '#2D2D2D' : '#F3F4F6', color: theme.text }]}
+              <Input
+                label="Celular (Opcional)"
                 placeholder="Ej. 3001234567"
-                placeholderTextColor={theme.textSecondary}
                 value={newDebtorPhone}
                 onChangeText={setNewDebtorPhone}
                 keyboardType="phone-pad"
@@ -976,7 +962,7 @@ export default function POSScreen({ navigation }) {
         </Modal>
 
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </SidebarLayout>
   );
 }
 

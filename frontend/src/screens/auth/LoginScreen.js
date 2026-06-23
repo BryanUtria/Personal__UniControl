@@ -1,15 +1,17 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Image } from 'react-native';
+﻿import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
 import { useTheme } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
+import Button from '../../components/Button';
+import Input from '../../components/Input';
 
 import LogoImage from '../../../assets/Navegador.png';
 
 export default function LoginScreen() {
   const { login, sendVerificationCode, register } = useAuth();
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
 
@@ -25,7 +27,6 @@ export default function LoginScreen() {
   const [sandboxCode, setSandboxCode] = useState(null);
   const [sandboxMode, setSandboxMode] = useState(false);
 
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
@@ -195,76 +196,49 @@ export default function LoginScreen() {
               <>
                 {/* Full Name Input (Register Only) */}
                 {isRegisterMode && (
-                  <View style={styles.inputWrapper}>
-                    <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Nombre Completo</Text>
-                    <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', borderColor: isDarkMode ? '#333' : '#E5E7EB' }]}>
-                      <Ionicons name="card-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
-                      <TextInput
-                        style={[styles.textInput, { color: theme.text }]}
-                        placeholder="Ej. Juan Pérez"
-                        placeholderTextColor={theme.textSecondary}
-                        value={name}
-                        onChangeText={setName}
-                        autoCapitalize="words"
-                      />
-                    </View>
-                  </View>
+                  <Input
+                    label="Nombre Completo"
+                    icon="card-outline"
+                    placeholder="Ej. Juan Pérez"
+                    value={name}
+                    onChangeText={setName}
+                    autoCapitalize="words"
+                  />
                 )}
 
                 {/* Username Input */}
-                <View style={styles.inputWrapper}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Usuario</Text>
-                  <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', borderColor: isDarkMode ? '#333' : '#E5E7EB' }]}>
-                    <Ionicons name="person-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
-                    <TextInput
-                      style={[styles.textInput, { color: theme.text }]}
-                      placeholder="Nombre de usuario"
-                      placeholderTextColor={theme.textSecondary}
-                      value={username}
-                      onChangeText={setUsername}
-                      autoCapitalize="none"
-                    />
-                  </View>
-                </View>
+                <Input
+                  label="Usuario"
+                  icon="person-outline"
+                  placeholder="Nombre de usuario"
+                  value={username}
+                  onChangeText={setUsername}
+                  autoCapitalize="none"
+                />
 
                 {/* Email Input (Register Only) */}
                 {isRegisterMode && (
-                  <View style={styles.inputWrapper}>
-                    <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Correo Electrónico (Obligatorio)</Text>
-                    <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', borderColor: isDarkMode ? '#333' : '#E5E7EB' }]}>
-                      <Ionicons name="mail-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
-                      <TextInput
-                        style={[styles.textInput, { color: theme.text }]}
-                        placeholder="ejemplo@correo.com"
-                        placeholderTextColor={theme.textSecondary}
-                        value={email}
-                        onChangeText={setEmail}
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                      />
-                    </View>
-                  </View>
+                  <Input
+                    label="Correo Electrónico (Obligatorio)"
+                    icon="mail-outline"
+                    placeholder="ejemplo@correo.com"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
                 )}
 
                 {/* Password Input */}
-                <View style={styles.inputWrapper}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Contraseña</Text>
-                  <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', borderColor: isDarkMode ? '#333' : '#E5E7EB' }]}>
-                    <Ionicons name="lock-closed-outline" size={20} color={theme.textSecondary} style={styles.inputIcon} />
-                    <TextInput
-                      style={[styles.textInput, { color: theme.text }]}
-                      placeholder="Tu contraseña secreta"
-                      placeholderTextColor={theme.textSecondary}
-                      value={password}
-                      onChangeText={setPassword}
-                      secureTextEntry={!showPassword}
-                      autoCapitalize="none"
-                    />
-                    <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-                      <Ionicons name={showPassword ? "eye-off-outline" : "eye-outline"} size={20} color={theme.textSecondary} />
-                    </TouchableOpacity>
-                  </View>
-                </View>
+                <Input
+                  label="Contraseña"
+                  icon="lock-closed-outline"
+                  placeholder="Tu contraseña secreta"
+                  value={password}
+                  onChangeText={setPassword}
+                  isPassword={true}
+                  autoCapitalize="none"
+                />
               </>
             ) : (
               <>
@@ -276,53 +250,41 @@ export default function LoginScreen() {
                 </View>
 
                 {/* Verification Code Input */}
-                <View style={styles.inputWrapper}>
-                  <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Código de Verificación</Text>
-                  <View style={[styles.inputContainer, { backgroundColor: isDarkMode ? '#1A1A1A' : '#F3F4F6', borderColor: isDarkMode ? '#333' : '#E5E7EB', height: 60 }]}>
-                    <Ionicons name="key-outline" size={22} color={theme.textSecondary} style={styles.inputIcon} />
-                    <TextInput
-                      style={[styles.textInput, { color: theme.text, fontSize: 20, letterSpacing: 6, fontWeight: '700', textAlign: 'center' }]}
-                      placeholder="123456"
-                      placeholderTextColor={theme.textSecondary}
-                      value={verificationCode}
-                      onChangeText={setVerificationCode}
-                      keyboardType="number-pad"
-                      maxLength={6}
-                      autoFocus={true}
-                    />
-                  </View>
-                </View>
+                <Input
+                  label="Código de Verificación"
+                  icon="key-outline"
+                  placeholder="123456"
+                  value={verificationCode}
+                  onChangeText={setVerificationCode}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoFocus={true}
+                  inputStyle={{ fontSize: 20, letterSpacing: 6, fontWeight: '700', textAlign: 'center' }}
+                  containerStyle={{ minHeight: 60 }}
+                />
               </>
             )}
 
             {/* Submit Button */}
-            <TouchableOpacity
-              style={[styles.submitBtn, { backgroundColor: theme.accent }]}
+            <Button
+              title={isRegisterMode
+                ? (isVerifying ? 'Verificar y Registrarse' : 'Continuar al Registro')
+                : 'Entrar'}
               onPress={handleSubmit}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator size="small" color="#FFF" />
-              ) : (
-                <Text style={styles.submitBtnText}>
-                  {isRegisterMode
-                    ? (isVerifying ? 'Verificar y Registrarse' : 'Continuar al Registro')
-                    : 'Entrar'}
-                </Text>
-              )}
-            </TouchableOpacity>
+              loading={loading}
+              variant="primary"
+              style={[styles.submitBtn, { backgroundColor: theme.accent }]}
+            />
 
             {/* Cancel/Go Back Verification Button */}
             {isRegisterMode && isVerifying && (
-              <TouchableOpacity
-                style={[styles.cancelBtn, { borderColor: theme.danger }]}
+              <Button
+                title="Cancelar y cambiar datos"
                 onPress={handleCancelVerification}
+                variant="danger"
                 disabled={loading}
-              >
-                <Text style={[styles.cancelBtnText, { color: theme.danger }]}>
-                  Cancelar y cambiar datos
-                </Text>
-              </TouchableOpacity>
+                style={styles.cancelBtn}
+              />
             )}
 
             {/* Toggle Mode Link (only if not verifying code) */}
@@ -438,42 +400,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     marginBottom: 20,
   },
-  inputWrapper: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    fontSize: 12,
-    fontWeight: '700',
-    marginBottom: 8,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  inputContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderRadius: 12,
-    borderWidth: 1,
-    paddingLeft: 12,
-    paddingRight: 4,
-    height: 50,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  textInput: {
-    flex: 1,
-    fontSize: 15,
-    height: '100%',
-    padding: 0,
-    marginRight: 8,
-    minWidth: 150
-  },
-  eyeBtn: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
+
   submitBtn: {
     height: 50,
     borderRadius: 12,
