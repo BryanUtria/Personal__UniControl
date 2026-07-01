@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, RefreshControl } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, RefreshControl, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../../theme/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../context/ToastContext';
+import { useTheme } from '../../../theme/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
+import { useToast } from '../../../context/ToastContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
-import { exportToExcel } from '../../utils/excelExport';
-import { apiFetch } from '../../utils/offlineSync';
-import SidebarLayout from '../../navigation/SidebarLayout';
-import Input from '../../components/Input';
-import Button from '../../components/Button';
+import { exportToExcel } from '../../../utils/excelExport';
+import { apiFetch } from '../../../utils/offlineSync';
+import SidebarLayout from '../../../navigation/SidebarLayout';
+import Input from '../../../components/Input';
+import Button from '../../../components/Button';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -51,6 +51,7 @@ export default function InventoryScreen({ navigation }) {
   const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
+  const [isSavingClient, setIsSavingClient] = useState(false);
 
   // Estados de datos
   const [products, setProducts] = useState([]);
@@ -60,6 +61,7 @@ export default function InventoryScreen({ navigation }) {
   const [refreshing, setRefreshing] = useState(false);
 
   const handleRefresh = async () => {
+    setLoading(true);
     setRefreshing(true);
     await fetchProducts();
     setRefreshing(false);
@@ -220,6 +222,7 @@ export default function InventoryScreen({ navigation }) {
       price: parseFloat(rechargePrice)
     };
 
+    setIsSavingClient(true);
     try {
       setLoading(true);
       const response = await apiFetch(`${API_URL}/products/${selectedProductForRecharge.id}/recharge`, {
@@ -244,6 +247,7 @@ export default function InventoryScreen({ navigation }) {
       showToast('Error de red al recargar stock.', 'error');
     } finally {
       setLoading(false);
+      setIsSavingClient(false);
     }
   };
 
@@ -348,6 +352,7 @@ export default function InventoryScreen({ navigation }) {
       min_stock: parseInt(minStock, 10),
     };
 
+    setIsSavingClient(true);
     try {
       setLoading(true);
       if (editingId) {
@@ -391,6 +396,8 @@ export default function InventoryScreen({ navigation }) {
       console.error('Error al guardar producto:', error);
       setLoading(false);
       showToast('Error de red al guardar el producto.', 'error');
+    } finally {
+      setIsSavingClient(false);
     }
   };
 
@@ -426,6 +433,8 @@ export default function InventoryScreen({ navigation }) {
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+
+    setIsSavingClient(true);
     try {
       setLoading(true);
       const response = await apiFetch(`${API_URL}/products/${itemToDelete.id}`, {
@@ -442,6 +451,8 @@ export default function InventoryScreen({ navigation }) {
     } catch (error) {
       console.error('Error al eliminar producto:', error);
       setLoading(false);
+    } finally {
+      setIsSavingClient(false);
     }
   };
 
@@ -546,8 +557,20 @@ export default function InventoryScreen({ navigation }) {
           }
         >
 
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: isMobile ? 10 : 20 }}>
+            <Button
+              onPress={() => navigation.goBack()}
+              variant="secondary"
+              style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, marginRight: 10, borderWidth: 0 }]}
+              icon={<Ionicons name="chevron-back" size={22} color={theme.text} />}
+            />
+            <Text style={[styles.title, { color: theme.text }]}>
+              Stock
+            </Text>
+          </View>
+
           {/* TARJETAS RESUMEN */}
-          <View style={styles.statsRow}>
+          <View style={[styles.statsRow, { marginBottom: 10 }]}>
             <View style={[styles.statCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
               <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Ítems Únicos</Text>
               <Text style={[styles.statValue, { color: theme.text }]}>{uniqueItemsCount}</Text>
@@ -584,8 +607,9 @@ export default function InventoryScreen({ navigation }) {
 
           {/* LISTADO DE PRODUCTOS */}
           {loading ? (
-            <View style={{ paddingVertical: 50, justifyContent: 'center', alignItems: 'center' }}>
+            <View style={{ paddingVertical: 60, alignItems: 'center' }}>
               <ActivityIndicator size="large" color={theme.accent} />
+              <Text style={{ color: theme.textSecondary, marginTop: 12, fontSize: 14 }}>Cargando datos...</Text>
             </View>
           ) : (
             <View style={styles.list}>
@@ -726,10 +750,10 @@ export default function InventoryScreen({ navigation }) {
           animationType="fade"
           onRequestClose={() => setExportModalVisible(false)}
         >
-          <View style={[styles.modalOverlay, {
+          <Pressable style={[styles.modalOverlay, {
             padding: isMobile ? 10 : 20
-          }]}>
-            <View style={[styles.modalContent, { backgroundColor: theme.card, maxWidth: 450, alignSelf: 'center', borderRadius: 20, padding: isMobile ? 10 : 20 }]}>
+          }]} onPress={() => setExportModalVisible(false)}>
+            <Pressable style={[styles.modalContent, { backgroundColor: theme.card, maxWidth: 450, alignSelf: 'center', borderRadius: 20, padding: isMobile ? 10 : 20 }]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
               <View style={styles.modalHeader}>
                 <View style={{ flex: 1, marginRight: 10 }}>
                   <Text style={[styles.modalTitle, { textAlign: 'left', marginBottom: 2, fontSize: 18, color: theme.text }]}>Exportar Inventario</Text>
@@ -764,8 +788,8 @@ export default function InventoryScreen({ navigation }) {
                   <Text style={[styles.exportBtnText, { color: theme.text }]}>Productos filtrados/buscados ({processedProducts.length})</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
 
         {/* FAB PARA CREAR PRODUCTO */}
@@ -780,10 +804,10 @@ export default function InventoryScreen({ navigation }) {
           animationType="fade"
           onRequestClose={() => setModalVisible(false)}
         >
-          <View style={[styles.modalOverlay, {
+          <Pressable style={[styles.modalOverlay, {
             padding: isMobile ? 10 : 20
-          }]}>
-            <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
+          }]} onPress={() => setModalVisible(false)}>
+            <Pressable style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>
                 {editingId ? 'Editar Producto' : 'Nuevo Producto'}
               </Text>
@@ -892,15 +916,23 @@ export default function InventoryScreen({ navigation }) {
               )}
 
               <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setModalVisible(false)}>
-                  <Text style={[styles.modalBtnText, { color: theme.textSecondary }]}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.accent }]} onPress={handleSaveProduct}>
-                  <Text style={styles.modalBtnTextSave}>Guardar</Text>
-                </TouchableOpacity>
+                <Button
+                  title="Cancelar"
+                  onPress={() => setModalVisible(false)}
+                  variant="secondary"
+                  style={{ flex: 1 }}
+                  loading={false}
+                />
+                <Button
+                  title="Guardar"
+                  onPress={handleSaveProduct}
+                  variant="primary"
+                  loading={isSavingClient}
+                  style={{ flex: 1 }}
+                />
               </View>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
 
         {/* MODAL CONFIRMACIÓN ELIMINACIÓN */}
@@ -910,24 +942,32 @@ export default function InventoryScreen({ navigation }) {
           animationType="fade"
           onRequestClose={() => setDeleteModalVisible(false)}
         >
-          <View style={[styles.modalOverlay, {
+          <Pressable style={[styles.modalOverlay, {
             padding: isMobile ? 10 : 20
-          }]}>
-            <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
+          }]} onPress={() => setDeleteModalVisible(false)}>
+            <Pressable style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>Eliminar Producto</Text>
               <Text style={{ color: theme.textSecondary, marginBottom: 20, textAlign: 'center', fontSize: 16 }}>
                 ¿Seguro que deseas eliminar este producto del inventario? Esta acción no se puede deshacer.
               </Text>
               <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setDeleteModalVisible(false)}>
-                  <Text style={[styles.modalBtnText, { color: theme.textSecondary }]}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.danger }]} onPress={confirmDelete}>
-                  <Text style={styles.modalBtnTextSave}>Eliminar</Text>
-                </TouchableOpacity>
+                <Button
+                  title="Cancelar"
+                  onPress={() => setDeleteModalVisible(false)}
+                  variant="secondary"
+                  loading={false}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Eliminar"
+                  onPress={confirmDelete}
+                  loading={isSavingClient}
+                  variant="danger"
+                  style={{ flex: 1 }}
+                />
               </View>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
 
         {/* MODAL RECARGAR STOCK */}
@@ -937,10 +977,10 @@ export default function InventoryScreen({ navigation }) {
           animationType="fade"
           onRequestClose={() => setRechargeModalVisible(false)}
         >
-          <View style={[styles.modalOverlay, {
+          <Pressable style={[styles.modalOverlay, {
             padding: isMobile ? 10 : 20
-          }]}>
-            <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
+          }]} onPress={() => setRechargeModalVisible(false)}>
+            <Pressable style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>Recargar Stock</Text>
               <Text style={{ color: theme.textSecondary, fontSize: 13, textAlign: 'center', marginBottom: 15 }}>
                 Producto: {selectedProductForRecharge?.name}
@@ -991,15 +1031,25 @@ export default function InventoryScreen({ navigation }) {
               </View>
 
               <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setRechargeModalVisible(false)}>
-                  <Text style={[styles.modalBtnText, { color: theme.textSecondary }]}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: '#10B981' }]} onPress={handleSaveRecharge}>
-                  <Text style={styles.modalBtnTextSave}>Cargar</Text>
-                </TouchableOpacity>
+                <Button
+                  title="Cancelar"
+                  onPress={() => setRechargeModalVisible(false)}
+                  variant="secondary"
+                  loading={false}
+                  style={{ flex: 1 }}
+                />
+                <Button
+                  title="Cargar"
+                  onPress={handleSaveRecharge}
+                  loading={isSavingClient}
+                  variant="primary"
+                  backgroundColor="#10B981"
+                  hoverBackgroundColor="#059669"
+                  style={{ flex: 1 }}
+                />
               </View>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
 
         {/* MODAL HISTORIAL DE LOTES / RECARGAS */}
@@ -1009,10 +1059,10 @@ export default function InventoryScreen({ navigation }) {
           animationType="fade"
           onRequestClose={() => setBatchesModalVisible(false)}
         >
-          <View style={[styles.modalOverlay, {
+          <Pressable style={[styles.modalOverlay, {
             padding: isMobile ? 10 : 20
-          }]}>
-            <View style={[
+          }]} onPress={() => setBatchesModalVisible(false)}>
+            <Pressable style={[
               styles.modalContent,
               {
                 backgroundColor: theme.card,
@@ -1021,7 +1071,7 @@ export default function InventoryScreen({ navigation }) {
                 maxWidth: 450,
                 padding: isMobile ? 16 : 20
               }
-            ]}>
+            ]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
                 <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 0 }]}>Historial de Lotes</Text>
                 <TouchableOpacity onPress={() => setBatchesModalVisible(false)} style={{ padding: 5 }}>
@@ -1115,8 +1165,8 @@ export default function InventoryScreen({ navigation }) {
               >
                 <Text style={styles.filterApplyBtnText}>Cerrar</Text>
               </TouchableOpacity>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
 
         {/* MODAL DE FILTROS Y ORDENAMIENTO */}
@@ -1126,10 +1176,10 @@ export default function InventoryScreen({ navigation }) {
           animationType="fade"
           onRequestClose={() => setFilterMenuVisible(false)}
         >
-          <View style={[styles.modalOverlay, {
+          <Pressable style={[styles.modalOverlay, {
             padding: isMobile ? 10 : 20
-          }]}>
-            <View style={[styles.modalContent, { backgroundColor: theme.card, maxWidth: 360, padding: isMobile ? 10 : 20 }]}>
+          }]} onPress={() => setFilterMenuVisible(false)}>
+            <Pressable style={[styles.modalContent, { backgroundColor: theme.card, maxWidth: 360, padding: isMobile ? 10 : 20 }]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
               <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 15 }]}>Organizar y Filtrar</Text>
 
               {/* ORDENAR POR CATEGORÍA */}
@@ -1225,8 +1275,8 @@ export default function InventoryScreen({ navigation }) {
               >
                 <Text style={styles.filterApplyBtnText}>Aplicar Filtros</Text>
               </TouchableOpacity>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
 
       </KeyboardAvoidingView>
@@ -1254,6 +1304,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
   },
+  title: { fontSize: 20, fontWeight: 'bold' },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
@@ -1275,7 +1326,6 @@ const styles = StyleSheet.create({
   statsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 20,
     gap: 8,
   },
   statCard: {
@@ -1414,6 +1464,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
+    gap: 10,
   },
   modalBtnCancel: {
     padding: 15,

@@ -7,9 +7,10 @@ import LoginScreen from '../screens/auth/LoginScreen';
 import DashboardScreen from '../screens/DashboardScreen';
 import DebtorsListScreen from '../screens/debtors/DebtorsListScreen';
 import DebtorDetailScreen from '../screens/debtors/DebtorDetailScreen';
-import InventoryScreen from '../screens/inventory/InventoryScreen';
-import POSScreen from '../screens/pos/POSScreen';
-import SalesHistoryScreen from '../screens/sales/SalesHistoryScreen';
+import InventoryScreen from '../screens/shop/inventory/InventoryScreen';
+import POSScreen from '../screens/shop/pos/POSScreen';
+import SalesHistoryScreen from '../screens/shop/sales/SalesHistoryScreen';
+import ShopMenuScreen from '../screens/shop/ShopMenuScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 
 const Stack = createNativeStackNavigator();
@@ -35,6 +36,7 @@ export default function AppNavigator() {
           <Stack.Screen name="Dashboard" component={DashboardScreen} />
           <Stack.Screen name="DebtorsList" component={DebtorsListScreen} />
           <Stack.Screen name="DebtorDetail" component={DebtorDetailScreen} />
+          <Stack.Screen name="ShopMenu" component={ShopMenuScreen} />
           <Stack.Screen name="Inventory" component={InventoryScreen} />
           <Stack.Screen name="POS" component={POSScreen} />
           <Stack.Screen name="SalesHistory" component={SalesHistoryScreen} />

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../../theme/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../context/ToastContext';
+import { useTheme } from '../../../theme/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
+import { useToast } from '../../../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
-import { apiFetch } from '../../utils/offlineSync';
-import SidebarLayout from '../../navigation/SidebarLayout';
-import Input from '../../components/Input';
-import Button from '../../components/Button';
+import { apiFetch } from '../../../utils/offlineSync';
+import SidebarLayout from '../../../navigation/SidebarLayout';
+import Input from '../../../components/Input';
+import Button from '../../../components/Button';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -25,6 +25,7 @@ export default function POSScreen({ navigation }) {
   const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
+  const [isSavingClient, setIsSavingClient] = useState(false);
 
   // Pestaña activa en celulares: 'products' o 'cart'
   const [activeTab, setActiveTab] = useState('products');
@@ -103,10 +104,9 @@ export default function POSScreen({ navigation }) {
           setCart([]);
         }
       }
-
-      setLoading(false);
     } catch (error) {
       console.error('Error al cargar datos del POS:', error);
+    } finally {
       setLoading(false);
     }
   };
@@ -150,6 +150,7 @@ export default function POSScreen({ navigation }) {
       return;
     }
 
+    setIsSavingClient(true);
     try {
       const response = await apiFetch(`${API_URL}/orders`, {
         method: 'POST',
@@ -183,6 +184,8 @@ export default function POSScreen({ navigation }) {
     } catch (error) {
       console.error('Error al crear orden:', error);
       showToast('Error de red al registrar el pedido.', 'error');
+    } finally {
+      setIsSavingClient(false);
     }
   };
 
@@ -449,9 +452,14 @@ export default function POSScreen({ navigation }) {
     }, {})
   );
 
+  const handleRefresh = () => {
+    setLoading(true);
+    fetchData();
+  };
+
   const headerRightComponent = (
     <Button
-      onPress={clearSelection}
+      onPress={handleRefresh}
       variant="secondary"
       style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
       icon={<Ionicons name="refresh-outline" size={20} color={theme.text} />}
@@ -464,6 +472,18 @@ export default function POSScreen({ navigation }) {
 
         {/* --- SECCIÓN DE PEDIDOS / CUENTAS PENDIENTES --- */}
         <View style={[styles.ordersBar, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: isMobile ? 10 : 15, paddingBottom: 10 }}>
+            <Button
+              onPress={() => navigation.goBack()}
+              variant="secondary"
+              style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, marginRight: 10, borderWidth: 0 }]}
+              icon={<Ionicons name="chevron-back" size={22} color={theme.text} />}
+            />
+            <Text style={[styles.title, { color: theme.text }]}>
+              Pedidos
+            </Text>
+          </View>
+
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.ordersScroll}>
             {orders.map(order => {
               const isSelected = activeOrder && activeOrder.id === order.id;
@@ -542,6 +562,7 @@ export default function POSScreen({ navigation }) {
         {loading ? (
           <View style={styles.centerContainer}>
             <ActivityIndicator size="large" color={theme.accent} />
+            <Text style={{ marginTop: 10, color: theme.textSecondary }}>Cargando datos...</Text>
           </View>
         ) : !activeOrder ? (
           /* PANTALLA DE INVITACIÓN A SELECCIONAR PEDIDO */
@@ -593,17 +614,19 @@ export default function POSScreen({ navigation }) {
                     <View style={styles.productGrid}>
                       {filteredProducts.map(product => {
                         const inCartQty = cart.filter(item => item.product_id === product.id).reduce((s, i) => s + i.quantity, 0);
+                        const isInCart = inCartQty > 0;
                         const finalStock = product.stock;
                         const isOutOfStock = finalStock <= 0;
+                        const isDisabled = isOutOfStock || isInCart;
 
                         return (
                           <TouchableOpacity
                             key={product.id}
-                            disabled={isOutOfStock}
+                            disabled={isDisabled}
                             style={[
                               styles.productCard,
                               { backgroundColor: theme.card, shadowColor: theme.shadow },
-                              isOutOfStock && { opacity: 0.5 }
+                              isDisabled && { opacity: 0.5 }
                             ]}
                             onPress={() => addToCart(product)}
                           >
@@ -825,26 +848,17 @@ export default function POSScreen({ navigation }) {
                   </View>
 
                   {/* Botón de Checkout */}
-                  <TouchableOpacity
-                    disabled={savingSale || cart.length === 0}
-                    style={[
-                      styles.checkoutBtn,
-                      { backgroundColor: saleType === 'credit' ? theme.danger : theme.accent },
-                      (savingSale || cart.length === 0) && { opacity: 0.6 }
-                    ]}
+                  <Button
+                    title={saleType === 'credit' ? 'Cobrar como Crédito' : 'Cobrar Pedido'}
                     onPress={handleCheckout}
-                  >
-                    {savingSale ? (
-                      <ActivityIndicator size="small" color="#FFF" />
-                    ) : (
-                      <>
-                        <Ionicons name="checkmark-circle-outline" size={22} color="#FFF" style={{ marginRight: 8 }} />
-                        <Text style={styles.checkoutBtnText}>
-                          {saleType === 'credit' ? 'Cobrar como Crédito' : 'Cobrar Pedido'}
-                        </Text>
-                      </>
-                    )}
-                  </TouchableOpacity>
+                    disabled={cart.length === 0}
+                    loading={savingSale}
+                    variant="primary"
+                    backgroundColor={saleType === 'credit' ? theme.danger : theme.accent}
+                    icon={!savingSale ? <Ionicons name="checkmark-circle-outline" size={22} color="#FFF" style={{ marginRight: 8 }} /> : null}
+                    style={styles.checkoutBtn}
+                    textStyle={styles.checkoutBtnText}
+                  />
 
                 </View>
               </View>
@@ -860,8 +874,8 @@ export default function POSScreen({ navigation }) {
           animationType="fade"
           onRequestClose={() => setNewOrderModalVisible(false)}
         >
-          <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
-            <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
+          <Pressable style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]} onPress={() => setNewOrderModalVisible(false)}>
+            <Pressable style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>Abrir Nuevo Pedido / Cuenta</Text>
 
               <Input
@@ -873,15 +887,23 @@ export default function POSScreen({ navigation }) {
               />
 
               <View style={styles.modalButtons}>
-                <TouchableOpacity style={styles.modalBtnCancel} onPress={() => { setNewOrderReference(''); setNewOrderModalVisible(false); }}>
-                  <Text style={[styles.modalBtnText, { color: theme.textSecondary }]}>Cancelar</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.accent }]} onPress={handleCreateOrder}>
-                  <Text style={styles.modalBtnTextSave}>Crear Pedido</Text>
-                </TouchableOpacity>
+                <Button
+                  title="Cancelar"
+                  onPress={() => { setNewOrderReference(''); setNewOrderModalVisible(false); }}
+                  variant="secondary"
+                  style={{ flex: 1 }}
+                  loading={false}
+                />
+                <Button
+                  title="Guardar"
+                  onPress={handleCreateOrder}
+                  variant="primary"
+                  loading={isSavingClient}
+                  style={{ flex: 1 }}
+                />
               </View>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
 
         {/* MODAL CREAR CLIENTE RÁPIDO */}
@@ -891,8 +913,8 @@ export default function POSScreen({ navigation }) {
           animationType="fade"
           onRequestClose={() => setNewDebtorModalVisible(false)}
         >
-          <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
-            <View style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]}>
+          <Pressable style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]} onPress={() => setNewDebtorModalVisible(false)}>
+            <Pressable style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 10 : 20 }]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
               <Text style={[styles.modalTitle, { color: theme.text }]}>Registrar Deudor Express</Text>
 
               <Input
@@ -918,8 +940,8 @@ export default function POSScreen({ navigation }) {
                   <Text style={styles.modalBtnTextSave}>Crear y Seleccionar</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
 
         {/* MODAL CONFIRMACIÓN ELIMINAR PEDIDO */}
@@ -929,8 +951,8 @@ export default function POSScreen({ navigation }) {
           animationType="fade"
           onRequestClose={() => { setDeleteModalVisible(false); setOrderToDelete(null); }}
         >
-          <View style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]}>
-            <View style={[styles.modalContent, { backgroundColor: theme.card, alignItems: 'center', padding: isMobile ? 10 : 20 }]}>
+          <Pressable style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]} onPress={() => { setDeleteModalVisible(false); setOrderToDelete(null); }}>
+            <Pressable style={[styles.modalContent, { backgroundColor: theme.card, alignItems: 'center', padding: isMobile ? 10 : 20 }]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
               <View style={{ backgroundColor: theme.danger + '15', padding: 12, borderRadius: 50, marginBottom: 15 }}>
                 <Ionicons name="trash-outline" size={32} color={theme.danger} />
               </View>
@@ -957,8 +979,8 @@ export default function POSScreen({ navigation }) {
                   <Text style={[styles.modalBtnTextSave, { textAlign: 'center' }]}>Sí, Eliminar</Text>
                 </TouchableOpacity>
               </View>
-            </View>
-          </View>
+            </Pressable>
+          </Pressable>
         </Modal>
 
       </KeyboardAvoidingView>
@@ -988,6 +1010,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
   },
+  title: { fontSize: 20, fontWeight: 'bold' },
   headerTitle: {
     fontSize: 18,
     fontWeight: '800',
@@ -1351,6 +1374,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
+    gap: 10,
   },
   modalBtnCancel: {
     flex: 0.48,

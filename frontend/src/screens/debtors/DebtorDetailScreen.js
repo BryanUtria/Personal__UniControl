@@ -56,6 +56,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
   const [sortBy, setSortBy] = useState('date_desc'); // 'date_desc', 'date_asc', 'amount_desc', 'amount_asc', 'desc_asc'
   const [disabledTxIds, setDisabledTxIds] = useState([]);
   const [refreshing, setRefreshing] = useState(false);
+  const [isSavingClient, setIsSavingClient] = useState(false);
 
   const handleRefresh = async () => {
     setRefreshing(true);
@@ -135,6 +136,8 @@ export default function DebtorDetailScreen({ route, navigation }) {
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+
+    setIsSavingClient(true);
     try {
       const response = await apiFetch(`${API_URL}/debts/${itemToDelete}`, {
         method: 'DELETE',
@@ -149,6 +152,8 @@ export default function DebtorDetailScreen({ route, navigation }) {
       setItemToDelete(null);
     } catch (error) {
       console.error('Error al eliminar movimiento:', error);
+    } finally {
+      setIsSavingClient(false);
     }
   };
 
@@ -433,6 +438,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
       return;
     }
 
+    setIsSavingClient(true);
     try {
       if (editingId) {
         // Actualizar en backend
@@ -473,6 +479,8 @@ export default function DebtorDetailScreen({ route, navigation }) {
     } catch (error) {
       console.error('Error al guardar movimiento:', error);
       showToast('Error de red al guardar el movimiento.', 'error');
+    } finally {
+      setIsSavingClient(false);
     }
   };
 
@@ -569,7 +577,10 @@ export default function DebtorDetailScreen({ route, navigation }) {
   const headerRightComponent = (
     <View style={{ flexDirection: 'row', gap: isMobile ? 5 : 8, alignItems: 'center' }}>
       <Button
-        onPress={handleRefresh}
+        onPress={() => {
+          setLoading(true);
+          handleRefresh();
+        }}
         variant="secondary"
         style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
         icon={<Ionicons name="refresh" size={22} color={theme.text} />}
@@ -714,8 +725,9 @@ export default function DebtorDetailScreen({ route, navigation }) {
 
 
         {loading ? (
-          <View style={{ paddingVertical: 40, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ paddingVertical: 60, alignItems: 'center' }}>
             <ActivityIndicator size="large" color={theme.accent} />
+            <Text style={{ color: theme.textSecondary, marginTop: 12, fontSize: 14 }}>Cargando datos...</Text>
           </View>
         ) : (
           <View style={[styles.list, { paddingHorizontal: isMobile ? 10 : 20 }]}>
@@ -879,12 +891,20 @@ export default function DebtorDetailScreen({ route, navigation }) {
             )}
 
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setModalVisible(false)}>
-                <Text style={[styles.modalBtnText, { color: theme.textSecondary }]}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.accent }]} onPress={saveTransaction}>
-                <Text style={styles.modalBtnTextSave}>Guardar</Text>
-              </TouchableOpacity>
+              <Button
+                title="Cancelar"
+                onPress={() => setModalVisible(false)}
+                variant="secondary"
+                style={{ flex: 1 }}
+                loading={false}
+              />
+              <Button
+                title="Guardar"
+                onPress={saveTransaction}
+                variant="primary"
+                loading={isSavingClient}
+                style={{ flex: 1 }}
+              />
             </View>
           </Pressable>
         </Pressable>
@@ -912,12 +932,20 @@ export default function DebtorDetailScreen({ route, navigation }) {
               ¿Seguro que deseas eliminar este movimiento? Afectará el saldo del {debtor.type === 'deuda' ? 'proveedor' : 'cliente'}.
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity style={styles.modalBtnCancel} onPress={() => setDeleteModalVisible(false)}>
-                <Text style={[styles.modalBtnText, { color: theme.textSecondary }]}>Cancelar</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.danger }]} onPress={confirmDelete}>
-                <Text style={styles.modalBtnTextSave}>Eliminar</Text>
-              </TouchableOpacity>
+              <Button
+                title="Cancelar"
+                onPress={() => setDeleteModalVisible(false)}
+                variant="secondary"
+                loading={false}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title="Eliminar"
+                onPress={confirmDelete}
+                loading={isSavingClient}
+                variant="danger"
+                style={{ flex: 1 }}
+              />
             </View>
           </Pressable>
         </Pressable>
@@ -1301,6 +1329,7 @@ const styles = StyleSheet.create({
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 10,
   },
   modalBtnCancel: {
     padding: 15,

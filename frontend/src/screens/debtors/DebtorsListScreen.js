@@ -58,6 +58,7 @@ export default function DebtorsListScreen({ navigation }) {
   const [address, setAddress] = useState('');
   const [notes, setNotes] = useState('');
   const [type, setType] = useState('deudor'); // 'deudor' | 'deuda' | 'ahorro'
+  const [isSavingClient, setIsSavingClient] = useState(false);
 
   // Modal Confirmación de Eliminación
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -209,6 +210,7 @@ export default function DebtorsListScreen({ navigation }) {
   const saveClient = async () => {
     if (!name.trim()) return;
 
+    setIsSavingClient(true);
     try {
       if (editingId) {
         // Actualizar existente en base de datos
@@ -236,11 +238,15 @@ export default function DebtorsListScreen({ navigation }) {
       setModalVisible(false);
     } catch (error) {
       console.error('Error al guardar cliente:', error);
+    } finally {
+      setIsSavingClient(false);
     }
   };
 
   const confirmDelete = async () => {
     if (!itemToDelete) return;
+
+    setIsSavingClient(true);
     try {
       // Eliminar de la base de datos
       const response = await apiFetch(`${API_URL}/debtors/${itemToDelete}`, {
@@ -254,6 +260,8 @@ export default function DebtorsListScreen({ navigation }) {
       setItemToDelete(null);
     } catch (error) {
       console.error('Error al eliminar cliente:', error);
+    } finally {
+      setIsSavingClient(false);
     }
   };
 
@@ -442,7 +450,10 @@ export default function DebtorsListScreen({ navigation }) {
   const headerRightComponent = (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
       <Button
-        onPress={handleRefresh}
+        onPress={() => {
+          setLoading(true);
+          handleRefresh();
+        }}
         variant="secondary"
         style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
         icon={<Ionicons name="refresh" size={20} color={theme.text} />}
@@ -459,7 +470,7 @@ export default function DebtorsListScreen({ navigation }) {
   return (
     <SidebarLayout navigation={navigation} title="Deudas y Ahorros" activeRoute="DebtorsList" headerRight={headerRightComponent}>
 
-      <View style={{ paddingHorizontal: isMobile ? 10 : 20, paddingTop: 8, paddingBottom: 4 }}>
+      <View style={{ paddingHorizontal: isMobile ? 10 : 20, paddingTop: 8, paddingBottom: 10 }}>
         <Input
           icon="search-outline"
           placeholder="Buscar deudor o deuda..."
@@ -478,8 +489,9 @@ export default function DebtorsListScreen({ navigation }) {
       </View>
 
       {loading ? (
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ paddingVertical: 60, alignItems: 'center' }}>
           <ActivityIndicator size="large" color={theme.accent} />
+          <Text style={{ color: theme.textSecondary, marginTop: 12, fontSize: 14 }}>Cargando datos...</Text>
         </View>
       ) : (
         <FlatList
@@ -570,7 +582,7 @@ export default function DebtorsListScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 10 }}>
+            <ScrollView style={{ maxHeight: 380 }} showsVerticalScrolltor={false} contentContainerStyle={{ paddingBottom: 10 }}>
               <Input
                 label="Nombre *"
                 placeholder="Nombre completo"
@@ -624,11 +636,13 @@ export default function DebtorsListScreen({ navigation }) {
                 onPress={() => setModalVisible(false)}
                 variant="secondary"
                 style={{ flex: 1 }}
+                loading={false}
               />
               <Button
                 title="Guardar"
                 onPress={saveClient}
                 variant="primary"
+                loading={isSavingClient}
                 style={{ flex: 1 }}
               />
             </View>
@@ -662,11 +676,13 @@ export default function DebtorsListScreen({ navigation }) {
                 title="Cancelar"
                 onPress={() => setDeleteModalVisible(false)}
                 variant="secondary"
+                loading={false}
                 style={{ flex: 1 }}
               />
               <Button
                 title="Eliminar"
                 onPress={confirmDelete}
+                loading={isSavingClient}
                 variant="danger"
                 style={{ flex: 1 }}
               />
@@ -911,6 +927,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     marginTop: 10,
+    gap: 10,
   },
   modalBtnCancel: {
     padding: 15,

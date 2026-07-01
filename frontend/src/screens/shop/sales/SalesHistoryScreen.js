@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Platform, Modal, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, Platform, Modal, ScrollView, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { useTheme } from '../../theme/ThemeContext';
-import { useAuth } from '../../context/AuthContext';
-import { useToast } from '../../context/ToastContext';
+import { useTheme } from '../../../theme/ThemeContext';
+import { useAuth } from '../../../context/AuthContext';
+import { useToast } from '../../../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { useWindowDimensions } from 'react-native';
-import { apiFetch } from '../../utils/offlineSync';
-import { exportToExcel } from '../../utils/excelExport';
-import SidebarLayout from '../../navigation/SidebarLayout';
-import Input from '../../components/Input';
-import Button from '../../components/Button';
+import { apiFetch } from '../../../utils/offlineSync';
+import { exportToExcel } from '../../../utils/excelExport';
+import SidebarLayout from '../../../navigation/SidebarLayout';
+import Input from '../../../components/Input';
+import Button from '../../../components/Button';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -126,6 +126,7 @@ export default function SalesHistoryScreen({ navigation }) {
   }, [isFocused]);
 
   const handleRefresh = () => {
+    setLoading(true);
     setRefreshing(true);
     fetchSales();
   };
@@ -245,8 +246,20 @@ export default function SalesHistoryScreen({ navigation }) {
   return (
     <SidebarLayout navigation={navigation} title="Historial de Ventas" activeRoute="SalesHistory" headerRight={headerRightComponent}>
 
+      <View style={{ flexDirection: 'row', alignItems: 'center', padding: isMobile ? 10 : 20 }}>
+        <Button
+          onPress={() => navigation.goBack()}
+          variant="secondary"
+          style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, marginRight: 10, borderWidth: 0 }]}
+          icon={<Ionicons name="chevron-back" size={22} color={theme.text} />}
+        />
+        <Text style={[styles.title, { color: theme.text }]}>
+          Ventas
+        </Text>
+      </View>
+
       {/* Buscador */}
-      <View style={[styles.filterSection, { paddingHorizontal: isMobile ? 10 : 15 }]}>
+      <View style={[styles.filterSection, { paddingHorizontal: isMobile ? 10 : 15, paddingTop: 0 }]}>
         <Input
           icon="search"
           placeholder="Buscar por # venta, pedido o deudor..."
@@ -263,7 +276,7 @@ export default function SalesHistoryScreen({ navigation }) {
         />
 
         {/* Filtros Rápidos */}
-        <View style={styles.filterButtonsRow}>
+        <View style={[styles.filterButtonsRow, { marginTop: isMobile ? 10 : 20 }]}>
           <TouchableOpacity
             style={[
               styles.filterTab,
@@ -337,8 +350,8 @@ export default function SalesHistoryScreen({ navigation }) {
         animationType="slide"
         onRequestClose={() => setDetailModalVisible(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[
+        <Pressable style={styles.modalOverlay} onPress={() => setDetailModalVisible(false)}>
+          <Pressable style={[
             styles.modalContent,
             {
               backgroundColor: theme.card,
@@ -346,7 +359,7 @@ export default function SalesHistoryScreen({ navigation }) {
               height: isMobile ? '80%' : '75%',
               paddingBottom: isMobile ? (Platform.OS === 'ios' ? 32 : 20) : 24
             }
-          ]}>
+          ]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
 
             {/* Header del Modal */}
             <View style={styles.modalHeader}>
@@ -446,8 +459,8 @@ export default function SalesHistoryScreen({ navigation }) {
               <Text style={styles.modalCloseMainText}>Entendido</Text>
             </TouchableOpacity>
 
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
 
       {/* MODAL DE EXPORTACIÓN */}
@@ -457,8 +470,8 @@ export default function SalesHistoryScreen({ navigation }) {
         animationType="fade"
         onRequestClose={() => setExportModalVisible(false)}
       >
-        <View style={[styles.modalOverlay, { paddingHorizontal: isMobile ? 10 : 15 }]}>
-          <View style={[styles.modalContent, { backgroundColor: theme.card, maxWidth: 450, alignSelf: 'center', marginBottom: 'auto', marginTop: 'auto', borderRadius: 20, padding: isMobile ? 10 : 15 }]}>
+        <Pressable style={[styles.modalOverlay, { paddingHorizontal: isMobile ? 10 : 15 }]} onPress={() => setExportModalVisible(false)}>
+          <Pressable style={[styles.modalContent, { backgroundColor: theme.card, maxWidth: 450, alignSelf: 'center', marginBottom: 'auto', marginTop: 'auto', borderRadius: 20, padding: isMobile ? 10 : 15 }]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
             <View style={styles.modalHeader}>
               <View>
                 <Text style={[styles.modalTitle, { color: theme.text }]}>Exportar Ventas</Text>
@@ -493,8 +506,8 @@ export default function SalesHistoryScreen({ navigation }) {
                 <Text style={[styles.exportBtnText, { color: theme.text }]}>Ventas filtradas/buscadas ({filteredSales.length})</Text>
               </TouchableOpacity>
             </View>
-          </View>
-        </View>
+          </Pressable>
+        </Pressable>
       </Modal>
     </SidebarLayout>
   );
@@ -522,6 +535,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.05,
     shadowRadius: 4,
   },
+  title: { fontSize: 20, fontWeight: 'bold' },
   refreshBtn: {
     padding: 8,
   },
@@ -530,7 +544,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   filterSection: {
-    padding: 15,
     paddingBottom: 5,
   },
   searchContainer: {

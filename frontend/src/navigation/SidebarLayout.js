@@ -99,21 +99,9 @@ export default function SidebarLayout({
       visible: moduleSettings.showDebtors
     },
     {
-      label: 'Punto de Venta',
-      icon: 'cart',
-      route: 'POS',
-      visible: moduleSettings.showShop
-    },
-    {
-      label: 'Inventario',
-      icon: 'cube',
-      route: 'Inventory',
-      visible: moduleSettings.showShop
-    },
-    {
-      label: 'Historial de Ventas',
-      icon: 'receipt',
-      route: 'SalesHistory',
+      label: 'Tienda',
+      icon: 'storefront',
+      route: 'ShopMenu',
       visible: moduleSettings.showShop
     },
     {
@@ -179,7 +167,7 @@ export default function SidebarLayout({
         >
           {navItems.map((item, index) => {
             if (!item.visible) return null;
-            const isActive = activeRoute === item.route;
+            const isActive = activeRoute === item.route || (item.route === 'ShopMenu' && ['POS', 'Inventory', 'SalesHistory'].includes(activeRoute));
             const isItemHovered = hoveredItem === index;
             return (
               <Button
@@ -349,7 +337,7 @@ export default function SidebarLayout({
         {/* CONTENEDOR DE CONTENIDO PRINCIPAL */}
         <View style={styles.contentContainer}>
           {/* HEADER PRINCIPAL */}
-          <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: isDarkMode ? '#2D2D2D' : '#E5E7EB' }]}>
+          <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: isDarkMode ? '#2D2D2D' : '#E5E7EB', paddingHorizontal: isMobile ? 10 : 16 }]}>
             <View style={styles.headerLeft}>
               {onBackPress ? (
                 <Button
@@ -374,7 +362,9 @@ export default function SidebarLayout({
                   }
                 />
               )}
-              <Text style={[styles.headerTitle, { color: theme.text }]}>{title || 'UniControl'}</Text>
+              <Text style={[styles.headerTitle, { color: theme.text }]} numberOfLines={1}>
+                {title || 'UniControl'}
+              </Text>
             </View>
 
             <View style={[styles.headerRight, { gap: 10 }]}>
@@ -457,12 +447,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 16,
     borderBottomWidth: 1,
     zIndex: 10,
-
   },
   headerLeft: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
@@ -480,6 +469,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    flexShrink: 1,
   },
   headerRight: {
     flexDirection: 'row',
@@ -511,7 +501,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     paddingVertical: 10,
-    borderBottomWidth: 1,
     gap: 8,
   },
   brandLogo: {

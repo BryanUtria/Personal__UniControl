@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Switch, ScrollView, Platform, Alert } from 'react-native';
+import { StyleSheet, Text, View, Switch, ScrollView, Platform, Alert, useWindowDimensions } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useModules } from '../../context/ModuleContext';
@@ -14,6 +14,8 @@ export default function SettingsScreen({ navigation }) {
   const { user } = useAuth();
   const { moduleSettings, saveModuleSettings } = useModules();
   const { showToast } = useToast();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 600;
 
   const [pendingQueue, setPendingQueue] = useState([]);
   const [syncingManual, setSyncingManual] = useState(false);
@@ -105,7 +107,7 @@ export default function SettingsScreen({ navigation }) {
       if (body) {
         parsedBody = typeof body === 'string' ? JSON.parse(body) : body;
       }
-    } catch (e) {}
+    } catch (e) { }
 
     const lowerUrl = url.toLowerCase();
 
@@ -167,132 +169,132 @@ export default function SettingsScreen({ navigation }) {
       title="Configuración"
       activeRoute="Settings"
     >
-      <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={styles.scrollContent}>
-      {/* SECCIÓN MÓDULOS */}
-      <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-        <Text style={[styles.sectionTitle, { color: theme.text }]}>Módulos Habilitados</Text>
-        <Text style={[styles.sectionDesc, { color: theme.textSecondary }]}>
-          Enciende o apaga los módulos para personalizar el menú lateral y las funciones visibles.
-        </Text>
+      <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={[styles.scrollContent, { padding: isMobile ? 10 : 16 }]}>
+        {/* SECCIÓN MÓDULOS */}
+        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Módulos Habilitados</Text>
+          <Text style={[styles.sectionDesc, { color: theme.textSecondary }]}>
+            Enciende o apaga los módulos para personalizar el menú lateral y las funciones visibles.
+          </Text>
 
-        <View style={[styles.settingRow, { borderBottomColor: isDarkMode ? '#2D2D2D' : '#F0F0F0' }]}>
-          <View style={styles.settingLabelWrap}>
-            <View style={[styles.iconContainer, { backgroundColor: '#3B82F615' }]}>
-              <Ionicons name="cart" size={22} color="#3B82F6" />
+          <View style={[styles.settingRow, { borderBottomColor: isDarkMode ? '#2D2D2D' : '#F0F0F0' }]}>
+            <View style={styles.settingLabelWrap}>
+              <View style={[styles.iconContainer, { backgroundColor: '#3B82F615' }]}>
+                <Ionicons name="cart" size={22} color="#3B82F6" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Tienda</Text>
+                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Punto de Venta, Inventario e Historial de Ventas.</Text>
+              </View>
             </View>
-            <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingTitle, { color: theme.text }]}>Módulo de Tienda</Text>
-              <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Punto de Venta, Inventario e Historial de Ventas.</Text>
-            </View>
+            <Switch
+              value={moduleSettings.showShop}
+              onValueChange={() => handleToggleModule('showShop')}
+              trackColor={{ false: '#767577', true: theme.accent }}
+              thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showShop ? '#FFF' : '#f4f3f4')}
+            />
           </View>
-          <Switch
-            value={moduleSettings.showShop}
-            onValueChange={() => handleToggleModule('showShop')}
-            trackColor={{ false: '#767577', true: theme.accent }}
-            thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showShop ? '#FFF' : '#f4f3f4')}
-          />
-        </View>
 
-        <View style={styles.settingRow}>
-          <View style={styles.settingLabelWrap}>
-            <View style={[styles.iconContainer, { backgroundColor: '#8B5CF615' }]}>
-              <Ionicons name="people" size={22} color="#8B5CF6" />
+          <View style={styles.settingRow}>
+            <View style={styles.settingLabelWrap}>
+              <View style={[styles.iconContainer, { backgroundColor: '#8B5CF615' }]}>
+                <Ionicons name="people" size={22} color="#8B5CF6" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Deudas, Deudores y Ahorros</Text>
+                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Control de cuentas por cobrar, pagar y ahorros.</Text>
+              </View>
             </View>
-            <View style={styles.settingTextContainer}>
-              <Text style={[styles.settingTitle, { color: theme.text }]}>Deudas, Deudores y Ahorros</Text>
-              <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Control de cuentas por cobrar, pagar y ahorros.</Text>
-            </View>
-          </View>
-          <Switch
-            value={moduleSettings.showDebtors}
-            onValueChange={() => handleToggleModule('showDebtors')}
-            trackColor={{ false: '#767577', true: theme.accent }}
-            thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showDebtors ? '#FFF' : '#f4f3f4')}
-          />
-        </View>
-      </View>
-
-      {/* SECCIÓN SINCRONIZACIÓN */}
-      <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: 20 }]}>
-        <View style={styles.sectionHeader}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Sincronización Offline</Text>
-          <View style={[styles.networkBadge, { backgroundColor: networkOnline ? '#10B98120' : theme.danger + '15' }]}>
-            <View style={[styles.networkDot, { backgroundColor: networkOnline ? '#10B981' : theme.danger }]} />
-            <Text style={[styles.networkBadgeText, { color: networkOnline ? '#10B981' : theme.danger }]}>
-              {networkOnline ? 'Online' : 'Offline'}
-            </Text>
+            <Switch
+              value={moduleSettings.showDebtors}
+              onValueChange={() => handleToggleModule('showDebtors')}
+              trackColor={{ false: '#767577', true: theme.accent }}
+              thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showDebtors ? '#FFF' : '#f4f3f4')}
+            />
           </View>
         </View>
-        <Text style={[styles.sectionDesc, { color: theme.textSecondary }]}>
-          Los cambios realizados sin internet se encolan localmente y se suben al servidor cuando se restablece la red.
-        </Text>
 
-        {pendingQueue.length === 0 ? (
-          <View style={styles.emptyQueue}>
-            <Ionicons name="checkmark-circle-outline" size={48} color="#10B981" />
-            <Text style={[styles.emptyQueueTitle, { color: theme.text }]}>¡Todo está al día!</Text>
-            <Text style={{ color: theme.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 4 }}>
-              No tienes ningún cambio pendiente de sincronización.
-            </Text>
-          </View>
-        ) : (
-          <View style={styles.queueContainer}>
-            <View style={styles.queueHeader}>
-              <Text style={[styles.queueTitle, { color: theme.text }]}>
-                Cola de cambios ({pendingQueue.length})
+        {/* SECCIÓN SINCRONIZACIÓN */}
+        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20 }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Sincronización Offline</Text>
+            <View style={[styles.networkBadge, { backgroundColor: networkOnline ? '#10B98120' : theme.danger + '15' }]}>
+              <View style={[styles.networkDot, { backgroundColor: networkOnline ? '#10B981' : theme.danger }]} />
+              <Text style={[styles.networkBadgeText, { color: networkOnline ? '#10B981' : theme.danger }]}>
+                {networkOnline ? 'Online' : 'Offline'}
               </Text>
             </View>
+          </View>
+          <Text style={[styles.sectionDesc, { color: theme.textSecondary }]}>
+            Los cambios realizados sin internet se encolan localmente y se suben al servidor cuando se restablece la red.
+          </Text>
 
-            <View style={styles.queueList}>
-              {pendingQueue.map((req, index) => {
-                const methodColor = req.method === 'POST' ? '#10B981' : req.method === 'PUT' ? '#3B82F6' : '#EF4444';
-                return (
-                  <View
-                    key={req.id || index}
-                    style={[
-                      styles.queueItem,
-                      {
-                        backgroundColor: theme.background,
-                        borderColor: isDarkMode ? '#2D2D2D' : '#E5E7EB',
-                        borderLeftColor: methodColor
-                      }
-                    ]}
-                  >
-                    <View style={styles.queueItemHeader}>
-                      <Text style={[styles.queueMethodText, { color: methodColor }]}>
-                        {req.method}
-                      </Text>
-                      <Text style={{ color: theme.textSecondary, fontSize: 10 }}>
-                        {req.timestamp ? new Date(req.timestamp).toLocaleTimeString() : ''}
+          {pendingQueue.length === 0 ? (
+            <View style={styles.emptyQueue}>
+              <Ionicons name="checkmark-circle-outline" size={48} color="#10B981" />
+              <Text style={[styles.emptyQueueTitle, { color: theme.text }]}>¡Todo está al día!</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 13, textAlign: 'center', marginTop: 4 }}>
+                No tienes ningún cambio pendiente de sincronización.
+              </Text>
+            </View>
+          ) : (
+            <View style={styles.queueContainer}>
+              <View style={styles.queueHeader}>
+                <Text style={[styles.queueTitle, { color: theme.text }]}>
+                  Cola de cambios ({pendingQueue.length})
+                </Text>
+              </View>
+
+              <View style={styles.queueList}>
+                {pendingQueue.map((req, index) => {
+                  const methodColor = req.method === 'POST' ? '#10B981' : req.method === 'PUT' ? '#3B82F6' : '#EF4444';
+                  return (
+                    <View
+                      key={req.id || index}
+                      style={[
+                        styles.queueItem,
+                        {
+                          backgroundColor: theme.background,
+                          borderColor: isDarkMode ? '#2D2D2D' : '#E5E7EB',
+                          borderLeftColor: methodColor
+                        }
+                      ]}
+                    >
+                      <View style={styles.queueItemHeader}>
+                        <Text style={[styles.queueMethodText, { color: methodColor }]}>
+                          {req.method}
+                        </Text>
+                        <Text style={{ color: theme.textSecondary, fontSize: 10 }}>
+                          {req.timestamp ? new Date(req.timestamp).toLocaleTimeString() : ''}
+                        </Text>
+                      </View>
+                      <Text style={[styles.queueItemDesc, { color: theme.text }]}>
+                        {getFriendlyRequestName(req)}
                       </Text>
                     </View>
-                    <Text style={[styles.queueItemDesc, { color: theme.text }]}>
-                      {getFriendlyRequestName(req)}
-                    </Text>
-                  </View>
-                );
-              })}
-            </View>
+                  );
+                })}
+              </View>
 
-            <View style={styles.queueActions}>
-              <Button
-                title="Limpiar Cola"
-                onPress={handleClearQueue}
-                variant="danger"
-                style={{ flex: 1 }}
-              />
+              <View style={styles.queueActions}>
+                <Button
+                  title="Limpiar Cola"
+                  onPress={handleClearQueue}
+                  variant="danger"
+                  style={{ flex: 1 }}
+                />
 
-              <Button
-                title="Sincronizar Ahora"
-                onPress={handleManualSync}
-                variant="primary"
-                loading={syncingManual}
-                style={{ flex: 1 }}
-              />
+                <Button
+                  title="Sincronizar Ahora"
+                  onPress={handleManualSync}
+                  variant="primary"
+                  loading={syncingManual}
+                  style={{ flex: 1 }}
+                />
+              </View>
             </View>
-          </View>
-        )}
-      </View>
+          )}
+        </View>
       </ScrollView>
     </SidebarLayout>
   );
@@ -303,7 +305,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    padding: 16,
   },
   section: {
     borderRadius: 16,
@@ -334,6 +335,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 14,
     borderBottomWidth: 1,
+    gap: 10,
   },
   settingLabelWrap: {
     flexDirection: 'row',

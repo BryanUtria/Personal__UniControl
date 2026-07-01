@@ -187,15 +187,18 @@ export default function DashboardScreen({ navigation }) {
               </>
             )}
 
-            {/* FILA 1: Ventas de hoy + Pedidos en curso */}
+            {/* TIENDA (Título Global) */}
             {moduleSettings.showShop && (
-              <>
+              <View style={{ marginTop: 20 }}>
+                <Text style={[styles.globalTitle, { color: theme.text }]}>Tienda</Text>
+
+                {/* VENTAS (Subtítulo) */}
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => navigation.navigate('SalesHistory')}
                   style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 15, marginBottom: 10 }}
                 >
-                  <Text style={[styles.sectionLabel, { color: theme.textSecondary, marginBottom: 0, marginTop: 0 }]}>TIENDA</Text>
+                  <Text style={[styles.sectionLabel, { color: theme.textSecondary, marginBottom: 0, marginTop: 0 }]}>VENTAS</Text>
                   <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
                 </TouchableOpacity>
                 <View style={styles.row}>
@@ -247,12 +250,8 @@ export default function DashboardScreen({ navigation }) {
                     </Text>
                   </View>
                 </View>
-              </>
-            )}
 
-            {/* FILA 4: Inventario */}
-            {moduleSettings.showShop && (
-              <>
+                {/* INVENTARIO (Subtítulo) */}
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => navigation.navigate('Inventory')}
@@ -343,7 +342,7 @@ export default function DashboardScreen({ navigation }) {
                     </View>
                   </>
                 )}
-              </>
+              </View>
             )}
 
             {!moduleSettings.showShop && !moduleSettings.showDebtors && (
@@ -395,6 +394,12 @@ const styles = StyleSheet.create({
     fontSize: 11, fontWeight: '700', letterSpacing: 1,
     marginBottom: 10, marginTop: 4,
   },
+  globalTitle: { // Nuevo estilo para el título global "Tienda"
+    fontSize: 24,
+    fontWeight: '800',
+    letterSpacing: 0.5,
+    marginBottom: 0,
+  },
   row: { flexDirection: 'row', gap: 10, marginBottom: 10 },
   rowColumn: { flexDirection: 'column' },
   bigStatCard: {
@@ -444,3 +449,4 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
 });
+
