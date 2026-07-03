@@ -141,3 +141,23 @@ npm run build:apk
 ### 4. Descargar tu APK
 Una vez completada la compilación, encontrarás tu archivo instalable ya renombrado en la raíz de tu frontend:
 `frontend/Unicontrol.apk`
+
+### 5. Lanzar una nueva versión y subir el APK a GitHub
+Para distribuir automáticamente la nueva actualización a los usuarios, subiremos el archivo APK generado a los **Releases** de tu repositorio usando GitHub CLI (`gh`).
+
+**Paso 1: Sube tus últimos cambios a Git**
+Primero asegúrate de confirmar y empujar la nueva versión (recuerda subir la versión en el `package.json`):
+```bash
+git add .
+git commit -m "Actualización a nueva versión"
+git push
+```
+
+**Paso 2: Crea el Release en GitHub**
+Asegúrate de estar en la carpeta raíz del proyecto (la carpeta principal, no dentro del frontend) y ejecuta el siguiente comando, ajustando el número de versión (ej. `v1.0.1`):
+```bash
+gh release create v1.0.1 frontend/Unicontrol.apk --title "Versión 1.0.1" --notes "Nueva actualización disponible"
+```
+
+**Paso 3: Actualizar Backend**
+GitHub te devolverá un enlace directo de descarga. Copia ese enlace (o constrúyelo así: `https://github.com/BryanUtria/Personal__UniControl/releases/download/v1.0.1/Unicontrol.apk`) y ponlo en tu variable `APK_URL` dentro del archivo `.env` de tu **backend** en producción (Render).
