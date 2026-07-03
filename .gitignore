@@ -4,6 +4,7 @@
 
 # local env files
 **/.env
+**/UniControl.apk
 
 # generated native folders
 **/ios

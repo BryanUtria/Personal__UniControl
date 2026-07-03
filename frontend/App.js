@@ -10,6 +10,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { syncOfflineQueue, getOfflineQueue, isConnected } from './src/utils/offlineSync';
 import { Ionicons } from '@expo/vector-icons';
 import { ModuleProvider } from './src/context/ModuleContext';
+import VersionCheckModal from './src/components/VersionCheckModal';
 
 function OfflineSyncManager() {
   const { showToast } = useToast();
@@ -207,6 +208,7 @@ export default function App() {
                 <AppNavigator />
               </NavigationContainer>
               <OfflineSyncManager />
+              <VersionCheckModal />
             </ToastProvider>
           </ModuleProvider>
         </ThemeProvider>

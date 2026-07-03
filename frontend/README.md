@@ -129,20 +129,15 @@ Antes de compilar, abre el archivo [.env](file:///c:/Users/braya/OneDrive/Docume
 EXPO_PUBLIC_API_URL=https://unicontrol-backend.onrender.com/api
 ```
 
-### 3. Generar y Compilar el Proyecto Nativo
-Ejecuta los siguientes comandos desde la carpeta `frontend/`:
+### 3. Generar y Compilar el APK
+Para hacer todo el proceso automáticamente (limpiar, compilar y extraer el APK con el nombre `Unicontrol.apk`), hemos añadido un comando rápido. 
+
+Ejecuta el siguiente comando desde la carpeta `frontend/`:
 
 ```bash
-# 1. Generar/Limpiar el directorio nativo de Android
-npx expo prebuild --clean
-
-# 2. Entrar a la carpeta nativa
-cd android
-
-# 3. Compilar el APK de producción (Release)
-./gradlew assembleRelease
+npm run build:apk
 ```
 
 ### 4. Descargar tu APK
-Una vez completada la compilación, encontrarás tu archivo instalable `.apk` en:
-`frontend/android/app/build/outputs/apk/release/app-release.apk`
+Una vez completada la compilación, encontrarás tu archivo instalable ya renombrado en la raíz de tu frontend:
+`frontend/Unicontrol.apk`

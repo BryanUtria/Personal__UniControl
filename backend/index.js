@@ -11,6 +11,14 @@ const PORT = process.env.PORT || 3001;
 app.use(cors());
 app.use(express.json());
 
+// --- ENDPOINT PARA CONTROL DE VERSIONES ---
+app.get('/api/version', (req, res) => {
+    res.json({ 
+        version: process.env.version || '1.0.0',
+        apkUrl: process.env.APK_URL || 'https://tu-servidor.com/Unicontrol.apk'
+    });
+});
+
 const mapType = (t) => {
     if (t === 'supplier' || t === 'deuda') return 'deuda';
     if (t === 'saving' || t === 'ahorro') return 'ahorro';
