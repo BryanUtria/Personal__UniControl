@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, View, TouchableOpacity, StatusBar, ScrollView, Platform, useWindowDimensions, ActivityIndicator, RefreshControl, Alert } from 'react-native';
+import { StyleSheet, Text, View, TouchableOpacity, StatusBar, ScrollView, Platform, useWindowDimensions, ActivityIndicator, RefreshControl, Alert, Modal, TextInput } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import { useModules } from '../context/ModuleContext';
@@ -8,6 +8,8 @@ import { useIsFocused } from '@react-navigation/native';
 import { apiFetch, getOfflineQueue } from '../utils/offlineSync';
 import { useToast } from '../context/ToastContext';
 import SidebarLayout from '../navigation/SidebarLayout';
+import DatePicker from '../components/DatePicker';
+import { formatDateToLocal } from '../utils/dateUtils';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -33,6 +35,35 @@ export default function DashboardScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
+
+  const [customRangeModalVisible, setCustomRangeModalVisible] = useState(false);
+  const [customStartDate, setCustomStartDate] = useState('');
+  const [customEndDate, setCustomEndDate] = useState('');
+  const [customStats, setCustomStats] = useState(null);
+  const [loadingCustom, setLoadingCustom] = useState(false);
+
+  const fetchCustomRange = async () => {
+    if (!customStartDate || !customEndDate) {
+      showToast('Ingresa ambas fechas (AAAA-MM-DD).', 'error');
+      return;
+    }
+    try {
+      setLoadingCustom(true);
+      const res = await apiFetch(`${API_URL}/dashboard/custom?start=${customStartDate}&end=${customEndDate}`, {
+        headers: { 'x-user-id': user ? user.id.toString() : '' }
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setCustomStats(data);
+      } else {
+        showToast(data.error || 'Error al cargar rango', 'error');
+      }
+    } catch (e) {
+      showToast('Error de red', 'error');
+    } finally {
+      setLoadingCustom(false);
+    }
+  };
 
   const loadQueueCount = async () => {
     try {
@@ -192,6 +223,36 @@ export default function DashboardScreen({ navigation }) {
               <View style={{ marginTop: 20 }}>
                 <Text style={[styles.globalTitle, { color: theme.text }]}>Tienda</Text>
 
+                {/* PEDIDOS / PUNTO DE VENTA (Subtítulo) */}
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => navigation.navigate('POS')}
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 15, marginBottom: 10 }}
+                >
+                  <Text style={[styles.sectionLabel, { color: theme.textSecondary, marginBottom: 0, marginTop: 0 }]}>PUNTO DE VENTA</Text>
+                  <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
+                </TouchableOpacity>
+                <View style={styles.row}>
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    // onPress={() => navigation.navigate('POS')}
+                    style={[styles.statCard, { backgroundColor: theme.card, flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+                  >
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                      <View style={[styles.statIconBg, { backgroundColor: '#6366F115', marginBottom: 0 }]}>
+                        <Ionicons name="receipt-outline" size={20} color="#6366F1" />
+                      </View>
+                      <View>
+                        <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 12 }]}>Pedidos en curso</Text>
+                        <Text style={[styles.statValue, { color: stats?.pending_orders_count > 0 ? '#6366F1' : theme.text }]}>
+                          {stats?.pending_orders_count || 0}
+                        </Text>
+                      </View>
+                    </View>
+                    {/* <Ionicons name="arrow-forward" size={20} color={theme.textSecondary} /> */}
+                  </TouchableOpacity>
+                </View>
+
                 {/* VENTAS (Subtítulo) */}
                 <TouchableOpacity
                   activeOpacity={0.7}
@@ -202,29 +263,24 @@ export default function DashboardScreen({ navigation }) {
                   <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
                 </TouchableOpacity>
                 <View style={styles.row}>
-                  <View style={[styles.bigStatCard, { backgroundColor: theme.accent, flex: 1.5 }]}>
+                  <View style={[styles.bigStatCard, { backgroundColor: theme.accent, flex: 1 }]}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                       <View>
                         <Text style={styles.bigStatLabel}>Ventas Hoy</Text>
                         <Text style={styles.bigStatValue}>
                           $ {isMobile ? formatCompact(stats?.today_sales_total || 0) : formatNumber(stats?.today_sales_total || 0)}
                         </Text>
+                        {stats?.today_profit_total !== undefined && (
+                          <Text style={{ fontSize: 13, color: 'rgba(255,255,255,0.85)', marginTop: 2, fontWeight: '500' }}>
+                            Utilidad: $ {isMobile ? formatCompact(stats?.today_profit_total || 0) : formatNumber(stats?.today_profit_total || 0)}
+                          </Text>
+                        )}
                       </View>
                       <View style={styles.bigStatIcon}>
                         <Ionicons name="trending-up" size={22} color="rgba(255,255,255,0.9)" />
                       </View>
                     </View>
                     <Text style={styles.bigStatSub}>{stats?.today_sales_count || 0} transacciones</Text>
-                  </View>
-
-                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
-                    <View style={[styles.statIconBg, { backgroundColor: '#6366F115' }]}>
-                      <Ionicons name="receipt-outline" size={20} color="#6366F1" />
-                    </View>
-                    <Text style={[styles.statLabel, { color: theme.textSecondary }]}>Pedidos en curso</Text>
-                    <Text style={[styles.statValue, { color: stats?.pending_orders_count > 0 ? '#6366F1' : theme.text }]}>
-                      {stats?.pending_orders_count || 0}
-                    </Text>
                   </View>
                 </View>
 
@@ -238,6 +294,11 @@ export default function DashboardScreen({ navigation }) {
                     <Text style={[styles.statValue, { color: '#10B981' }]}>
                       $ {isMobile ? formatCompact(stats?.week_sales_total || 0) : formatNumber(stats?.week_sales_total || 0)}
                     </Text>
+                    {stats?.week_profit_total !== undefined && (
+                      <Text style={{ fontSize: 11, color: theme.textSecondary, marginTop: 4 }}>
+                        Utilidad: $ {isMobile ? formatCompact(stats?.week_profit_total || 0) : formatNumber(stats?.week_profit_total || 0)}
+                      </Text>
+                    )}
                   </View>
 
                   <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
@@ -248,8 +309,31 @@ export default function DashboardScreen({ navigation }) {
                     <Text style={[styles.statValue, { color: '#F59E0B' }]}>
                       $ {isMobile ? formatCompact(stats?.month_sales_total || 0) : formatNumber(stats?.month_sales_total || 0)}
                     </Text>
+                    {stats?.month_profit_total !== undefined && (
+                      <Text style={{ fontSize: 11, color: theme.textSecondary, marginTop: 4 }}>
+                        Utilidad: $ {isMobile ? formatCompact(stats?.month_profit_total || 0) : formatNumber(stats?.month_profit_total || 0)}
+                      </Text>
+                    )}
                   </View>
                 </View>
+
+                {/* FILA 3: Rango Personalizado */}
+                <TouchableOpacity
+                  activeOpacity={0.7}
+                  onPress={() => setCustomRangeModalVisible(true)}
+                  style={[styles.statCard, { backgroundColor: theme.card, marginBottom: 10, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }]}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                    <View style={[styles.statIconBg, { backgroundColor: '#8B5CF615', marginBottom: 0 }]}>
+                      <Ionicons name="calendar" size={20} color="#8B5CF6" />
+                    </View>
+                    <View>
+                      <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 13, marginBottom: 2 }]}>Consulta Personalizada</Text>
+                      <Text style={{ color: theme.textSecondary, fontSize: 11 }}>Calcula ventas por fecha</Text>
+                    </View>
+                  </View>
+                  <Ionicons name="search" size={20} color={theme.textSecondary} />
+                </TouchableOpacity>
 
                 {/* INVENTARIO (Subtítulo) */}
                 <TouchableOpacity
@@ -326,7 +410,7 @@ export default function DashboardScreen({ navigation }) {
                             style={{ marginRight: 8 }}
                           />
                           <Text style={[styles.alertName, { color: theme.textSecondary, fontSize: 11 }]}>
-                            {new Date(s.created_at).toLocaleString('es-CO', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', hour12: true })}
+                            {formatDateToLocal(s.created_at)}
                           </Text>
                           <Text style={[styles.alertBadgeText, { color: theme.accent, fontWeight: '800', marginLeft: 'auto' }]}>
                             $ {formatNumber(s.total)}
@@ -358,6 +442,53 @@ export default function DashboardScreen({ navigation }) {
         )}
 
       </ScrollView>
+
+      {/* MODAL CONSULTA PERSONALIZADA */}
+      <Modal
+        visible={customRangeModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setCustomRangeModalVisible(false)}
+      >
+        <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }} onPress={() => setCustomRangeModalVisible(false)} activeOpacity={1}>
+          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: theme.card, padding: 20, borderRadius: 16, maxWidth: 400, width: '100%', alignSelf: 'center' }}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
+              <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Consulta Personalizada</Text>
+              <TouchableOpacity onPress={() => setCustomRangeModalVisible(false)} style={{ padding: 5 }}>
+                <Ionicons name="close" size={20} color={theme.text} />
+              </TouchableOpacity>
+            </View>
+            <View style={{ gap: 10, marginBottom: 15 }}>
+              <Text style={{ color: theme.textSecondary, fontSize: 12 }}>Selecciona el rango de fechas</Text>
+              
+              <DatePicker 
+                label="Fecha Inicio:" 
+                value={customStartDate} 
+                onChange={setCustomStartDate} 
+              />
+              <DatePicker 
+                label="Fecha Fin:" 
+                value={customEndDate} 
+                onChange={setCustomEndDate} 
+              />
+              
+              <TouchableOpacity style={{ backgroundColor: theme.accent, padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 10 }} onPress={fetchCustomRange}>
+                {loadingCustom ? <ActivityIndicator color="#FFF" /> : <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 15 }}>Consultar Rango</Text>}
+              </TouchableOpacity>
+            </View>
+
+            {customStats && (
+              <View style={{ backgroundColor: theme.background, padding: 15, borderRadius: 12, marginTop: 10, borderWidth: 1, borderColor: theme.border }}>
+                <Text style={{ color: theme.textSecondary, fontSize: 12, marginBottom: 5 }}>Resultados del período:</Text>
+                <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Ventas: $ {formatNumber(customStats.sales_total)}</Text>
+                <Text style={{ color: theme.textSecondary, fontSize: 13, marginTop: 4 }}>Transacciones: {customStats.sales_count}</Text>
+                <Text style={{ color: '#10B981', fontSize: 15, fontWeight: '700', marginTop: 8 }}>Utilidad: $ {formatNumber(customStats.profit_total)}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
     </SidebarLayout>
   );
 }

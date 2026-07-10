@@ -24,7 +24,8 @@ async function initDB() {
         database: process.env.DB_NAME || 'unicontrol',
         waitForConnections: true,
         connectionLimit: 10,
-        queueLimit: 0
+        queueLimit: 0,
+        dateStrings: true
     });
 
     // 3. Crear tablas si no existen
@@ -208,6 +209,100 @@ async function initDB() {
     } catch (migErr) {
         console.error('Error al migrar stock a lotes iniciales:', migErr);
     }
+
+    // --- SAAS SUBSCRIPTIONS & ROLES ---
+    try { await pool.query("ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'client'"); } catch (e) {}
+    try {
+        // Asignar el primer usuario como admin de manera segura si no hay ninguno
+        await pool.query("UPDATE users SET role = 'admin' WHERE id = (SELECT min_id FROM (SELECT MIN(id) as min_id FROM users) as tmp) AND NOT EXISTS (SELECT 1 FROM (SELECT id FROM users WHERE role = 'admin') as tmp2)");
+    } catch (e) {}
+
+    const appModulesTable = `
+        CREATE TABLE IF NOT EXISTS app_modules (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            module_key VARCHAR(50) NOT NULL UNIQUE,
+            name VARCHAR(255) NOT NULL,
+            base_price_cop DECIMAL(10,2) NOT NULL DEFAULT 0,
+            is_free TINYINT(1) NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(appModulesTable);
+
+    try {
+        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, is_free) VALUES ('shop', 'Tienda', 10000, 0)");
+        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, is_free) VALUES ('habits', 'Hábitos', 5000, 0)");
+    } catch (e) {}
+
+    const userSubscriptionsTable = `
+        CREATE TABLE IF NOT EXISTS user_subscriptions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            module_key VARCHAR(50) NOT NULL,
+            status VARCHAR(20) DEFAULT 'pending',
+            custom_price_cop DECIMAL(10,2) NULL,
+            trial_ends_at DATETIME NULL,
+            expires_at DATETIME NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (module_key) REFERENCES app_modules(module_key) ON DELETE CASCADE,
+            UNIQUE KEY user_module (user_id, module_key)
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(userSubscriptionsTable);
+
+    const userSettingsTable = `
+        CREATE TABLE IF NOT EXISTS user_settings (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            setting_key VARCHAR(50) NOT NULL,
+            setting_value VARCHAR(255) NOT NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE KEY user_setting (user_id, setting_key)
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(userSettingsTable);
+
+    // --- MÓDULO HÁBITOS ---
+    const habitsTable = `
+        CREATE TABLE IF NOT EXISTS habits (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            description TEXT NULL,
+            color VARCHAR(50) DEFAULT '#4caf50',
+            type VARCHAR(20) NOT NULL DEFAULT 'habit',
+            frequency VARCHAR(50) NOT NULL DEFAULT 'daily', 
+            repeat_details VARCHAR(255) NULL, 
+            start_date DATE NULL,
+            start_time TIME NULL,
+            end_time TIME NULL,
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(habitsTable);
+
+    try { await pool.query("ALTER TABLE habits ADD COLUMN description TEXT NULL"); } catch (e) {}
+    try { await pool.query("ALTER TABLE habits ADD COLUMN start_time TIME NULL"); } catch (e) {}
+    try { await pool.query("ALTER TABLE habits ADD COLUMN end_time TIME NULL"); } catch (e) {}
+    try { await pool.query("ALTER TABLE habits ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'habit'"); } catch (e) {}
+    try { await pool.query("ALTER TABLE habits ADD COLUMN start_date DATE NULL"); } catch (e) {}
+
+    const habitLogsTable = `
+        CREATE TABLE IF NOT EXISTS habit_logs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            habit_id INT NOT NULL,
+            log_date DATE NOT NULL,
+            completed TINYINT(1) NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE,
+            UNIQUE KEY habit_date (habit_id, log_date)
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(habitLogsTable);
 
     console.log('Conectado a MySQL y tablas inicializadas con éxito.');
 }

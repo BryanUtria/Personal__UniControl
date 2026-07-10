@@ -1,9 +1,11 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from './AuthContext';
 
 const ModuleContext = createContext();
+const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export const ModuleProvider = ({ children }) => {
+  const { user } = useAuth();
   const [moduleSettings, setModuleSettings] = useState({
     showShop: true,
     showDebtors: true,
@@ -12,10 +14,19 @@ export const ModuleProvider = ({ children }) => {
 
   useEffect(() => {
     const loadModuleSettings = async () => {
+      if (!user) {
+        setLoadingModules(false);
+        return;
+      }
       try {
-        const saved = await AsyncStorage.getItem('@unicontrol_module_settings');
-        if (saved) {
-          setModuleSettings(JSON.parse(saved));
+        const response = await fetch(`${API_URL}/users/settings`, {
+          headers: {
+            'x-user-id': user.id.toString(),
+          }
+        });
+        if (response.ok) {
+          const settings = await response.json();
+          setModuleSettings(settings);
         }
       } catch (e) {
         console.error('Error cargando ajustes de módulos:', e);
@@ -24,14 +35,22 @@ export const ModuleProvider = ({ children }) => {
       }
     };
     loadModuleSettings();
-  }, []);
+  }, [user]);
 
   const saveModuleSettings = async (settings) => {
+    setModuleSettings(settings); // Optimistic UI update
+    if (!user) return;
     try {
-      await AsyncStorage.setItem('@unicontrol_module_settings', JSON.stringify(settings));
-      setModuleSettings(settings);
+      await fetch(`${API_URL}/users/settings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id.toString(),
+        },
+        body: JSON.stringify(settings),
+      });
     } catch (e) {
-      console.error('Error guardando ajustes de módulos:', e);
+      console.error('Error guardando ajustes de módulos en backend:', e);
     }
   };
 

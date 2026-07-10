@@ -21,7 +21,7 @@ export default function SidebarLayout({
 }) {
   const { theme, isDarkMode, toggleTheme } = useTheme();
   const { user, logout } = useAuth();
-  const { moduleSettings } = useModules();
+  const { moduleSettings, saveModuleSettings } = useModules();
   const { isMobile, width } = useResponsive();
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -32,26 +32,18 @@ export default function SidebarLayout({
 
   const isSidebarCollapsed = !isMobile && isCollapsed;
 
-  // Cargar estado colapsado del menú lateral
+  // Sincronizar estado colapsado del menú lateral con la base de datos
   useEffect(() => {
-    const loadSidebarState = async () => {
-      try {
-        const val = await AsyncStorage.getItem('@unicontrol_sidebar_collapsed');
-        if (val !== null) {
-          setIsCollapsed(val === 'true');
-        }
-      } catch (err) {
-        console.error('Error cargando estado del menú lateral:', err);
-      }
-    };
-    loadSidebarState();
-  }, []);
+    if (moduleSettings.unicontrol_sidebar_collapsed !== undefined) {
+      setIsCollapsed(moduleSettings.unicontrol_sidebar_collapsed === true || moduleSettings.unicontrol_sidebar_collapsed === 'true');
+    }
+  }, [moduleSettings.unicontrol_sidebar_collapsed]);
 
   const toggleSidebar = async () => {
     try {
       const newVal = !isCollapsed;
       setIsCollapsed(newVal);
-      await AsyncStorage.setItem('@unicontrol_sidebar_collapsed', newVal ? 'true' : 'false');
+      await saveModuleSettings({ ...moduleSettings, unicontrol_sidebar_collapsed: newVal });
     } catch (err) {
       console.error('Error guardando estado del menú lateral:', err);
     }
@@ -103,6 +95,12 @@ export default function SidebarLayout({
       icon: 'storefront',
       route: 'ShopMenu',
       visible: moduleSettings.showShop
+    },
+    {
+      label: 'Hábitos y Tareas',
+      icon: 'calendar',
+      route: 'Habits',
+      visible: moduleSettings.showHabits
     },
     {
       label: 'Configuración',

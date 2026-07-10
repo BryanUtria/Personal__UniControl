@@ -201,8 +201,8 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
-        <ThemeProvider>
-          <ModuleProvider>
+        <ModuleProvider>
+          <ThemeProvider>
             <ToastProvider>
               <NavigationContainer>
                 <AppNavigator />
@@ -210,8 +210,8 @@ export default function App() {
               <OfflineSyncManager />
               <VersionCheckModal />
             </ToastProvider>
-          </ModuleProvider>
-        </ThemeProvider>
+          </ThemeProvider>
+        </ModuleProvider>
       </AuthProvider>
     </SafeAreaProvider>
   );

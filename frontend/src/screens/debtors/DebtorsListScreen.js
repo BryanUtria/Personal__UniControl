@@ -7,9 +7,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiFetch } from '../../utils/offlineSync';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
+import { formatDateToLocal } from '../../utils/dateUtils';
 import { Ionicons } from '@expo/vector-icons';
 import SidebarLayout from '../../navigation/SidebarLayout';
 import Input from '../../components/Input';
+import { useModules } from '../../context/ModuleContext';
 
 const formatNumber = (num) => {
   if (num === null || num === undefined || isNaN(num)) return '0';
@@ -33,6 +36,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 export default function DebtorsListScreen({ navigation }) {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
+  const { moduleSettings, saveModuleSettings } = useModules();
   const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
@@ -92,41 +96,43 @@ export default function DebtorsListScreen({ navigation }) {
   const [sortBy, setSortBy] = useState('date_desc'); // date_desc, date_asc, name_asc, name_desc, balance_desc
   const [unifiedFilter, setUnifiedFilter] = useState('all'); // all, deben, deudores, saving, zero
 
+  const isFilterLoaded = React.useRef(false);
+
   // Cargar filtros del storage al iniciar
   useEffect(() => {
-    const loadFilters = async () => {
+    if (moduleSettings.unicontrol_debtors_filter && !isFilterLoaded.current) {
+      isFilterLoaded.current = true;
       try {
-        const saved = await AsyncStorage.getItem('@unicontrol_debtors_filter');
-        if (saved) {
-          const parsed = JSON.parse(saved);
-          if (parsed.sortBy) setSortBy(parsed.sortBy);
-          if (parsed.unifiedFilter) {
-            setUnifiedFilter(parsed.unifiedFilter);
-          } else if (parsed.balanceFilter || parsed.typeFilter) {
-            // Migrar antiguos filtros si existieran
-            if (parsed.balanceFilter === 'zero') {
-              setUnifiedFilter('zero');
-            } else if (parsed.balanceFilter === 'credit') {
-              setUnifiedFilter('saving');
-            } else if (parsed.typeFilter === 'supplier') {
-              setUnifiedFilter('deben');
-            } else if (parsed.typeFilter === 'client') {
-              setUnifiedFilter('deudores');
-            }
+        const saved = moduleSettings.unicontrol_debtors_filter;
+        const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
+        if (parsed.sortBy) setSortBy(parsed.sortBy);
+        if (parsed.unifiedFilter) {
+          setUnifiedFilter(parsed.unifiedFilter);
+        } else if (parsed.balanceFilter || parsed.typeFilter) {
+          // Migrar antiguos filtros si existieran
+          if (parsed.balanceFilter === 'zero') {
+            setUnifiedFilter('zero');
+          } else if (parsed.balanceFilter === 'credit') {
+            setUnifiedFilter('saving');
+          } else if (parsed.typeFilter === 'supplier') {
+            setUnifiedFilter('deben');
+          } else if (parsed.typeFilter === 'client') {
+            setUnifiedFilter('deudores');
           }
         }
       } catch (e) {
         console.error('Error al cargar filtros de clientes:', e);
       }
-    };
-    loadFilters();
-  }, []);
+    }
+  }, [moduleSettings.unicontrol_debtors_filter]);
 
   // Guardar filtros en el storage cuando cambien
   useEffect(() => {
     const saveFilters = async () => {
       try {
-        await AsyncStorage.setItem('@unicontrol_debtors_filter', JSON.stringify({ sortBy, unifiedFilter }));
+        if (moduleSettings.unicontrol_debtors_filter !== undefined || sortBy !== 'date_desc' || unifiedFilter !== 'all') {
+          await saveModuleSettings({ ...moduleSettings, unicontrol_debtors_filter: { sortBy, unifiedFilter } });
+        }
       } catch (e) {
         console.error('Error al guardar filtros de clientes:', e);
       }
@@ -408,7 +414,7 @@ export default function DebtorsListScreen({ navigation }) {
 
             <Text style={[styles.phone, { color: theme.textSecondary }]}>{item.phone || 'Sin teléfono'}</Text>
             <Text style={[styles.date, { color: theme.textSecondary }]}>
-              Creado: {new Date(item.createdAt).toLocaleString()}
+              Creado: {formatDateToLocal(item.createdAt)}
             </Text>
           </View>
           <View style={styles.cardAmount}>

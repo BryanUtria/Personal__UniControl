@@ -81,11 +81,14 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     try {
-      await AsyncStorage.removeItem('@unicontrol_user');
-      setUser(null);
-    } catch (error) {
-      console.error("Error al cerrar sesión:", error);
+      await AsyncStorage.clear();
+      if (typeof window !== 'undefined' && window.localStorage) {
+        window.localStorage.clear();
+      }
+    } catch (e) {
+      console.error(e);
     }
+    setUser(null);
   };
 
   return (

@@ -12,7 +12,9 @@ import * as Sharing from 'expo-sharing';
 import * as XLSX from 'xlsx';
 import Input from '../../components/Input';
 import Button from '../../components/Button';
+import { formatDateToLocal } from '../../utils/dateUtils';
 import SidebarLayout from '../../navigation/SidebarLayout';
+import { useModules } from '../../context/ModuleContext';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -21,28 +23,11 @@ const formatNumber = (num) => {
   return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
-const formatTxDate = (dateStr) => {
-  if (!dateStr) return '';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    return d.toLocaleString('es-CO', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    });
-  } catch (e) {
-    return dateStr;
-  }
-};
-
 export default function DebtorDetailScreen({ route, navigation }) {
   const { debtor } = route.params;
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
+  const { moduleSettings, saveModuleSettings } = useModules();
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
@@ -64,28 +49,30 @@ export default function DebtorDetailScreen({ route, navigation }) {
     setRefreshing(false);
   };
 
+  const isFilterLoaded = React.useRef(false);
+
   // Cargar filtros de movimientos del storage al iniciar
   useEffect(() => {
-    const loadFilters = async () => {
+    if (moduleSettings.unicontrol_debtors_items_filter && !isFilterLoaded.current) {
+      isFilterLoaded.current = true;
       try {
-        const saved = await AsyncStorage.getItem('@unicontrol_debtors_items_filter');
-        if (saved) {
-          const { sortBy: savedSort, filterType: savedFilter } = JSON.parse(saved);
-          if (savedSort) setSortBy(savedSort);
-          if (savedFilter) setFilterType(savedFilter);
-        }
+        const saved = moduleSettings.unicontrol_debtors_items_filter;
+        const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
+        if (parsed.sortBy) setSortBy(parsed.sortBy);
+        if (parsed.filterType) setFilterType(parsed.filterType);
       } catch (e) {
         console.error('Error al cargar filtros de ítems:', e);
       }
-    };
-    loadFilters();
-  }, []);
+    }
+  }, [moduleSettings.unicontrol_debtors_items_filter]);
 
   // Guardar filtros de movimientos en el storage cuando cambien
   useEffect(() => {
     const saveFilters = async () => {
       try {
-        await AsyncStorage.setItem('@unicontrol_debtors_items_filter', JSON.stringify({ sortBy, filterType }));
+        if (moduleSettings.unicontrol_debtors_items_filter !== undefined || sortBy !== 'date_desc' || filterType !== 'all') {
+          await saveModuleSettings({ ...moduleSettings, unicontrol_debtors_items_filter: { sortBy, filterType } });
+        }
       } catch (e) {
         console.error('Error al guardar filtros de ítems:', e);
       }
@@ -264,7 +251,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
           ? (debtor.type === 'deuda' ? 'Compra' : 'Deuda')
           : (debtor.type === 'deuda' ? 'Pago' : 'Abono');
         return {
-          'Fecha': formatTxDate(t.date),
+          'Fecha': formatDateToLocal(t.date),
           'Descripción': t.description || 'Sin descripción',
           'Cantidad': t.quantity || 1,
           'Valor Unidad ($)': t.amount,
@@ -376,10 +363,10 @@ export default function DebtorDetailScreen({ route, navigation }) {
         const isDisabled = disabledTxIds.includes(t.id);
 
         if (isDisabled) {
-          message += `• *[${typeLabel}]* (Omitido para Saldo) ${formatTxDate(t.date)}\n`;
+          message += `• *[${typeLabel}]* (Omitido para Saldo) ${formatDateToLocal(t.date)}\n`;
           message += `  ~${t.description || 'Sin descripción'} (x${t.quantity || 1} a $ ${t.amount.toLocaleString()}): ${sign}$ ${itemTotal.toLocaleString()}~\n\n`;
         } else {
-          message += `• *[${typeLabel}]* ${formatTxDate(t.date)}\n`;
+          message += `• *[${typeLabel}]* ${formatDateToLocal(t.date)}\n`;
           message += `  ${t.description || 'Sin descripción'} (x${t.quantity || 1} a $ ${t.amount.toLocaleString()}): ${sign}$ ${itemTotal.toLocaleString()}\n\n`;
         }
       });
@@ -516,7 +503,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
                   <Ionicons name="cloud-done-outline" size={13} color="#10B981" style={{ marginLeft: 5 }} />
                 )}
               </View>
-              <Text style={[styles.tDate, { color: theme.textSecondary }]}>{formatTxDate(item.date)}</Text>
+              <Text style={[styles.tDate, { color: theme.textSecondary }]}>{formatDateToLocal(item.date)}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={[styles.tAmount, { color: tAmountColor, textDecorationLine: isEnabled ? 'none' : 'line-through' }]}>

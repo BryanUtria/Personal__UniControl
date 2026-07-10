@@ -43,7 +43,7 @@ async function calculateOfflineOrderTotal(orderId) {
   let total = 0;
   try {
     const keys = await AsyncStorage.getAllKeys();
-    const targetSuffix = `/api/orders/${orderId}/items`;
+    const targetSuffix = `/orders/${orderId}/items`;
     const orderItemsKey = keys.find(k => k.startsWith(CACHE_PREFIX) && k.endsWith(targetSuffix));
     if (orderItemsKey) {
       const cachedData = await AsyncStorage.getItem(orderItemsKey);
@@ -85,8 +85,9 @@ export async function apiFetch(url, options = {}) {
 
   // 1. Manejo de peticiones de lectura (GET)
   if (method === 'GET') {
-    const cacheKey = `${CACHE_PREFIX}${url}`;
     const cleanGetPath = getCleanPath(url);
+    const cleanUrlKey = cleanGetPath.replace(/^\/api/, '');
+    const cacheKey = `${CACHE_PREFIX}${cleanUrlKey}`;
     if (online) {
       try {
         const response = await fetch(url, options);
@@ -202,7 +203,7 @@ function getCleanPath(urlStr) {
 
 // Calcula dinámicamente el totalDebt de un deudor a partir de su caché de transacciones y la cola offline
 async function calculateOfflineTotalDebt(debtorId, baseTotalDebt) {
-  const cacheKey = `${CACHE_PREFIX}/api/debtors/${debtorId}/debts`;
+  const cacheKey = `${CACHE_PREFIX}/debtors/${debtorId}/debts`;
   const cachedData = await AsyncStorage.getItem(cacheKey);
 
   if (cachedData === null && !debtorId.startsWith('temp_')) {
@@ -252,7 +253,7 @@ async function calculateOfflineTotalDebt(debtorId, baseTotalDebt) {
 async function getCachedProducts() {
   try {
     const keys = await AsyncStorage.getAllKeys();
-    const productKey = keys.find(k => k.startsWith(CACHE_PREFIX) && k.endsWith('/api/products'));
+    const productKey = keys.find(k => k.startsWith(CACHE_PREFIX) && k.endsWith('/products'));
     if (productKey) {
       const dataJson = await AsyncStorage.getItem(productKey);
       if (dataJson) {

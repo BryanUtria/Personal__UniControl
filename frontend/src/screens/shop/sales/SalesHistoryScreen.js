@@ -9,6 +9,7 @@ import { useIsFocused } from '@react-navigation/native';
 import { useWindowDimensions } from 'react-native';
 import { apiFetch } from '../../../utils/offlineSync';
 import { exportToExcel } from '../../../utils/excelExport';
+import { formatDateToLocal as formatDate } from '../../../utils/dateUtils';
 import SidebarLayout from '../../../navigation/SidebarLayout';
 import Input from '../../../components/Input';
 import Button from '../../../components/Button';
@@ -20,18 +21,7 @@ const formatNumber = (num) => {
   return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 };
 
-const formatDate = (dateString) => {
-  if (!dateString) return '';
-  const date = new Date(dateString);
-  return date.toLocaleString('es-CO', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true
-  });
-};
+// formatDate is now imported from utils
 
 export default function SalesHistoryScreen({ navigation }) {
   const { theme, isDarkMode } = useTheme();
@@ -177,9 +167,16 @@ export default function SalesHistoryScreen({ navigation }) {
             </View>
             <Text style={[styles.saleTime, { color: theme.textSecondary }]}>{formatDate(item.created_at)}</Text>
           </View>
-          <Text style={[styles.saleTotal, { color: theme.accent }]}>
-            $ {formatNumber(item.total)}
-          </Text>
+          <View style={{ alignItems: 'flex-end' }}>
+            <Text style={[styles.saleTotal, { color: theme.accent }]}>
+              $ {formatNumber(item.total)}
+            </Text>
+            {item.profit !== undefined && (
+              <Text style={{ fontSize: 12, color: theme.textSecondary, marginTop: 2, fontWeight: '600' }}>
+                Utilidad: $ {formatNumber(item.profit)}
+              </Text>
+            )}
+          </View>
         </View>
 
         <View style={styles.cardBody}>
@@ -443,7 +440,14 @@ export default function SalesHistoryScreen({ navigation }) {
 
               {/* Total Final */}
               <View style={[styles.totalSectionDetail, { borderTopColor: theme.background }]}>
-                <Text style={[styles.totalLabelDetail, { color: theme.text }]}>Total Cobrado</Text>
+                <View>
+                  <Text style={[styles.totalLabelDetail, { color: theme.text }]}>Total Cobrado</Text>
+                  {selectedSale?.profit !== undefined && (
+                    <Text style={{ color: theme.textSecondary, fontSize: 14, marginTop: 4, fontWeight: '600' }}>
+                      Utilidad: $ {formatNumber(selectedSale.profit)}
+                    </Text>
+                  )}
+                </View>
                 <Text style={[styles.totalValueDetail, { color: theme.accent }]}>
                   $ {formatNumber(selectedSale?.total)}
                 </Text>

@@ -12,6 +12,7 @@ import POSScreen from '../screens/shop/pos/POSScreen';
 import SalesHistoryScreen from '../screens/shop/sales/SalesHistoryScreen';
 import ShopMenuScreen from '../screens/shop/ShopMenuScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
+import HabitsScreen from '../screens/habits/HabitsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -41,6 +42,7 @@ export default function AppNavigator() {
           <Stack.Screen name="POS" component={POSScreen} />
           <Stack.Screen name="SalesHistory" component={SalesHistoryScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
+          <Stack.Screen name="Habits" component={HabitsScreen} />
         </>
       )}
     </Stack.Navigator>

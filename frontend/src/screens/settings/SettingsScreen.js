@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, getOfflineQueue, clearOfflineQueue, syncOfflineQueue, isConnected } from '../../utils/offlineSync';
 import Button from '../../components/Button';
 import SidebarLayout from '../../navigation/SidebarLayout';
+import SubscriptionModal from '../../components/SubscriptionModal';
 
 export default function SettingsScreen({ navigation }) {
   const { theme, isDarkMode } = useTheme();
@@ -20,6 +21,26 @@ export default function SettingsScreen({ navigation }) {
   const [pendingQueue, setPendingQueue] = useState([]);
   const [syncingManual, setSyncingManual] = useState(false);
   const [networkOnline, setNetworkOnline] = useState(true);
+  const [subModalVisible, setSubModalVisible] = useState(false);
+  const [targetModule, setTargetModule] = useState(null);
+  const [myModules, setMyModules] = useState([]);
+
+  useEffect(() => {
+    fetchModules();
+  }, [user]);
+
+  const fetchModules = async () => {
+    if (!user) return;
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api'}/modules`, {
+        headers: { 'x-user-id': user.id.toString() }
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setMyModules(data);
+      }
+    } catch (e) {}
+  };
 
   // Cargar la cola de sincronización offline
   const loadQueue = async () => {
@@ -47,6 +68,19 @@ export default function SettingsScreen({ navigation }) {
   }, []);
 
   const handleToggleModule = (key) => {
+    // Verificación de suscripción para la Tienda
+    if (key === 'showShop' && !moduleSettings[key] && user?.role !== 'admin') {
+      const shopMod = myModules.find(m => m.module_key === 'shop');
+      const isTrialValid = shopMod?.trial_ends_at && new Date(shopMod.trial_ends_at) > new Date();
+      const isSubActive = shopMod?.status === 'active' && new Date(shopMod.expires_at) > new Date();
+      
+      if (!isTrialValid && !isSubActive && (!shopMod || !shopMod.is_free)) {
+        setTargetModule('shop');
+        setSubModalVisible(true);
+        return;
+      }
+    }
+
     const updated = {
       ...moduleSettings,
       [key]: !moduleSettings[key]
@@ -177,7 +211,7 @@ export default function SettingsScreen({ navigation }) {
             Enciende o apaga los módulos para personalizar el menú lateral y las funciones visibles.
           </Text>
 
-          <View style={[styles.settingRow, { borderBottomColor: isDarkMode ? '#2D2D2D' : '#F0F0F0' }]}>
+          <View style={styles.settingRow}>
             <View style={styles.settingLabelWrap}>
               <View style={[styles.iconContainer, { backgroundColor: '#3B82F615' }]}>
                 <Ionicons name="cart" size={22} color="#3B82F6" />
@@ -185,6 +219,11 @@ export default function SettingsScreen({ navigation }) {
               <View style={styles.settingTextContainer}>
                 <Text style={[styles.settingTitle, { color: theme.text }]}>Tienda</Text>
                 <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Punto de Venta, Inventario e Historial de Ventas.</Text>
+                {user?.role !== 'admin' && (
+                  <Text style={{ fontSize: 10, color: theme.accent, fontWeight: 'bold', marginTop: 2 }}>
+                    Módulo Premium
+                  </Text>
+                )}
               </View>
             </View>
             <Switch
@@ -210,6 +249,29 @@ export default function SettingsScreen({ navigation }) {
               onValueChange={() => handleToggleModule('showDebtors')}
               trackColor={{ false: '#767577', true: theme.accent }}
               thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showDebtors ? '#FFF' : '#f4f3f4')}
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingLabelWrap}>
+              <View style={[styles.iconContainer, { backgroundColor: '#10B98115' }]}>
+                <Ionicons name="calendar" size={22} color="#10B981" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Hábitos y Tareas</Text>
+                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Gestión de rutinas, actividades y calendario.</Text>
+                {user?.role !== 'admin' && (
+                  <Text style={{ fontSize: 10, color: theme.accent, fontWeight: 'bold', marginTop: 2 }}>
+                    Módulo Premium
+                  </Text>
+                )}
+              </View>
+            </View>
+            <Switch
+              value={moduleSettings.showHabits}
+              onValueChange={() => handleToggleModule('showHabits')}
+              trackColor={{ false: '#767577', true: theme.accent }}
+              thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showHabits ? '#FFF' : '#f4f3f4')}
             />
           </View>
         </View>
@@ -294,6 +356,14 @@ export default function SettingsScreen({ navigation }) {
               </View>
             </View>
           )}
+          <SubscriptionModal 
+            visible={subModalVisible} 
+            onClose={() => {
+              setSubModalVisible(false);
+              fetchModules();
+            }} 
+            moduleKey={targetModule} 
+          />
         </View>
       </ScrollView>
     </SidebarLayout>

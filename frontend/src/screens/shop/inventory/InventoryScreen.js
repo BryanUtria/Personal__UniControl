@@ -8,10 +8,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { exportToExcel } from '../../../utils/excelExport';
+import { formatDateToLocal } from '../../../utils/dateUtils';
 import { apiFetch } from '../../../utils/offlineSync';
 import SidebarLayout from '../../../navigation/SidebarLayout';
 import Input from '../../../components/Input';
 import Button from '../../../components/Button';
+import { useModules } from '../../../context/ModuleContext';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -24,25 +26,7 @@ const formatCompact = (num) => {
   return formatNumber(num);
 };
 
-const formatBatchDate = (dateStr) => {
-  if (!dateStr) return 'Fecha N/A';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const day = String(d.getDate()).padStart(2, '0');
-    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-    const month = months[d.getMonth()];
-    const year = d.getFullYear();
-    let hours = d.getHours();
-    const minutes = String(d.getMinutes()).padStart(2, '0');
-    const ampm = hours >= 12 ? 'p.m.' : 'a.m.';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    return `${day} ${month}. ${year}, ${hours}:${minutes} ${ampm}`;
-  } catch (e) {
-    return dateStr;
-  }
-};
+// formatDateToLocal replaces formatBatchDate
 
 export default function InventoryScreen({ navigation }) {
   const { theme, isDarkMode } = useTheme();
@@ -299,28 +283,33 @@ export default function InventoryScreen({ navigation }) {
     }
   }, [isFocused]);
 
+  const { moduleSettings, saveModuleSettings } = useModules();
+
+  const isFilterLoaded = React.useRef(false);
+
   // Cargar preferencias de filtros
   useEffect(() => {
-    const loadFilters = async () => {
+    if (moduleSettings.unicontrol_inventory_filter && !isFilterLoaded.current) {
+      isFilterLoaded.current = true;
       try {
-        const saved = await AsyncStorage.getItem('@unicontrol_inventory_filter');
-        if (saved) {
-          const { sortBy: savedSort, stockFilter: savedFilter } = JSON.parse(saved);
-          if (savedSort) setSortBy(savedSort);
-          if (savedFilter) setStockFilter(savedFilter);
-        }
+        const saved = moduleSettings.unicontrol_inventory_filter;
+        const parsed = typeof saved === 'string' ? JSON.parse(saved) : saved;
+        if (parsed.sortBy) setSortBy(parsed.sortBy);
+        if (parsed.stockFilter) setStockFilter(parsed.stockFilter);
       } catch (e) {
         console.error('Error al cargar filtros de inventario:', e);
       }
-    };
-    loadFilters();
-  }, []);
+    }
+  }, [moduleSettings.unicontrol_inventory_filter]);
 
   // Guardar preferencias de filtros
   useEffect(() => {
     const saveFilters = async () => {
       try {
-        await AsyncStorage.setItem('@unicontrol_inventory_filter', JSON.stringify({ sortBy, stockFilter }));
+        // Evitamos guardar si no ha cargado los ajustes de modulos (evita sobrescribir en el primer render con valores por defecto)
+        if (moduleSettings.unicontrol_inventory_filter !== undefined || sortBy !== 'name_asc' || stockFilter !== 'all') {
+          await saveModuleSettings({ ...moduleSettings, unicontrol_inventory_filter: { sortBy, stockFilter } });
+        }
       } catch (e) {
         console.error('Error al guardar filtros de inventario:', e);
       }
@@ -695,7 +684,7 @@ export default function InventoryScreen({ navigation }) {
 
                         {product.created_at ? (
                           <Text style={{ fontSize: 10, color: theme.textSecondary, marginTop: 6 }}>
-                            Creado: {new Date(product.created_at).toLocaleString('es-CO', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true })}
+                            Creado: {formatDateToLocal(product.created_at)}
                           </Text>
                         ) : null}
                       </View>
@@ -1115,7 +1104,7 @@ export default function InventoryScreen({ navigation }) {
                           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
                               <Text style={{ fontSize: 11, fontWeight: '800', color: theme.textSecondary }}>
-                                Recarga: {formatBatchDate(batch.created_at)}
+                                Recarga: {formatDateToLocal(batch.created_at)}
                               </Text>
                               {String(batch.id).startsWith('temp_') ? (
                                 <Ionicons name="cloud-offline-outline" size={12} color="#F59E0B" />
