@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Platform, Alert, Modal } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, ActivityIndicator, Platform, Alert, Modal, useWindowDimensions } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
@@ -14,15 +14,21 @@ import { apiFetch } from '../../utils/offlineSync';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
+const getLocalYMD = (date = new Date()) => {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 export default function HabitsScreen({ navigation }) {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
   const { showToast } = useToast();
+  const { width } = useWindowDimensions();
+  const isMobile = width < 600;
 
   const [habits, setHabits] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getLocalYMD());
   const [activeTab, setActiveTab] = useState('calendar'); // 'today' or 'calendar'
 
   const [formVisible, setFormVisible] = useState(false);
@@ -220,18 +226,18 @@ export default function HabitsScreen({ navigation }) {
   const progress = activeHabitsToday.length > 0 ? (completedToday / activeHabitsToday.length) * 100 : 0;
 
   const getRelativeDateLabel = (dateStr) => {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayStr = getLocalYMD();
 
     const todayObj = new Date();
     todayObj.setHours(0, 0, 0, 0);
 
     const yesterdayObj = new Date(todayObj);
     yesterdayObj.setDate(yesterdayObj.getDate() - 1);
-    const yesterdayStr = yesterdayObj.toISOString().split('T')[0];
+    const yesterdayStr = getLocalYMD(yesterdayObj);
 
     const tomorrowObj = new Date(todayObj);
     tomorrowObj.setDate(tomorrowObj.getDate() + 1);
-    const tomorrowStr = tomorrowObj.toISOString().split('T')[0];
+    const tomorrowStr = getLocalYMD(tomorrowObj);
 
     if (dateStr === todayStr) return 'Hoy';
     if (dateStr === yesterdayStr) return 'Ayer';
@@ -310,7 +316,7 @@ export default function HabitsScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.accent]} />
         }
       >
-        <View style={styles.content}>
+        <View style={[styles.content, { padding: isMobile ? 10 : 20 }]}>
 
           <View style={styles.headerRow}>
             <Text style={[styles.pageTitle, { color: theme.text }]}>Mi Progreso</Text>
@@ -397,7 +403,7 @@ export default function HabitsScreen({ navigation }) {
               </View>
 
               <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 10 }]}>
-                Actividades para {selectedDate === new Date().toISOString().split('T')[0] ? 'Hoy' : selectedDate}
+                Actividades para {selectedDate === getLocalYMD() ? 'Hoy' : selectedDate}
               </Text>
 
               {loading ? (

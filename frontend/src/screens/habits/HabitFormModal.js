@@ -42,6 +42,7 @@ export default function HabitFormModal({ visible, onClose, onSave, editingHabit 
   const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
+  const [reminderTime, setReminderTime] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
@@ -55,6 +56,7 @@ export default function HabitFormModal({ visible, onClose, onSave, editingHabit 
       setStartDate(editingHabit.start_date ? String(editingHabit.start_date).substring(0, 10) : new Date().toISOString().split('T')[0]);
       setStartTime(editingHabit.start_time ? String(editingHabit.start_time).substring(0, 5) : '');
       setEndTime(editingHabit.end_time ? String(editingHabit.end_time).substring(0, 5) : '');
+      setReminderTime(editingHabit.reminder_time !== undefined ? editingHabit.reminder_time : null);
 
       if (editingHabit.frequency === 'specific_days' && editingHabit.repeat_details) {
         setSelectedDays(editingHabit.repeat_details.days || []);
@@ -71,6 +73,7 @@ export default function HabitFormModal({ visible, onClose, onSave, editingHabit 
       setStartDate(new Date().toISOString().split('T')[0]);
       setStartTime('');
       setEndTime('');
+      setReminderTime(null);
       setErrors({});
     }
   }, [visible, editingHabit]);
@@ -114,7 +117,8 @@ export default function HabitFormModal({ visible, onClose, onSave, editingHabit 
         repeat_details,
         start_date: startDate || null,
         start_time: startTime || null,
-        end_time: endTime || null
+        end_time: endTime || null,
+        reminder_time: reminderTime
       };
 
       await onSave(habitData);
@@ -215,6 +219,42 @@ export default function HabitFormModal({ visible, onClose, onSave, editingHabit 
                 />
               </View>
             </View>
+
+            <Text style={[styles.label, { color: theme.text, marginTop: 10 }]}>Recordatorio</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 10 }}>
+              {[
+                { label: 'Sin aviso', value: null },
+                { label: '10 min', value: 10 },
+                { label: '30 min', value: 30 },
+                { label: '1 h', value: 60 },
+                { label: '5 h', value: 300 },
+                { label: '1 d', value: 1440 },
+                { label: '2 d', value: 2880 },
+              ].map(rem => (
+                <TouchableOpacity
+                  key={String(rem.value)}
+                  style={[
+                    styles.freqBtn,
+                    { borderColor: theme.border, marginRight: 10, paddingVertical: 6, paddingHorizontal: 12 },
+                    reminderTime === rem.value && { backgroundColor: theme.accent, borderColor: theme.accent }
+                  ]}
+                  onPress={() => setReminderTime(rem.value)}
+                >
+                  <Text style={[
+                    styles.freqText,
+                    { color: reminderTime === rem.value ? '#fff' : theme.text, fontSize: 13 }
+                  ]}>
+                    {rem.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+            <Input
+              placeholder="Minutos personalizados (Ej: 15)"
+              value={reminderTime ? String(reminderTime) : ''}
+              onChangeText={(text) => setReminderTime(text ? parseInt(text) : null)}
+              keyboardType="numeric"
+            />
 
             <Text style={[styles.label, { color: theme.text, marginTop: 5 }]}>Frecuencia</Text>
             <View style={styles.frequencyContainer}>

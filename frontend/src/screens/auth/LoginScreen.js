@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -245,7 +245,7 @@ export default function LoginScreen() {
                 {/* Information Header */}
                 <View style={{ marginBottom: 20 }}>
                   <Text style={{ color: theme.textSecondary, fontSize: 14, textAlign: 'center', lineHeight: 20 }}>
-                    Hemos enviado un código secreto de 6 dígitos a <Text style={{ fontWeight: '700', color: theme.text }}>{email}</Text>. Por favor ingresa el código a continuación para verificar tu identidad.
+                    Hemos enviado un código secreto de 6 dígitos a <Text style={{ fontWeight: '700', color: theme.text }}>{email}</Text>. Por favor ingresa el código a continuación para verificar tu identidad. (Recuerda revisar también tu carpeta de spam o correo no deseado).
                   </Text>
                 </View>
 

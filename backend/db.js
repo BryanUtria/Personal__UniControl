@@ -232,6 +232,7 @@ async function initDB() {
     try {
         await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, is_free) VALUES ('shop', 'Tienda', 10000, 0)");
         await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, is_free) VALUES ('habits', 'Hábitos', 5000, 0)");
+        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, is_free) VALUES ('expenses', 'Control de Gastos', 5000, 0)");
     } catch (e) {}
 
     const userSubscriptionsTable = `
@@ -278,6 +279,7 @@ async function initDB() {
             start_date DATE NULL,
             start_time TIME NULL,
             end_time TIME NULL,
+            reminder_time INT NULL,
             active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -290,6 +292,20 @@ async function initDB() {
     try { await pool.query("ALTER TABLE habits ADD COLUMN end_time TIME NULL"); } catch (e) {}
     try { await pool.query("ALTER TABLE habits ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'habit'"); } catch (e) {}
     try { await pool.query("ALTER TABLE habits ADD COLUMN start_date DATE NULL"); } catch (e) {}
+    try { await pool.query("ALTER TABLE habits ADD COLUMN reminder_time INT NULL"); } catch (e) {}
+
+    const pushTokensTable = `
+        CREATE TABLE IF NOT EXISTS push_tokens (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            token VARCHAR(255) NOT NULL,
+            device_type VARCHAR(50) NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE KEY token_user (token, user_id)
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(pushTokensTable);
 
     const habitLogsTable = `
         CREATE TABLE IF NOT EXISTS habit_logs (
@@ -303,6 +319,65 @@ async function initDB() {
         ) ENGINE=InnoDB;
     `;
     await pool.query(habitLogsTable);
+
+    // --- MÓDULO GASTOS ---
+    const expenseCategoriesTable = `
+        CREATE TABLE IF NOT EXISTS expense_categories (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            name VARCHAR(100) NOT NULL,
+            icon VARCHAR(50) DEFAULT 'wallet-outline',
+            color VARCHAR(20) DEFAULT '#4caf50',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(expenseCategoriesTable);
+
+    const expensesTable = `
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            category_id INT NOT NULL,
+            month_year VARCHAR(10) NOT NULL,
+            description VARCHAR(255) NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            is_paid TINYINT(1) NOT NULL DEFAULT 0,
+            is_recurring TINYINT(1) NOT NULL DEFAULT 0,
+            reminder_date DATETIME NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY (category_id) REFERENCES expense_categories(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(expensesTable);
+
+    const incomesTable = `
+        CREATE TABLE IF NOT EXISTS incomes (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            month_year VARCHAR(10) NOT NULL,
+            description VARCHAR(255) NOT NULL,
+            amount DECIMAL(10,2) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(incomesTable);
+
+    const suggestionsTable = `
+        CREATE TABLE IF NOT EXISTS suggestions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            message TEXT NOT NULL,
+            admin_reply TEXT NULL,
+            status VARCHAR(50) DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(suggestionsTable);
 
     console.log('Conectado a MySQL y tablas inicializadas con éxito.');
 }

@@ -66,12 +66,12 @@ router.post('/send-code', async (req, res) => {
         }
 
         // Imprimir de forma llamativa en la consola
-        console.log('\n┌────────────────────────────────────────────────────────┐');
-        console.log(`│  [UNICONTROL VERIFICACIÓN DE CORREO]                   │`);
-        console.log(`│  Destinatario: ${email.padEnd(40)} │`);
-        console.log(`│  Código:       \x1b[32m\x1b[1m${code}\x1b[0m                      │`);
-        console.log(`│  Estado:       ${(emailSent ? 'ENVIADO POR SMTP' : 'SANDBOX / CONSOLA').padEnd(39)} │`);
-        console.log('└────────────────────────────────────────────────────────┘\n');
+        console.log('\n┌────────────────────────────────────────────────────────');
+        console.log(`│  [UNICONTROL VERIFICACIÓN DE CORREO]                     `);
+        console.log(`│  Destinatario: ${email.padEnd(40)}                       `);
+        console.log(`│  Código:       \x1b[32m\x1b[1m${code}\x1b[0m             `);
+        console.log(`│  Estado:       ${(emailSent ? 'ENVIADO POR SMTP' : 'SANDBOX / CONSOLA').padEnd(39)} `);
+        console.log('└────────────────────────────────────────────────────────\n');
 
         res.json({
             success: true,
@@ -146,10 +146,10 @@ router.post('/login', async (req, res) => {
         if (!isMatch) {
             return res.status(400).json({ error: 'Usuario o contraseña incorrectos.' });
         }
-        
+
         // Fetch subscriptions
         const subs = await db.query('SELECT module_key, status, trial_ends_at, expires_at FROM user_subscriptions WHERE user_id = ?', [user.id]);
-        
+
         res.json({ id: user.id, name: user.name, username: user.username, email: user.email, role: user.role, subscriptions: subs });
     } catch (err) {
         res.status(500).json({ error: err.message });

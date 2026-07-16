@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import * as WebBrowser from 'expo-web-browser';
+import Purchases from 'react-native-purchases';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -49,27 +50,48 @@ export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop'
   const handleSubscribe = async () => {
     setPaying(true);
     try {
-      const response = await fetch(`${API_URL}/subscriptions/checkout`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user.id.toString()
-        },
-        body: JSON.stringify({ module_key: moduleKey })
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Error al generar link de pago');
-
-      if (data.init_point) {
-        if (Platform.OS === 'web') {
-          window.open(data.init_point, '_blank');
+      if (Platform.OS === 'android') {
+        // Autenticar al usuario en RevenueCat
+        await Purchases.logIn(user.id.toString());
+        
+        // Obtener las ofertas desde RevenueCat
+        const offerings = await Purchases.getOfferings();
+        
+        if (offerings.current !== null && offerings.current.availablePackages.length !== 0) {
+          // Comprar el primer paquete disponible en el offering actual
+          const packageToBuy = offerings.current.availablePackages[0];
+          const { customerInfo } = await Purchases.purchasePackage(packageToBuy);
+          
+          if (typeof customerInfo.entitlements.active['Premium'] !== 'undefined') {
+            onClose();
+            // TODO: Refrescar estado global del usuario
+          }
         } else {
-          await WebBrowser.openBrowserAsync(data.init_point);
+          // Sandbox / Mock cuando no hay productos configurados en Google Play
+          setError('Aún estamos configurando los productos en Google Play. Por favor intenta más tarde.');
         }
-        onClose();
+      } else {
+        // Lógica antigua web (Mercado Pago)
+        const response = await fetch(`${API_URL}/subscriptions/checkout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id.toString()
+          },
+          body: JSON.stringify({ module_key: moduleKey })
+        });
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Error al generar link de pago');
+
+        if (data.init_point) {
+          window.open(data.init_point, '_blank');
+          onClose();
+        }
       }
     } catch (err) {
-      setError(err.message);
+      if (!err.userCancelled) {
+        setError(err.message);
+      }
     } finally {
       setPaying(false);
     }
@@ -147,12 +169,16 @@ export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop'
                 {paying ? (
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
-                  <Text style={styles.subscribeText}>Pagar con Mercado Pago</Text>
+                  <Text style={styles.subscribeText}>
+                    {Platform.OS === 'android' ? 'Suscribirse con Google Play' : 'Pagar con Mercado Pago'}
+                  </Text>
                 )}
               </TouchableOpacity>
               <View style={styles.secureRow}>
                 <Ionicons name="lock-closed" size={12} color={theme.textSecondary} />
-                <Text style={{ fontSize: 11, color: theme.textSecondary, marginLeft: 4 }}>Pagos Seguros por Mercado Pago</Text>
+                <Text style={{ fontSize: 11, color: theme.textSecondary, marginLeft: 4 }}>
+                  {Platform.OS === 'android' ? 'Pagos Seguros por Google Play' : 'Pagos Seguros por Mercado Pago'}
+                </Text>
               </View>
             </View>
           ) : null}

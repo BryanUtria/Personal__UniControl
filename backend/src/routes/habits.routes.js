@@ -16,7 +16,7 @@ const requireAuth = (req, res, next) => {
 router.get('/', requireAuth, async (req, res) => {
     try {
         const habitsSql = `
-            SELECT id, name, description, color, type, frequency, repeat_details, start_date, start_time, end_time, created_at
+            SELECT id, name, description, color, type, frequency, repeat_details, start_date, start_time, end_time, reminder_time, created_at
             FROM habits
             WHERE user_id = ? AND active = 1
             ORDER BY created_at ASC
@@ -61,6 +61,7 @@ router.get('/', requireAuth, async (req, res) => {
                 start_date: habit.start_date,
                 start_time: habit.start_time,
                 end_time: habit.end_time,
+                reminder_time: habit.reminder_time,
                 logs
             };
         });
@@ -73,7 +74,7 @@ router.get('/', requireAuth, async (req, res) => {
 
 // Crear un hábito
 router.post('/', requireAuth, async (req, res) => {
-    const { name, description, color, type, frequency, repeat_details, start_date, start_time, end_time } = req.body;
+    const { name, description, color, type, frequency, repeat_details, start_date, start_time, end_time, reminder_time } = req.body;
     if (!name || !frequency) {
         return res.status(400).json({ error: 'Nombre y frecuencia son obligatorios.' });
     }
@@ -81,8 +82,8 @@ router.post('/', requireAuth, async (req, res) => {
     try {
         const detailsStr = repeat_details ? JSON.stringify(repeat_details) : null;
         const result = await db.query(
-            'INSERT INTO habits (user_id, name, description, color, type, frequency, repeat_details, start_date, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [req.userId, name, description || null, color || '#4caf50', type || 'habit', frequency, detailsStr, start_date || null, start_time || null, end_time || null]
+            'INSERT INTO habits (user_id, name, description, color, type, frequency, repeat_details, start_date, start_time, end_time, reminder_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [req.userId, name, description || null, color || '#4caf50', type || 'habit', frequency, detailsStr, start_date || null, start_time || null, end_time || null, reminder_time || null]
         );
 
         res.json({
@@ -96,6 +97,7 @@ router.post('/', requireAuth, async (req, res) => {
             start_date,
             start_time,
             end_time,
+            reminder_time,
             logs: {}
         });
     } catch (err) {
@@ -105,14 +107,14 @@ router.post('/', requireAuth, async (req, res) => {
 
 // Actualizar un hábito
 router.put('/:id', requireAuth, async (req, res) => {
-    const { name, description, color, type, frequency, repeat_details, start_date, start_time, end_time } = req.body;
+    const { name, description, color, type, frequency, repeat_details, start_date, start_time, end_time, reminder_time } = req.body;
     const { id } = req.params;
 
     try {
         const detailsStr = repeat_details ? JSON.stringify(repeat_details) : null;
         await db.query(
-            'UPDATE habits SET name = ?, description = ?, color = ?, type = ?, frequency = ?, repeat_details = ?, start_date = ?, start_time = ?, end_time = ? WHERE id = ? AND user_id = ?',
-            [name, description || null, color, type || 'habit', frequency, detailsStr, start_date || null, start_time || null, end_time || null, id, req.userId]
+            'UPDATE habits SET name = ?, description = ?, color = ?, type = ?, frequency = ?, repeat_details = ?, start_date = ?, start_time = ?, end_time = ?, reminder_time = ? WHERE id = ? AND user_id = ?',
+            [name, description || null, color, type || 'habit', frequency, detailsStr, start_date || null, start_time || null, end_time || null, reminder_time || null, id, req.userId]
         );
         res.json({ success: true });
     } catch (err) {

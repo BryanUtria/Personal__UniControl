@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Switch, ScrollView, Platform, Alert, useWindowDimensions } from 'react-native';
+import { StyleSheet, Text, View, Switch, ScrollView, Platform, Alert, useWindowDimensions, Modal, Linking } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useModules } from '../../context/ModuleContext';
@@ -7,12 +7,13 @@ import { useToast } from '../../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import { apiFetch, getOfflineQueue, clearOfflineQueue, syncOfflineQueue, isConnected } from '../../utils/offlineSync';
 import Button from '../../components/Button';
+import Input from '../../components/Input';
 import SidebarLayout from '../../navigation/SidebarLayout';
 import SubscriptionModal from '../../components/SubscriptionModal';
 
 export default function SettingsScreen({ navigation }) {
   const { theme, isDarkMode } = useTheme();
-  const { user } = useAuth();
+  const { user, updateProfile, sendVerificationCode } = useAuth();
   const { moduleSettings, saveModuleSettings } = useModules();
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
@@ -22,12 +23,101 @@ export default function SettingsScreen({ navigation }) {
   const [syncingManual, setSyncingManual] = useState(false);
   const [networkOnline, setNetworkOnline] = useState(true);
   const [subModalVisible, setSubModalVisible] = useState(false);
+  const [appVersionInfo, setAppVersionInfo] = useState(null);
   const [targetModule, setTargetModule] = useState(null);
   const [myModules, setMyModules] = useState([]);
 
+  // Perfil Edit States
+  const [profileModalVisible, setProfileModalVisible] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [profileError, setProfileError] = useState('');
+
+  // Email verification states
+  const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
+  const [emailCode, setEmailCode] = useState('');
+  const [sandboxCode, setSandboxCode] = useState(null);
+  const [sandboxMode, setSandboxMode] = useState(false);
+
+  const resetProfileModal = () => {
+    setProfileModalVisible(false);
+    setIsVerifyingEmail(false);
+    setEmailCode('');
+    setSandboxCode(null);
+    setSandboxMode(false);
+    setProfileError('');
+  };
+
+  const handleUpdateProfile = async () => {
+    if (!editName.trim() || !editUsername.trim() || !editEmail.trim()) {
+      setProfileError('Nombre, Usuario y Correo son obligatorios.');
+      return;
+    }
+
+    // Si cambia el correo y no estamos en modo verificación, enviar código
+    if (editEmail.trim() !== user?.email && !isVerifyingEmail) {
+      setProfileLoading(true);
+      setProfileError('');
+      // No pasamos username para no activar validación de username tomado en send-code
+      const res = await sendVerificationCode(editEmail.trim(), undefined);
+      setProfileLoading(false);
+
+      if (res.success) {
+        setIsVerifyingEmail(true);
+        setSandboxMode(res.sandboxMode);
+        if (res.sandboxMode) {
+          setSandboxCode(res.sandboxCode);
+        }
+        showToast(res.sandboxMode ? 'Código de prueba generado' : 'Código enviado a tu nuevo correo', 'success');
+      } else {
+        setProfileError(res.error || 'Error enviando código de verificación');
+      }
+      return;
+    }
+
+    if (isVerifyingEmail && (!emailCode || emailCode.length !== 6)) {
+      setProfileError('Ingresa el código de 6 dígitos que enviamos a tu correo.');
+      return;
+    }
+
+    setProfileLoading(true);
+    setProfileError('');
+    const res = await updateProfile({
+      name: editName.trim(),
+      username: editUsername.trim(),
+      email: editEmail.trim(),
+      password: editPassword,
+      code: isVerifyingEmail ? emailCode : undefined
+    });
+    setProfileLoading(false);
+
+    if (res.success) {
+      showToast('Perfil actualizado con éxito', 'success');
+      resetProfileModal();
+    } else {
+      setProfileError(res.error || 'Error al actualizar');
+    }
+  };
+
   useEffect(() => {
     fetchModules();
+    fetchAppVersion();
   }, [user]);
+
+  const fetchAppVersion = async () => {
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api'}/version`);
+      if (response.ok) {
+        const data = await response.json();
+        setAppVersionInfo(data);
+      }
+    } catch (e) {
+      console.log('Error fetching version:', e);
+    }
+  };
 
   const fetchModules = async () => {
     if (!user) return;
@@ -39,7 +129,19 @@ export default function SettingsScreen({ navigation }) {
         const data = await response.json();
         setMyModules(data);
       }
-    } catch (e) {}
+    } catch (e) { }
+  };
+
+  const getModulePriceText = (key) => {
+    const mod = myModules.find(m => m.module_key === key);
+    if (!mod) return '';
+    const price = (mod.custom_price_cop !== null && mod.custom_price_cop < mod.base_price_cop) 
+      ? mod.custom_price_cop 
+      : mod.base_price_cop;
+    
+    if (!price || price === 0) return '';
+    
+    return `- $ ${Math.round(price).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}/mes`;
   };
 
   // Cargar la cola de sincronización offline
@@ -73,9 +175,35 @@ export default function SettingsScreen({ navigation }) {
       const shopMod = myModules.find(m => m.module_key === 'shop');
       const isTrialValid = shopMod?.trial_ends_at && new Date(shopMod.trial_ends_at) > new Date();
       const isSubActive = shopMod?.status === 'active' && new Date(shopMod.expires_at) > new Date();
-      
+
       if (!isTrialValid && !isSubActive && (!shopMod || !shopMod.is_free)) {
         setTargetModule('shop');
+        setSubModalVisible(true);
+        return;
+      }
+    }
+
+    // Verificación de suscripción para Hábitos y Tareas
+    if (key === 'showHabits' && !moduleSettings[key] && user?.role !== 'admin') {
+      const habitsMod = myModules.find(m => m.module_key === 'habits');
+      const isTrialValid = habitsMod?.trial_ends_at && new Date(habitsMod.trial_ends_at) > new Date();
+      const isSubActive = habitsMod?.status === 'active' && new Date(habitsMod.expires_at) > new Date();
+
+      if (!isTrialValid && !isSubActive && (!habitsMod || !habitsMod.is_free)) {
+        setTargetModule('habits');
+        setSubModalVisible(true);
+        return;
+      }
+    }
+
+    // Verificación de suscripción para Control de Gastos
+    if (key === 'showExpenses' && !moduleSettings[key] && user?.role !== 'admin') {
+      const expensesMod = myModules.find(m => m.module_key === 'expenses');
+      const isTrialValid = expensesMod?.trial_ends_at && new Date(expensesMod.trial_ends_at) > new Date();
+      const isSubActive = expensesMod?.status === 'active' && new Date(expensesMod.expires_at) > new Date();
+
+      if (!isTrialValid && !isSubActive && (!expensesMod || !expensesMod.is_free)) {
+        setTargetModule('expenses');
         setSubModalVisible(true);
         return;
       }
@@ -86,7 +214,12 @@ export default function SettingsScreen({ navigation }) {
       [key]: !moduleSettings[key]
     };
     saveModuleSettings(updated);
-    showToast(`Módulo ${key === 'showShop' ? 'Tienda' : 'Deudas'} ${updated[key] ? 'habilitado' : 'deshabilitado'}`, 'info', 2000);
+    let moduleName = 'Módulo';
+    if (key === 'showShop') moduleName = 'Tienda';
+    if (key === 'showDebtors') moduleName = 'Deudas';
+    if (key === 'showHabits') moduleName = 'Hábitos';
+    if (key === 'showExpenses') moduleName = 'Gastos';
+    showToast(`Módulo ${moduleName} ${updated[key] ? 'habilitado' : 'deshabilitado'}`, 'info', 2000);
   };
 
   const handleManualSync = async () => {
@@ -204,35 +337,44 @@ export default function SettingsScreen({ navigation }) {
       activeRoute="Settings"
     >
       <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={[styles.scrollContent, { padding: isMobile ? 10 : 16 }]}>
+        {/* SECCIÓN MI PERFIL */}
+        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginBottom: isMobile ? 10 : 20 }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Mi Perfil</Text>
+          </View>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 15 }}>
+            <View style={[styles.iconContainer, { backgroundColor: theme.accent + '20', width: 50, height: 50, borderRadius: 25 }]}>
+              <Text style={{ color: theme.accent, fontSize: 20, fontWeight: 'bold' }}>
+                {user?.username ? user.username.substring(0, 2).toUpperCase() : 'U'}
+              </Text>
+            </View>
+            <View style={{ marginLeft: 15, flex: 1 }}>
+              <Text style={{ color: theme.text, fontSize: 16, fontWeight: 'bold' }}>{user?.name || 'Usuario'}</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 13 }}>@{user?.username}</Text>
+              <Text style={{ color: theme.textSecondary, fontSize: 13 }}>{user?.email}</Text>
+            </View>
+          </View>
+          <Button
+            title="Editar Datos de Perfil"
+            variant="secondary"
+            onPress={() => {
+              setEditName(user?.name || '');
+              setEditUsername(user?.username || '');
+              setEditEmail(user?.email || '');
+              setEditPassword('');
+              setProfileError('');
+              setProfileModalVisible(true);
+            }}
+            icon={<Ionicons name="create-outline" size={18} color={theme.text} />}
+          />
+        </View>
+
         {/* SECCIÓN MÓDULOS */}
         <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
           <Text style={[styles.sectionTitle, { color: theme.text }]}>Módulos Habilitados</Text>
           <Text style={[styles.sectionDesc, { color: theme.textSecondary }]}>
             Enciende o apaga los módulos para personalizar el menú lateral y las funciones visibles.
           </Text>
-
-          <View style={styles.settingRow}>
-            <View style={styles.settingLabelWrap}>
-              <View style={[styles.iconContainer, { backgroundColor: '#3B82F615' }]}>
-                <Ionicons name="cart" size={22} color="#3B82F6" />
-              </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Tienda</Text>
-                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Punto de Venta, Inventario e Historial de Ventas.</Text>
-                {user?.role !== 'admin' && (
-                  <Text style={{ fontSize: 10, color: theme.accent, fontWeight: 'bold', marginTop: 2 }}>
-                    Módulo Premium
-                  </Text>
-                )}
-              </View>
-            </View>
-            <Switch
-              value={moduleSettings.showShop}
-              onValueChange={() => handleToggleModule('showShop')}
-              trackColor={{ false: '#767577', true: theme.accent }}
-              thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showShop ? '#FFF' : '#f4f3f4')}
-            />
-          </View>
 
           <View style={styles.settingRow}>
             <View style={styles.settingLabelWrap}>
@@ -262,7 +404,7 @@ export default function SettingsScreen({ navigation }) {
                 <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Gestión de rutinas, actividades y calendario.</Text>
                 {user?.role !== 'admin' && (
                   <Text style={{ fontSize: 10, color: theme.accent, fontWeight: 'bold', marginTop: 2 }}>
-                    Módulo Premium
+                    Módulo Premium {getModulePriceText('habits')}
                   </Text>
                 )}
               </View>
@@ -272,6 +414,52 @@ export default function SettingsScreen({ navigation }) {
               onValueChange={() => handleToggleModule('showHabits')}
               trackColor={{ false: '#767577', true: theme.accent }}
               thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showHabits ? '#FFF' : '#f4f3f4')}
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingLabelWrap}>
+              <View style={[styles.iconContainer, { backgroundColor: '#F59E0B15' }]}>
+                <Ionicons name="wallet" size={22} color="#F59E0B" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Control de Gastos</Text>
+                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Gestión de gastos recurrentes mes a mes.</Text>
+                {user?.role !== 'admin' && (
+                  <Text style={{ fontSize: 10, color: theme.accent, fontWeight: 'bold', marginTop: 2 }}>
+                    Módulo Premium {getModulePriceText('expenses')}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <Switch
+              value={moduleSettings.showExpenses}
+              onValueChange={() => handleToggleModule('showExpenses')}
+              trackColor={{ false: '#767577', true: theme.accent }}
+              thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showExpenses ? '#FFF' : '#f4f3f4')}
+            />
+          </View>
+
+          <View style={styles.settingRow}>
+            <View style={styles.settingLabelWrap}>
+              <View style={[styles.iconContainer, { backgroundColor: '#3B82F615' }]}>
+                <Ionicons name="cart" size={22} color="#3B82F6" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Tienda</Text>
+                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Punto de Venta, Inventario e Historial de Ventas.</Text>
+                {user?.role !== 'admin' && (
+                  <Text style={{ fontSize: 10, color: theme.accent, fontWeight: 'bold', marginTop: 2 }}>
+                    Módulo Premium {getModulePriceText('shop')}
+                  </Text>
+                )}
+              </View>
+            </View>
+            <Switch
+              value={moduleSettings.showShop}
+              onValueChange={() => handleToggleModule('showShop')}
+              trackColor={{ false: '#767577', true: theme.accent }}
+              thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showShop ? '#FFF' : '#f4f3f4')}
             />
           </View>
         </View>
@@ -356,16 +544,142 @@ export default function SettingsScreen({ navigation }) {
               </View>
             </View>
           )}
-          <SubscriptionModal 
-            visible={subModalVisible} 
+          <SubscriptionModal
+            visible={subModalVisible}
             onClose={() => {
               setSubModalVisible(false);
               fetchModules();
-            }} 
-            moduleKey={targetModule} 
+            }}
+            moduleKey={targetModule}
           />
         </View>
+
+        {/* SECCIÓN DESCARGAS/WEB */}
+        {appVersionInfo && (
+          <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20, marginBottom: 40 }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Plataformas UniControl</Text>
+            </View>
+            <Text style={[styles.sectionDesc, { color: theme.textSecondary, marginBottom: 15 }]}>
+              {Platform.OS === 'web' 
+                ? 'Descarga nuestra aplicación para Android y lleva UniControl en tu bolsillo.'
+                : 'Accede a la versión web de UniControl desde cualquier computadora.'}
+            </Text>
+
+            <Button
+              title={Platform.OS === 'web' ? 'Descargar APK para Android' : 'Ir a la Versión Web'}
+              icon={<Ionicons name={Platform.OS === 'web' ? 'logo-android' : 'globe-outline'} size={20} color="#FFF" />}
+              variant="primary"
+              onPress={() => {
+                const url = Platform.OS === 'web' ? appVersionInfo.apkUrl : appVersionInfo.webUrl;
+                if (url) Linking.openURL(url);
+              }}
+            />
+          </View>
+        )}
       </ScrollView>
+
+      {/* Modal Editar Perfil */}
+      <Modal
+        visible={profileModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setProfileModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContent, { backgroundColor: theme.card, width: isMobile ? '90%' : 400 }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Editar Perfil</Text>
+              <Button
+                icon={<Ionicons name="close" size={24} color={theme.textSecondary} />}
+                variant="secondary"
+                style={{ paddingHorizontal: 5, paddingVertical: 5, borderWidth: 0, backgroundColor: 'transparent' }}
+                onPress={resetProfileModal}
+              />
+            </View>
+
+            {sandboxMode && sandboxCode ? (
+              <View style={{ backgroundColor: '#FBBF2415', padding: 10, borderRadius: 8, marginBottom: 15, borderWidth: 1, borderColor: '#FBBF24' }}>
+                <Text style={{ color: '#FBBF24', fontSize: 12, fontWeight: 'bold' }}>[MODO SANDBOX - CÓDIGO TEMPORAL]</Text>
+                <Text style={{ color: theme.text, fontSize: 13, marginTop: 4 }}>Usa este código: <Text style={{ fontWeight: 'bold', fontSize: 14, color: theme.accent }}>{sandboxCode}</Text></Text>
+              </View>
+            ) : null}
+
+            {profileError ? (
+              <View style={{ backgroundColor: theme.danger + '15', padding: 10, borderRadius: 8, marginBottom: 15 }}>
+                <Text style={{ color: theme.danger, fontSize: 13 }}>{profileError}</Text>
+              </View>
+            ) : null}
+
+            <Input
+              label="Nombre Completo"
+              icon="person-outline"
+              value={editName}
+              onChangeText={setEditName}
+            />
+
+            <Input
+              label="Nombre de Usuario"
+              icon="at-outline"
+              value={editUsername}
+              onChangeText={setEditUsername}
+              autoCapitalize="none"
+            />
+
+            <Input
+              label="Correo Electrónico"
+              icon="mail-outline"
+              value={editEmail}
+              onChangeText={setEditEmail}
+              keyboardType="email-address"
+              autoCapitalize="none"
+              editable={!isVerifyingEmail}
+            />
+
+            {isVerifyingEmail && (
+              <Input
+                label="Código de Verificación (6 dígitos)"
+                icon="key-outline"
+                placeholder="123456"
+                value={emailCode}
+                onChangeText={setEmailCode}
+                keyboardType="number-pad"
+                maxLength={6}
+                autoFocus={true}
+              />
+            )}
+
+            {!isVerifyingEmail && (
+              <Input
+                label="Nueva Contraseña (Opcional)"
+                icon="lock-closed-outline"
+                placeholder="Dejar en blanco para no cambiar"
+                value={editPassword}
+                onChangeText={setEditPassword}
+                isPassword={true}
+                autoCapitalize="none"
+              />
+            )}
+
+            <View style={{ flexDirection: 'row', justifyContent: 'flex-end', gap: 10, marginTop: 10 }}>
+              <Button
+                title={isVerifyingEmail ? "Cancelar Cambio" : "Cancelar"}
+                variant="secondary"
+                onPress={isVerifyingEmail ? () => setIsVerifyingEmail(false) : resetProfileModal}
+                style={{ flex: 1 }}
+              />
+              <Button
+                title={isVerifyingEmail ? "Verificar y Guardar" : "Guardar Cambios"}
+                variant="primary"
+                onPress={handleUpdateProfile}
+                loading={profileLoading}
+                style={{ flex: 1 }}
+              />
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </SidebarLayout>
   );
 }
@@ -511,5 +825,19 @@ const styles = StyleSheet.create({
   actionBtnText: {
     fontSize: 13,
     fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    borderRadius: 16,
+    padding: 20,
+    elevation: 5,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 10,
   }
 });

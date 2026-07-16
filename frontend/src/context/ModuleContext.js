@@ -7,8 +7,9 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 export const ModuleProvider = ({ children }) => {
   const { user } = useAuth();
   const [moduleSettings, setModuleSettings] = useState({
-    showShop: true,
+    showShop: false,
     showDebtors: true,
+    showHabits: false,
   });
   const [loadingModules, setLoadingModules] = useState(true);
 

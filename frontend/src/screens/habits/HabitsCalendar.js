@@ -10,8 +10,8 @@ export default function HabitsCalendar({ habits, selectedDate, onDateSelect, get
 
   const daysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
   const firstDayOfMonth = (year, month) => {
-      let day = new Date(year, month, 1).getDay();
-      return day === 0 ? 6 : day - 1; // Ajustar para que Lunes sea 0 (0-indexed array for dayNames)
+    let day = new Date(year, month, 1).getDay();
+    return day === 0 ? 6 : day - 1; // Ajustar para que Lunes sea 0 (0-indexed array for dayNames)
   };
 
   const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -22,68 +22,71 @@ export default function HabitsCalendar({ habits, selectedDate, onDateSelect, get
   const totalDays = daysInMonth(year, month);
   const startDay = firstDayOfMonth(year, month);
 
+  const today = new Date();
+  const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+
   const grid = [];
   let currentWeek = [];
 
   for (let i = 0; i < startDay; i++) {
-      currentWeek.push(null);
+    currentWeek.push(null);
   }
 
   for (let day = 1; day <= totalDays; day++) {
-      currentWeek.push(day);
-      if (currentWeek.length === 7) {
-          grid.push(currentWeek);
-          currentWeek = [];
-      }
+    currentWeek.push(day);
+    if (currentWeek.length === 7) {
+      grid.push(currentWeek);
+      currentWeek = [];
+    }
   }
 
   if (currentWeek.length > 0) {
-      while (currentWeek.length < 7) {
-          currentWeek.push(null);
-      }
-      grid.push(currentWeek);
+    while (currentWeek.length < 7) {
+      currentWeek.push(null);
+    }
+    grid.push(currentWeek);
   }
 
   const prevMonth = () => {
-      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1));
   };
 
   const nextMonth = () => {
-      setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
+    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1));
   };
 
   const handleDayPress = (day) => {
-      if (!day) return;
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      if (onDateSelect) onDateSelect(dateStr);
+    if (!day) return;
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (onDateSelect) onDateSelect(dateStr);
   };
 
   const renderDots = (day) => {
-      if (!day || !getHabitsForDate) return null;
-      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-      
-      const scheduledHabits = getHabitsForDate(dateStr);
-      if (scheduledHabits.length === 0) return null;
+    if (!day || !getHabitsForDate) return null;
+    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
 
-      const completedCount = scheduledHabits.filter(h => h.logs && h.logs[dateStr] === true).length;
-      const totalCount = scheduledHabits.length;
-      const isAllDone = completedCount === totalCount && totalCount > 0;
+    const scheduledHabits = getHabitsForDate(dateStr);
+    if (scheduledHabits.length === 0) return null;
 
-      return (
-          <View style={{ width: '80%', alignItems: 'center', marginTop: 2 }}>
-              <View style={{ width: '100%', height: 3, backgroundColor: theme.border, borderRadius: 2 }}>
-                  <View style={{ 
-                      width: `${(completedCount / totalCount) * 100}%`, 
-                      height: '100%', 
-                      backgroundColor: isAllDone ? '#4caf50' : theme.accent, 
-                      borderRadius: 2 
-                  }} />
-              </View>
-              <Text style={{ fontSize: 9, color: isAllDone ? '#4caf50' : theme.textSecondary, marginTop: 2, fontWeight: isAllDone ? 'bold' : 'normal' }}>
-                  {completedCount}/{totalCount}
-              </Text>
-          </View>
-      );
+    const completedCount = scheduledHabits.filter(h => h.logs && h.logs[dateStr] === true).length;
+    const totalCount = scheduledHabits.length;
+    const isAllDone = completedCount === totalCount && totalCount > 0;
+
+    return (
+      <View style={{ width: '80%', alignItems: 'center', marginTop: 2 }}>
+        <View style={{ width: '100%', height: 3, backgroundColor: theme.border, borderRadius: 2 }}>
+          <View style={{
+            width: `${(completedCount / totalCount) * 100}%`,
+            height: '100%',
+            backgroundColor: isAllDone ? '#4caf50' : theme.accent,
+            borderRadius: 2
+          }} />
+        </View>
+        <Text style={{ fontSize: 9, color: isAllDone ? '#4caf50' : theme.textSecondary, marginTop: 2, fontWeight: isAllDone ? 'bold' : 'normal' }}>
+          {completedCount}/{totalCount}
+        </Text>
+      </View>
+    );
   };
 
   return (
@@ -114,7 +117,7 @@ export default function HabitsCalendar({ habits, selectedDate, onDateSelect, get
             {week.map((day, dIndex) => {
               const dateStr = day ? `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}` : null;
               const isSelected = dateStr === selectedDate;
-              const isToday = day && new Date().toISOString().split('T')[0] === dateStr;
+              const isToday = day && todayStr === dateStr;
 
               return (
                 <TouchableOpacity
@@ -129,7 +132,7 @@ export default function HabitsCalendar({ habits, selectedDate, onDateSelect, get
                   {day ? (
                     <>
                       <Text style={[
-                        styles.dayText, 
+                        styles.dayText,
                         { color: isSelected || isToday ? theme.accent : theme.text },
                         isToday && { fontWeight: 'bold' }
                       ]}>

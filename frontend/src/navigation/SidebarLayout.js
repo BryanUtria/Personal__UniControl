@@ -88,26 +88,38 @@ export default function SidebarLayout({
       label: 'Deudas y Ahorros',
       icon: 'people',
       route: 'DebtorsList',
-      visible: moduleSettings.showDebtors
-    },
-    {
-      label: 'Tienda',
-      icon: 'storefront',
-      route: 'ShopMenu',
-      visible: moduleSettings.showShop
+      visible: moduleSettings.showDebtors === true || moduleSettings.showDebtors === 'true'
     },
     {
       label: 'Hábitos y Tareas',
       icon: 'calendar',
       route: 'Habits',
-      visible: moduleSettings.showHabits
+      visible: moduleSettings.showHabits === true || moduleSettings.showHabits === 'true'
+    },
+    {
+      label: 'Control de Gastos',
+      icon: 'wallet',
+      route: 'Expenses',
+      visible: moduleSettings.showExpenses === true || moduleSettings.showExpenses === 'true'
+    },
+    {
+      label: 'Tienda',
+      icon: 'storefront',
+      route: 'ShopMenu',
+      visible: moduleSettings.showShop === true || moduleSettings.showShop === 'true'
     },
     {
       label: 'Configuración',
       icon: 'settings',
       route: 'Settings',
       visible: true
-    }
+    },
+    {
+      label: 'Buzón de Sugerencias',
+      icon: 'mail',
+      route: 'Suggestions',
+      visible: true
+    },
   ];
 
   const renderSidebarContent = () => {
@@ -152,7 +164,9 @@ export default function SidebarLayout({
                   {lastName}
                 </Text>
               ) : null}
-              <Text style={[styles.profileRole, { color: theme.textSecondary, marginTop: 2 }]}>Administrador</Text>
+              <Text style={[styles.profileRole, { color: theme.textSecondary, textTransform: 'capitalize', marginTop: 2 }]}>
+                {user?.role === 'admin' ? 'Administrador' : (user?.role === 'client' ? 'Cliente' : (user?.role || 'Usuario'))}
+              </Text>
             </View>
           )}
         </View>
@@ -161,7 +175,7 @@ export default function SidebarLayout({
         <ScrollView
           contentContainerStyle={styles.navList}
           showsVerticalScrollIndicator={false}
-          style={Platform.OS === 'web' ? { overflow: 'visible' } : undefined}
+          style={{ flex: 1 }}
         >
           {navItems.map((item, index) => {
             if (!item.visible) return null;
@@ -492,7 +506,6 @@ const styles = StyleSheet.create({
   sidebarContainer: {
     flex: 1,
     flexDirection: 'column',
-    ...Platform.select({ web: { overflow: 'visible' } }),
   },
   brandContainer: {
     flexDirection: 'row',
@@ -542,7 +555,7 @@ const styles = StyleSheet.create({
   navList: {
     paddingHorizontal: 12,
     gap: 4,
-    ...Platform.select({ web: { overflow: 'visible' } }),
+    paddingBottom: 20,
   },
   navItem: {
     flexDirection: 'row',

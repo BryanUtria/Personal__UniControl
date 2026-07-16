@@ -12,7 +12,8 @@ app.use(express.json());
 app.get('/api/version', (req, res) => {
     res.json({ 
         version: process.env.version || '1.0.0',
-        apkUrl: process.env.APK_URL || 'https://tu-servidor.com/Unicontrol.apk'
+        apkUrl: process.env.APK_URL || 'https://github.com/BryanUtria/Personal__UniControl/releases/download/v1.0.3/Unicontrol.apk',
+        webUrl: process.env.WEB_URL || 'https://unicontrol.onrender.com/'
     });
 });
 
@@ -27,6 +28,12 @@ app.use('/api/debts', require('./src/routes/debts.routes'));
 app.use('/api', require('./src/routes/modules.routes'));
 app.use('/api/users', require('./src/routes/users.routes'));
 app.use('/api/habits', require('./src/routes/habits.routes'));
+app.use('/api/expenses', require('./src/routes/expenses.routes'));
+app.use('/api/push', require('./src/routes/push.routes'));
+app.use('/api/suggestions', require('./src/routes/suggestions.routes'));
+
+// Inicializar el scheduler de notificaciones
+require('./src/utils/notificationScheduler');
 
 const server = http.createServer(app);
 

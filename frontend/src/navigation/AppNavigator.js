@@ -13,6 +13,8 @@ import SalesHistoryScreen from '../screens/shop/sales/SalesHistoryScreen';
 import ShopMenuScreen from '../screens/shop/ShopMenuScreen';
 import SettingsScreen from '../screens/settings/SettingsScreen';
 import HabitsScreen from '../screens/habits/HabitsScreen';
+import ExpensesScreen from '../screens/expenses/ExpensesScreen';
+import SuggestionsScreen from '../screens/suggestions/SuggestionsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -43,6 +45,8 @@ export default function AppNavigator() {
           <Stack.Screen name="SalesHistory" component={SalesHistoryScreen} />
           <Stack.Screen name="Settings" component={SettingsScreen} />
           <Stack.Screen name="Habits" component={HabitsScreen} />
+          <Stack.Screen name="Expenses" component={ExpensesScreen} />
+          <Stack.Screen name="Suggestions" component={SuggestionsScreen} />
         </>
       )}
     </Stack.Navigator>

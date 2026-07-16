@@ -60,6 +60,30 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const updateProfile = async (profileData) => {
+    try {
+      const response = await fetch(`${API_URL}/users/profile`, {
+        method: 'PUT',
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-user-id': user.id.toString()
+        },
+        body: JSON.stringify(profileData)
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Error al actualizar perfil');
+      }
+      
+      const updatedUser = { ...user, ...data.user };
+      await AsyncStorage.setItem('@unicontrol_user', JSON.stringify(updatedUser));
+      setUser(updatedUser);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
   const register = async (name, username, password, email, code) => {
     try {
       const response = await fetch(`${API_URL}/auth/register`, {
@@ -92,7 +116,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, sendVerificationCode, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, sendVerificationCode, register, updateProfile, logout }}>
       {children}
     </AuthContext.Provider>
   );
