@@ -360,7 +360,7 @@ export default function HabitsScreen({ navigation }) {
             <>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 15, marginBottom: 5 }}>
                 {/* Resumen del Mes */}
-                <View style={[styles.statsCard, { flex: 1, minWidth: 280, marginBottom: 0, backgroundColor: theme.accent + (isDarkMode ? '15' : '10'), borderColor: theme.accent + '30', shadowColor: theme.shadow }]}>
+                <View style={[styles.statsCard, { flex: 1, minWidth: 280, marginBottom: 0, backgroundColor: theme.card, borderColor: theme.border, shadowColor: theme.shadow }]}>
                   <View style={styles.statsHeader}>
                     <View style={[styles.statsIconWrap, { backgroundColor: theme.accent + '15' }]}>
                       <Ionicons name="calendar-outline" size={24} color={theme.accent} />
@@ -381,7 +381,7 @@ export default function HabitsScreen({ navigation }) {
                 </View>
 
                 {/* Resumen del Día */}
-                <View style={[styles.statsCard, { flex: 1, minWidth: 280, marginBottom: 0, backgroundColor: theme.accent + (isDarkMode ? '15' : '10'), borderColor: theme.accent + '30', shadowColor: theme.shadow }]}>
+                <View style={[styles.statsCard, { flex: 1, minWidth: 280, marginBottom: 0, backgroundColor: theme.card, borderColor: theme.border, shadowColor: theme.shadow }]}>
                   <View style={styles.statsHeader}>
                     <View style={[styles.statsIconWrap, { backgroundColor: theme.accent + '15' }]}>
                       <Ionicons name="trophy" size={24} color={theme.accent} />

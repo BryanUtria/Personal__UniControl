@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "611225471127",
+    "project_id": "unicontrol-e84d0",
+    "storage_bucket": "unicontrol-e84d0.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:611225471127:android:35ed22f4fdd7c6c73041d2",
+        "android_client_info": {
+          "package_name": "com.castelbrothers.unicontrol"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAfjwJccZN5dJacLuRb1CiFJ9AYdjfI5yM"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

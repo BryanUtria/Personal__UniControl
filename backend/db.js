@@ -342,8 +342,10 @@ async function initDB() {
             month_year VARCHAR(10) NOT NULL,
             description VARCHAR(255) NOT NULL,
             amount DECIMAL(10,2) NOT NULL,
+            amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0,
             is_paid TINYINT(1) NOT NULL DEFAULT 0,
             is_recurring TINYINT(1) NOT NULL DEFAULT 0,
+            is_reserved TINYINT(1) NOT NULL DEFAULT 0,
             reminder_date DATETIME NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
@@ -351,6 +353,9 @@ async function initDB() {
         ) ENGINE=InnoDB;
     `;
     await pool.query(expensesTable);
+
+    try { await pool.query("ALTER TABLE expenses ADD COLUMN amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0"); } catch (e) {}
+    try { await pool.query("ALTER TABLE expenses ADD COLUMN is_reserved TINYINT(1) NOT NULL DEFAULT 0"); } catch (e) {}
 
     const incomesTable = `
         CREATE TABLE IF NOT EXISTS incomes (

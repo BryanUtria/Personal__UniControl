@@ -40,9 +40,11 @@ async function notifyUser(userId, title, body, data = {}) {
         const tokensSql = `SELECT token FROM push_tokens WHERE user_id = ?`;
         const tokensRows = await db.query(tokensSql, [userId]);
         const tokens = tokensRows.map(row => row.token);
-        
+
         if (tokens.length > 0) {
             await sendPushNotifications(tokens, { title, body, data });
+        } else {
+            console.log(`Usuario ${userId} no tiene tokens de push registrados.`);
         }
     } catch (e) {
         console.error('Error in notifyUser:', e);

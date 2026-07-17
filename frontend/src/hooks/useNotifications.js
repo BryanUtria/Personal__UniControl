@@ -3,6 +3,7 @@ import { Platform } from 'react-native';
 import * as Device from 'expo-device';
 import * as Notifications from 'expo-notifications';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import Constants from 'expo-constants';
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -12,17 +13,19 @@ Notifications.setNotificationHandler({
   }),
 });
 
-export function useNotifications() {
+export function useNotifications(userId) {
   const [expoPushToken, setExpoPushToken] = useState('');
   const [notification, setNotification] = useState(false);
   const notificationListener = useRef();
   const responseListener = useRef();
 
   useEffect(() => {
+    if (!userId) return;
+
     registerForPushNotificationsAsync().then(token => {
       if (token) {
         setExpoPushToken(token);
-        sendTokenToBackend(token);
+        sendTokenToBackend(token, userId);
       }
     });
 
@@ -35,27 +38,26 @@ export function useNotifications() {
     });
 
     return () => {
-      if (notificationListener.current) {
-        Notifications.removeNotificationSubscription(notificationListener.current);
+      if (notificationListener.current && typeof notificationListener.current.remove === 'function') {
+        notificationListener.current.remove();
       }
-      if (responseListener.current) {
-        Notifications.removeNotificationSubscription(responseListener.current);
+      if (responseListener.current && typeof responseListener.current.remove === 'function') {
+        responseListener.current.remove();
       }
     };
-  }, []);
+  }, [userId]);
 
-  const sendTokenToBackend = async (token) => {
+  const sendTokenToBackend = async (token, uid) => {
     try {
-      const storedUserId = await AsyncStorage.getItem('user_id');
-      const apiUrl = process.env.EXPO_PUBLIC_API_URL;
-      
-      if (storedUserId && apiUrl) {
+      const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
+
+      if (uid) {
         const device_type = Platform.OS === 'web' ? 'web' : (Platform.OS === 'android' ? 'android' : 'ios');
-        await fetch(`${apiUrl}/api/push/token`, {
+        await fetch(`${API_URL}/push/token`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-user-id': storedUserId
+            'x-user-id': uid.toString()
           },
           body: JSON.stringify({ token, device_type })
         });
@@ -99,13 +101,13 @@ async function registerForPushNotificationsAsync() {
       console.log('Failed to get push token for push notification!');
       return null;
     }
-    
+
     try {
-        token = (await Notifications.getExpoPushTokenAsync({
-            projectId: process.env.EXPO_PUBLIC_PROJECT_ID || 'dummy-project-id'
-        })).data;
+      token = (await Notifications.getExpoPushTokenAsync({
+        projectId: Constants.expoConfig?.extra?.eas?.projectId
+      })).data;
     } catch (e) {
-        console.log("Error obtaining push token:", e);
+      console.log("Error obtaining push token:", e);
     }
   } else {
     console.log('Must use physical device for Push Notifications');

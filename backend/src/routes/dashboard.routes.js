@@ -165,6 +165,210 @@ router.get('/', async (req, res) => {
             [userId, userId]
         );
 
+        // Hábitos y tareas
+        const habitsRows = await db.query(
+            `SELECT * FROM habits WHERE (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND active = 1`,
+            [userId, userId]
+        );
+
+        if (habitsRows.length > 0) {
+            const habitIds = habitsRows.map(h => h.id);
+            const placeholders = habitIds.map(() => '?').join(',');
+            const logsSql = `
+                SELECT habit_id, log_date, completed
+                FROM habit_logs
+                WHERE habit_id IN (${placeholders})
+            `;
+            const logsRows = await db.query(logsSql, habitIds);
+
+            for (const h of habitsRows) {
+                h.logs = logsRows
+                    .filter(l => l.habit_id === h.id)
+                    .reduce((acc, log) => {
+                        const dateStr = typeof log.log_date === 'string' 
+                            ? log.log_date 
+                            : log.log_date.toISOString().split('T')[0];
+                        acc[dateStr] = log.completed === 1;
+                        return acc;
+                    }, {});
+            }
+        }
+        
+        const pad = (n) => (n < 10 ? '0' + n : n);
+        const formatDate = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+
+        const todayDate = new Date();
+        const todayStr = formatDate(todayDate);
+        
+        const last7Days = [];
+        for (let i = 0; i < 7; i++) {
+            const d = new Date();
+            d.setDate(todayDate.getDate() - i);
+            const dateStr = formatDate(d);
+            last7Days.push({
+                dateStr,
+                dayOfWeek: d.getDay(),
+                dayOfMonthStr: pad(d.getDate())
+            });
+        }
+
+        const currentMonthDays = [];
+        const firstDayOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth(), 1);
+        const lastDayOfMonth = new Date(todayDate.getFullYear(), todayDate.getMonth() + 1, 0);
+        for (let d = new Date(firstDayOfMonth); d <= lastDayOfMonth; d.setDate(d.getDate() + 1)) {
+            const dateStr = formatDate(d);
+            currentMonthDays.push({
+                dateStr,
+                dayOfWeek: d.getDay(),
+                dayOfMonthStr: pad(d.getDate())
+            });
+        }
+
+        const habitsStats = {
+            today: { scheduled: 0, completed: 0, habits_scheduled: 0, habits_completed: 0, tasks_scheduled: 0, tasks_completed: 0 },
+            week: { scheduled: 0, completed: 0, habits_scheduled: 0, habits_completed: 0, tasks_scheduled: 0, tasks_completed: 0 },
+            month: { scheduled: 0, completed: 0, habits_scheduled: 0, habits_completed: 0, tasks_scheduled: 0, tasks_completed: 0 }
+        };
+
+        const isHabitActiveOnDate = (h, dateStr, dayOfWeek, dayOfMonthStr) => {
+            if (h.start_date && dateStr < h.start_date) return false;
+            
+            if (h.frequency === 'daily') return true;
+            
+            if (h.frequency === 'specific_days') {
+                let repeat = h.repeat_details;
+                if (typeof repeat === 'string') {
+                    try { repeat = JSON.parse(repeat); } catch(e){}
+                }
+                if (repeat && repeat.days) {
+                    return repeat.days.includes(dayOfWeek.toString());
+                }
+                return false;
+            }
+            
+            if (h.frequency === 'weekly') {
+                if (!h.start_date) return true;
+                const [sy, sm, sday] = h.start_date.split('-');
+                const safeStartDate = new Date(sy, sm - 1, sday);
+                return safeStartDate.getDay() === dayOfWeek;
+            }
+            
+            if (h.frequency === 'monthly') {
+                if (!h.start_date) return true;
+                const startDayStr = h.start_date.split('-')[2];
+                return startDayStr === dayOfMonthStr;
+            }
+            
+            if (h.frequency === 'once') {
+                return h.start_date ? dateStr === h.start_date : true;
+            }
+            
+            return false;
+        };
+        
+        for (const h of habitsRows) {
+            let logs = h.logs || {};
+
+            const type = h.type === 'task' ? 'tasks' : 'habits';
+
+            // Hoy
+            if (isHabitActiveOnDate(h, last7Days[0].dateStr, last7Days[0].dayOfWeek, last7Days[0].dayOfMonthStr)) {
+                habitsStats.today.scheduled++;
+                habitsStats.today[`${type}_scheduled`]++;
+                if (logs && logs[todayStr] === true) {
+                    habitsStats.today.completed++;
+                    habitsStats.today[`${type}_completed`]++;
+                }
+            }
+
+            // Últimos 7 días
+            for (const dayObj of last7Days) {
+                if (isHabitActiveOnDate(h, dayObj.dateStr, dayObj.dayOfWeek, dayObj.dayOfMonthStr)) {
+                    habitsStats.week.scheduled++;
+                    habitsStats.week[`${type}_scheduled`]++;
+                    if (logs && logs[dayObj.dateStr] === true) {
+                        habitsStats.week.completed++;
+                        habitsStats.week[`${type}_completed`]++;
+                    }
+                }
+            }
+
+            // Mes actual (hasta hoy)
+            for (const dayObj of currentMonthDays) {
+                if (dayObj.dateStr > todayStr) continue;
+                if (isHabitActiveOnDate(h, dayObj.dateStr, dayObj.dayOfWeek, dayObj.dayOfMonthStr)) {
+                    habitsStats.month.scheduled++;
+                    habitsStats.month[`${type}_scheduled`]++;
+                    if (logs && logs[dayObj.dateStr] === true) {
+                        habitsStats.month.completed++;
+                        habitsStats.month[`${type}_completed`]++;
+                    }
+                }
+            }
+        }
+
+        // Gastos de este mes
+        const currentMonthYear = `${todayDate.getFullYear()}-${pad(todayDate.getMonth() + 1)}`;
+        
+        const [expensesIncomes] = await db.query(
+            `SELECT COALESCE(SUM(amount), 0) AS total FROM incomes WHERE month_year = ? AND (user_id = ? OR (user_id IS NULL AND ? IS NULL))`,
+            [currentMonthYear, userId, userId]
+        );
+        
+        const expensesRows = await db.query(
+            `SELECT e.amount, e.amount_paid, e.is_paid, e.is_reserved, c.name, c.color, c.icon 
+             FROM expenses e 
+             JOIN expense_categories c ON e.category_id = c.id 
+             WHERE e.month_year = ? AND (e.user_id = ? OR (e.user_id IS NULL AND ? IS NULL))`,
+            [currentMonthYear, userId, userId]
+        );
+
+        let expensesTotal = 0;
+        let paidTotal = 0;
+        let reservedTotal = 0;
+        const categoriesMap = {};
+
+        for (const exp of expensesRows) {
+            const amt = parseFloat(exp.amount);
+            const isPaid = exp.is_paid === 1;
+            const amtPaid = parseFloat(exp.amount_paid || 0);
+            
+            expensesTotal += amt;
+            paidTotal += isPaid ? amt : amtPaid;
+            if (!isPaid && exp.is_reserved === 1) {
+                reservedTotal += (amt - amtPaid);
+            }
+            
+            if (!categoriesMap[exp.name]) {
+                categoriesMap[exp.name] = {
+                    name: exp.name,
+                    color: exp.color,
+                    icon: exp.icon,
+                    total: 0
+                };
+            }
+            categoriesMap[exp.name].total += amt;
+        }
+
+        const categoriesBreakdown = Object.values(categoriesMap)
+            .map(cat => ({
+                ...cat,
+                percentage: expensesTotal > 0 ? parseFloat(((cat.total / expensesTotal) * 100).toFixed(1)) : 0
+            }))
+            .sort((a, b) => b.total - a.total);
+
+        const pendingTotal = expensesTotal - paidTotal;
+        const pendingFree = pendingTotal - reservedTotal;
+
+        const expensesStats = {
+            incomes_total: parseFloat(expensesIncomes.total),
+            expenses_total: expensesTotal,
+            paid_total: paidTotal,
+            pending_total: pendingTotal,
+            pending_free: pendingFree,
+            categories: categoriesBreakdown
+        };
+
         res.json({
             today_sales_total: parseFloat(todaySales.total),
             today_sales_count: parseInt(todaySales.count),
@@ -185,7 +389,9 @@ router.get('/', async (req, res) => {
                 total: parseFloat(s.total),
                 payment_type: s.debtor_id ? 'debt' : 'cash',
                 created_at: s.created_at
-            }))
+            })),
+            habits_stats: habitsStats,
+            expenses_stats: expensesStats
         });
     } catch (err) {
         res.status(500).json({ error: err.message });

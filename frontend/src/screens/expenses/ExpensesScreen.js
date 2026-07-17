@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { StyleSheet, Text, View, FlatList, TouchableOpacity, Modal, ScrollView, Platform, Alert, RefreshControl, Switch, useWindowDimensions, TouchableWithoutFeedback } from 'react-native';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { StyleSheet, Text, View, FlatList, TouchableOpacity, Modal, ScrollView, Platform, Alert, RefreshControl, Switch, useWindowDimensions, TouchableWithoutFeedback, ActivityIndicator, TextInput } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -7,6 +7,7 @@ import { useToast } from '../../context/ToastContext';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
 import SidebarLayout from '../../navigation/SidebarLayout';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -37,6 +38,10 @@ export default function ExpensesScreen({ navigation }) {
   const [deleteExpenseId, setDeleteExpenseId] = useState(null);
   const [deleteIncomeId, setDeleteIncomeId] = useState(null);
 
+  // Filters State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filterCategory, setFilterCategory] = useState(null);
+
   // Expense Form State
   const [editId, setEditId] = useState(null);
   const [formCategory, setFormCategory] = useState(null);
@@ -44,6 +49,31 @@ export default function ExpensesScreen({ navigation }) {
   const [formAmount, setFormAmount] = useState('');
   const [formIsRecurring, setFormIsRecurring] = useState(false);
   const [formIsPaid, setFormIsPaid] = useState(false);
+  const [formReminderDate, setFormReminderDate] = useState(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+
+  const onChangeDate = (event, selectedDate) => {
+    setShowDatePicker(false);
+    if (selectedDate && event.type !== 'dismissed') {
+      const current = formReminderDate || new Date();
+      selectedDate.setHours(current.getHours());
+      selectedDate.setMinutes(current.getMinutes());
+      setFormReminderDate(selectedDate);
+      setShowTimePicker(true);
+    }
+  };
+
+  const onChangeTime = (event, selectedDate) => {
+    setShowTimePicker(false);
+    if (selectedDate && event.type !== 'dismissed') {
+      const current = formReminderDate || new Date();
+      const updated = new Date(current);
+      updated.setHours(selectedDate.getHours());
+      updated.setMinutes(selectedDate.getMinutes());
+      setFormReminderDate(updated);
+    }
+  };
 
   // Category Form State
   const [editCatId, setEditCatId] = useState(null);
@@ -56,6 +86,18 @@ export default function ExpensesScreen({ navigation }) {
   const [formIncomeDesc, setFormIncomeDesc] = useState('');
   const [formIncomeAmount, setFormIncomeAmount] = useState('');
   const [incomes, setIncomes] = useState([]);
+
+  // Import Modal State
+  const [importModalVisible, setImportModalVisible] = useState(false);
+  const [importCandidates, setImportCandidates] = useState({ expenses: [], incomes: [] });
+  const [selectedImportIds, setSelectedImportIds] = useState({ expenses: [], incomes: [] });
+  const [loadingImportCandidates, setLoadingImportCandidates] = useState(false);
+  const [isImporting, setIsImporting] = useState(false);
+
+  // Payment Modal State
+  const [paymentModalVisible, setPaymentModalVisible] = useState(false);
+  const [paymentExpense, setPaymentExpense] = useState(null);
+  const [paymentAmount, setPaymentAmount] = useState('');
 
   const monthYearString = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}`;
 
@@ -123,10 +165,14 @@ export default function ExpensesScreen({ navigation }) {
   }, [monthYearString]);
 
   const prevMonth = () => {
+    setExpenses([]);
+    setIncomes([]);
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1));
   };
 
   const nextMonth = () => {
+    setExpenses([]);
+    setIncomes([]);
     setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1));
   };
 
@@ -137,6 +183,7 @@ export default function ExpensesScreen({ navigation }) {
     setFormAmount('');
     setFormIsRecurring(false);
     setFormIsPaid(false);
+    setFormReminderDate(null);
   };
 
   const openExpenseModal = (expense = null) => {
@@ -157,6 +204,7 @@ export default function ExpensesScreen({ navigation }) {
       setFormAmount(expense.amount.toString());
       setFormIsRecurring(!!expense.is_recurring);
       setFormIsPaid(!!expense.is_paid);
+      setFormReminderDate(expense.reminder_date ? new Date(expense.reminder_date) : null);
     } else {
       resetExpenseForm();
     }
@@ -169,13 +217,20 @@ export default function ExpensesScreen({ navigation }) {
       return;
     }
 
+    const formatToMySQL = (date) => {
+      if (!date) return null;
+      const pad = (n) => n < 10 ? '0' + n : n;
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    };
+
     const payload = {
       category_id: formCategory,
       month_year: monthYearString,
       description: formDescription,
       amount: parseFloat(formAmount),
       is_recurring: formIsRecurring,
-      is_paid: formIsPaid
+      is_paid: formIsPaid,
+      reminder_date: formatToMySQL(formReminderDate)
     };
 
     try {
@@ -197,14 +252,41 @@ export default function ExpensesScreen({ navigation }) {
         fetchExpenses();
       } else {
         const errorData = await response.json();
-        showToast(errorData.error || 'Error al guardar', 'error');
+        showToast(errorData.error || 'Error al guardar el pago', 'error');
       }
     } catch (e) {
       showToast('Error de conexión', 'error');
     }
   };
 
-  const handleDeleteExpense = (id) => {
+  const toggleReserved = async (expense) => {
+    try {
+      const payload = {
+        ...expense,
+        is_reserved: !expense.is_reserved,
+        amount_paid: expense.amount_paid
+      };
+      const response = await fetch(`${API_URL}/expenses/${expense.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id.toString()
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (response.ok) {
+        showToast(expense.is_reserved ? 'Reserva cancelada' : 'Dinero reservado', 'success');
+        fetchExpenses();
+      } else {
+        showToast('Error al actualizar reserva', 'error');
+      }
+    } catch (e) {
+      showToast('Error de conexión', 'error');
+    }
+  };
+
+  const handleDeleteExpense = async (id) => {
     setDeleteExpenseId(id);
   };
 
@@ -289,9 +371,54 @@ export default function ExpensesScreen({ navigation }) {
   };
 
   const togglePaidStatus = async (expense) => {
+    if (expense.is_paid) {
+      try {
+        const payload = { ...expense, is_paid: false, amount_paid: 0 };
+        const response = await fetch(`${API_URL}/expenses/${expense.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-user-id': user.id.toString()
+          },
+          body: JSON.stringify(payload)
+        });
+        if (response.ok) {
+          fetchExpenses();
+        }
+      } catch (e) {
+        showToast('Error al cambiar estado', 'error');
+      }
+    } else {
+      setPaymentExpense(expense);
+      setPaymentAmount((parseFloat(expense.amount) - parseFloat(expense.amount_paid || 0)).toString());
+      setPaymentModalVisible(true);
+    }
+  };
+
+  const handleSavePayment = async (isComplete = false) => {
+    if (!paymentExpense) return;
+    let newAmountPaid;
+    let isNowPaid = false;
+
+    if (isComplete) {
+      newAmountPaid = parseFloat(paymentExpense.amount);
+      isNowPaid = true;
+    } else {
+      const enteredAmount = parseFloat(paymentAmount);
+      if (isNaN(enteredAmount) || enteredAmount <= 0) {
+        showToast('Ingresa un monto válido', 'error');
+        return;
+      }
+      newAmountPaid = parseFloat(paymentExpense.amount_paid || 0) + enteredAmount;
+      if (newAmountPaid >= parseFloat(paymentExpense.amount)) {
+        newAmountPaid = parseFloat(paymentExpense.amount);
+        isNowPaid = true;
+      }
+    }
+
     try {
-      const payload = { ...expense, is_paid: !expense.is_paid };
-      const response = await fetch(`${API_URL}/expenses/${expense.id}`, {
+      const payload = { ...paymentExpense, is_paid: isNowPaid, amount_paid: newAmountPaid };
+      const response = await fetch(`${API_URL}/expenses/${paymentExpense.id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -300,10 +427,14 @@ export default function ExpensesScreen({ navigation }) {
         body: JSON.stringify(payload)
       });
       if (response.ok) {
+        showToast(isNowPaid ? 'Pago completado' : 'Pago parcial registrado', 'success');
+        setPaymentModalVisible(false);
         fetchExpenses();
+      } else {
+        showToast('Error al registrar el pago', 'error');
       }
     } catch (e) {
-      showToast('Error al cambiar estado', 'error');
+      showToast('Error de conexión', 'error');
     }
   };
 
@@ -365,8 +496,50 @@ export default function ExpensesScreen({ navigation }) {
     }
   };
 
+  const fetchImportCandidates = async () => {
+    setLoadingImportCandidates(true);
+    try {
+      const prevDate = new Date(currentDate);
+      prevDate.setMonth(prevDate.getMonth() - 1);
+      const prevMonthString = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+      const [resExp, resInc] = await Promise.all([
+        fetch(`${API_URL}/expenses?month_year=${prevMonthString}`, { headers: { 'x-user-id': user.id.toString() } }),
+        fetch(`${API_URL}/expenses/incomes?month_year=${prevMonthString}`, { headers: { 'x-user-id': user.id.toString() } })
+      ]);
+
+      let prevExpenses = [];
+      let prevIncomes = [];
+
+      if (resExp.ok) prevExpenses = await resExp.json();
+      if (resInc.ok) prevIncomes = await resInc.json();
+
+      const recurringExp = prevExpenses.filter(e => e.is_recurring);
+
+      const isImportedExp = (exp) => expenses.some(e => e.description === exp.description && parseFloat(e.amount) === parseFloat(exp.amount));
+      const isImportedInc = (inc) => incomes.some(i => i.description === inc.description && parseFloat(i.amount) === parseFloat(inc.amount));
+
+      const expensesToSelect = recurringExp.filter(e => !isImportedExp(e)).map(e => e.id);
+      const incomesToSelect = prevIncomes.filter(i => !isImportedInc(i)).map(i => i.id);
+
+      setImportCandidates({ expenses: recurringExp, incomes: prevIncomes });
+      setSelectedImportIds({
+        expenses: expensesToSelect,
+        incomes: incomesToSelect
+      });
+
+      setImportModalVisible(true);
+    } catch (e) {
+      showToast('Error cargando datos del mes anterior', 'error');
+    } finally {
+      setLoadingImportCandidates(false);
+    }
+  };
+
   const handleGenerateMonth = async () => {
-    const prevDate = new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1);
+    setIsImporting(true);
+    const prevDate = new Date(currentDate);
+    prevDate.setMonth(prevDate.getMonth() - 1);
     const prevMonthString = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
 
     try {
@@ -376,29 +549,67 @@ export default function ExpensesScreen({ navigation }) {
           'Content-Type': 'application/json',
           'x-user-id': user.id.toString()
         },
-        body: JSON.stringify({ previous_month: prevMonthString, target_month: monthYearString })
+        body: JSON.stringify({
+          previous_month: prevMonthString,
+          target_month: monthYearString,
+          expense_ids: selectedImportIds.expenses,
+          income_ids: selectedImportIds.incomes
+        })
       });
       if (response.ok) {
         const data = await response.json();
-        showToast(`Se importaron ${data.generated} gastos recurrentes de ${monthNames[prevDate.getMonth()]}`, 'success');
+        showToast(`Se importaron ${data.generated} gastos y ${data.generated_incomes} ingresos`, 'success');
+        setImportModalVisible(false);
         fetchExpenses();
+        fetchIncomes();
       } else {
         showToast('Error al importar', 'error');
       }
     } catch (e) {
       showToast('Error de conexión', 'error');
+    } finally {
+      setIsImporting(false);
     }
   };
 
   const totalExpenses = expenses.reduce((sum, item) => sum + parseFloat(item.amount), 0);
-  const paidExpenses = expenses.filter(i => i.is_paid).reduce((sum, item) => sum + parseFloat(item.amount), 0);
+  const paidExpenses = expenses.reduce((sum, item) => sum + (item.is_paid ? parseFloat(item.amount) : parseFloat(item.amount_paid || 0)), 0);
   const pendingExpenses = totalExpenses - paidExpenses;
+
+  const reservedExpenses = expenses.reduce((sum, item) => sum + (!item.is_paid && item.is_reserved ? (parseFloat(item.amount) - parseFloat(item.amount_paid || 0)) : 0), 0);
+  const pendingWithoutReserve = pendingExpenses - reservedExpenses;
 
   const totalIncomes = incomes.reduce((sum, item) => sum + parseFloat(item.amount), 0);
   const restante = totalIncomes - totalExpenses;
 
+  const filteredAndSortedExpenses = useMemo(() => {
+    let filtered = expenses;
+
+    if (searchQuery.trim() !== '') {
+      const q = searchQuery.toLowerCase();
+      filtered = filtered.filter(exp => (exp.description || '').toLowerCase().includes(q));
+    }
+
+    if (filterCategory !== null) {
+      filtered = filtered.filter(exp => exp.category_id === filterCategory);
+    }
+
+    return [...filtered].sort((a, b) => {
+      if (a.is_paid !== b.is_paid) return a.is_paid ? 1 : -1;
+      if (a.is_recurring !== b.is_recurring) return a.is_recurring ? -1 : 1;
+
+      const catA = a.category_name || '';
+      const catB = b.category_name || '';
+      if (catA.localeCompare(catB) !== 0) return catA.localeCompare(catB);
+
+      const descA = a.description || '';
+      const descB = b.description || '';
+      return descA.localeCompare(descB);
+    });
+  }, [expenses, searchQuery, filterCategory]);
+
   return (
-    <SidebarLayout navigation={navigation}>
+    <SidebarLayout navigation={navigation} activeRoute="Expenses">
       <FlatList
         ListHeaderComponent={
           <>
@@ -428,124 +639,251 @@ export default function ExpensesScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.summaryContainer, { paddingHorizontal: isMobile ? 10 : 20 }]}>
+            <View style={[styles.summaryContainer, { paddingHorizontal: isMobile ? 10 : 20, marginBottom: 10 }]}>
               <View style={[styles.summaryCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Ingresos</Text>
-                <Text style={[styles.summaryValue, { color: '#10B981' }]}>{formatCurrency(totalIncomes)}</Text>
+                <Text style={[styles.summaryValue, { color: '#10B981', fontSize: 14 }]}>{formatCurrency(totalIncomes)}</Text>
               </View>
               <View style={[styles.summaryCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Gastos</Text>
-                <Text style={[styles.summaryValue, { color: theme.text }]}>{formatCurrency(totalExpenses)}</Text>
-                <Text style={{ fontSize: 11, color: theme.textSecondary, marginTop: 4 }}>Pagado: {formatCurrency(paidExpenses)}</Text>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Gastos Tot.</Text>
+                <Text style={[styles.summaryValue, { color: theme.text, fontSize: 14 }]}>{formatCurrency(totalExpenses)}</Text>
               </View>
               <View style={[styles.summaryCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Restante</Text>
-                <Text style={[styles.summaryValue, { color: restante < 0 ? '#EF4444' : (restante > 0 ? '#10B981' : theme.text) }]}>{formatCurrency(restante)}</Text>
+                <Text style={[styles.summaryValue, { color: restante < 0 ? '#EF4444' : (restante > 0 ? '#10B981' : theme.text), fontSize: 14 }]}>{formatCurrency(restante)}</Text>
               </View>
             </View>
 
-            <View style={{ marginBottom: 10, paddingHorizontal: isMobile ? 10 : 20 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text }}>Ingresos del Mes</Text>
-                <Button
-                  title="Ingreso"
-                  variant="secondary"
-                  icon={<Ionicons name="add" size={16} color={theme.text} />}
-                  onPress={() => openIncomeModal()}
-                />
+            <View style={[styles.summaryContainer, { paddingHorizontal: isMobile ? 10 : 20 }]}>
+              <View style={[styles.summaryCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]} numberOfLines={1}>Pagado</Text>
+                <Text style={[styles.summaryValue, { color: '#10B981', fontSize: 14 }]} numberOfLines={1}>{formatCurrency(paidExpenses)}</Text>
               </View>
-              {incomes.map(inc => (
-                <View key={inc.id} style={[styles.expenseCard, { backgroundColor: theme.card, borderColor: theme.border, marginBottom: 5, padding: 10 }]}>
-                  <View style={{ flex: 1 }}>
-                    <Text style={[styles.expenseDesc, { color: theme.text }]}>{inc.description}</Text>
+              <View style={[styles.summaryCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]} numberOfLines={1}>Pdte. Total</Text>
+                <Text style={[styles.summaryValue, { color: '#EF4444', fontSize: 14 }]} numberOfLines={1}>{formatCurrency(pendingExpenses)}</Text>
+              </View>
+              <View style={[styles.summaryCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
+                <Text style={[styles.summaryLabel, { color: theme.textSecondary }]} numberOfLines={1}>Pdte. Libre</Text>
+                <Text style={[styles.summaryValue, { color: '#F59E0B', fontSize: 14 }]} numberOfLines={1}>{formatCurrency(pendingWithoutReserve)}</Text>
+              </View>
+            </View>
+
+            {loading ? (
+              <View style={{ padding: 60, alignItems: 'center' }}>
+                <ActivityIndicator size="large" color={theme.accent} />
+                <Text style={{ color: theme.textSecondary, marginTop: 15, fontSize: 16 }}>Cargando datos...</Text>
+              </View>
+            ) : (
+              <>
+                <View style={{ marginBottom: 10, paddingHorizontal: isMobile ? 10 : 20 }}>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
+                    <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text }}>Ingresos del Mes</Text>
+                    <Button
+                      title="Ingreso"
+                      variant="secondary"
+                      icon={<Ionicons name="add" size={16} color={theme.text} />}
+                      onPress={() => openIncomeModal()}
+                    />
                   </View>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
-                    <Text style={[styles.expenseAmount, { color: '#10B981' }]}>+{formatCurrency(inc.amount)}</Text>
-                    <TouchableOpacity onPress={() => openIncomeModal(inc)}>
-                      <Ionicons name="pencil" size={18} color={theme.accent} />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => setDeleteIncomeId(inc.id)}>
-                      <Ionicons name="trash" size={18} color="#EF4444" />
-                    </TouchableOpacity>
-                  </View>
+                  {incomes.map(inc => (
+                    <View key={inc.id} style={[styles.expenseCard, { backgroundColor: theme.card, borderColor: theme.border, marginBottom: 5, padding: 10 }]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 12 }}>
+                        <View style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#10B98115', justifyContent: 'center', alignItems: 'center' }}>
+                          <Ionicons name="trending-up" size={18} color="#10B981" />
+                        </View>
+                        <Text style={[styles.expenseDesc, { color: theme.text, flex: 1 }]} numberOfLines={1}>{inc.description}</Text>
+                      </View>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 15 }}>
+                        <Text style={[styles.expenseAmount, { color: '#10B981' }]}>+{formatCurrency(inc.amount)}</Text>
+                        <TouchableOpacity onPress={() => openIncomeModal(inc)}>
+                          <Ionicons name="pencil" size={18} color={theme.accent} />
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setDeleteIncomeId(inc.id)}>
+                          <Ionicons name="trash" size={18} color="#EF4444" />
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  ))}
+                  {incomes.length === 0 && (
+                    <View style={{ alignItems: 'center', marginVertical: 20 }}>
+                      <Ionicons name="trending-up-outline" size={48} color={theme.border} />
+                      <Text style={{ color: theme.textSecondary, marginTop: 10, fontSize: 14 }}>No hay ingresos registrados este mes</Text>
+                    </View>
+                  )}
                 </View>
-              ))}
-              {incomes.length === 0 && (
-                <Text style={{ color: theme.textSecondary, textAlign: 'center', marginVertical: 10 }}>No hay ingresos registrados este mes.</Text>
-              )}
-            </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingHorizontal: isMobile ? 10 : 20 }}>
-              <Button
-                title={isMobile ? "Importar" : "Importar Mes Anterior"}
-                variant="secondary"
-                icon={<Ionicons name="sync-outline" size={18} color={theme.text} />}
-                onPress={handleGenerateMonth}
-              />
-              <Button
-                title={isMobile ? "Gasto" : "Nuevo Gasto"}
-                variant="primary"
-                icon={<Ionicons name="add" size={18} color="#FFF" />}
-                onPress={() => openExpenseModal()}
-              />
-            </View>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingHorizontal: isMobile ? 10 : 20 }}>
+                  <Button
+                    title={isMobile ? "Importar" : "Importar Mes Anterior"}
+                    variant="secondary"
+                    icon={loadingImportCandidates ? <ActivityIndicator size="small" color={theme.text} /> : <Ionicons name="sync-outline" size={18} color={theme.text} />}
+                    onPress={fetchImportCandidates}
+                    disabled={loadingImportCandidates}
+                  />
+                  <Button
+                    title={isMobile ? "Gasto" : "Nuevo Gasto"}
+                    variant="primary"
+                    icon={<Ionicons name="add" size={18} color="#FFF" />}
+                    onPress={() => openExpenseModal()}
+                  />
+                </View>
+
+                {/* FILTROS */}
+                <View style={{ paddingHorizontal: isMobile ? 10 : 20, marginBottom: 15 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, borderRadius: 8, borderWidth: 1, borderColor: theme.border, paddingHorizontal: 10, marginBottom: 10 }}>
+                    <Ionicons name="search" size={18} color={theme.textSecondary} />
+                    <TextInput
+                      style={{ flex: 1, paddingVertical: 10, paddingHorizontal: 8, color: theme.text }}
+                      placeholder="Buscar gasto por descripción..."
+                      placeholderTextColor={theme.textSecondary}
+                      value={searchQuery}
+                      onChangeText={setSearchQuery}
+                    />
+                    {searchQuery !== '' && (
+                      <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 5 }}>
+                        <Ionicons name="close-circle" size={18} color={theme.textSecondary} />
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingBottom: 5 }}>
+                    <TouchableOpacity
+                      style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: filterCategory === null ? theme.accent : theme.border, backgroundColor: filterCategory === null ? theme.accent : 'transparent' }}
+                      onPress={() => setFilterCategory(null)}
+                    >
+                      <Text style={{ color: filterCategory === null ? '#FFF' : theme.textSecondary, fontSize: 12, fontWeight: filterCategory === null ? 'bold' : 'normal' }}>Todos</Text>
+                    </TouchableOpacity>
+                    {categories.map(cat => (
+                      <TouchableOpacity
+                        key={cat.id}
+                        style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: filterCategory === cat.id ? cat.color : theme.border, backgroundColor: filterCategory === cat.id ? cat.color : 'transparent' }}
+                        onPress={() => setFilterCategory(cat.id)}
+                      >
+                        <Ionicons name={cat.icon} size={14} color={filterCategory === cat.id ? '#FFF' : cat.color} />
+                        <Text style={{ color: filterCategory === cat.id ? '#FFF' : theme.textSecondary, fontSize: 12, marginLeft: 4, fontWeight: filterCategory === cat.id ? 'bold' : 'normal' }}>{cat.name}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </ScrollView>
+                </View>
+              </>
+            )}
           </>
         }
-        data={expenses}
+        data={filteredAndSortedExpenses}
         keyExtractor={item => item.id.toString()}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
         contentContainerStyle={{ paddingBottom: 100 }}
         ListEmptyComponent={
-          !loading && (
+          loading ? null : (
             <View style={styles.emptyContainer}>
               <Ionicons name="wallet-outline" size={64} color={theme.border} />
-              <Text style={{ color: theme.textSecondary, marginTop: 10, fontSize: 16 }}>No hay gastos en este mes</Text>
+              <Text style={{ color: theme.textSecondary, marginTop: 10, fontSize: 14 }}>No hay gastos en este mes</Text>
             </View>
           )
         }
-        renderItem={({ item }) => (
-          <View style={[styles.expenseCard, { backgroundColor: theme.card, borderColor: theme.border, padding: isMobile ? 10 : 15, marginHorizontal: isMobile ? 10 : 20 }]}>
-            <TouchableOpacity onPress={() => togglePaidStatus(item)} style={styles.checkbox}>
-              <Ionicons
-                name={item.is_paid ? "checkmark-circle" : "ellipse-outline"}
-                size={28}
-                color={item.is_paid ? '#10B981' : theme.textSecondary}
-              />
-            </TouchableOpacity>
+        renderItem={({ item, index }) => {
+          let showHeader = false;
+          let headerText = '';
 
-            <View style={[styles.catIconWrap, { backgroundColor: item.category_color + '20' }]}>
-              <Ionicons name={item.category_icon || 'wallet-outline'} size={20} color={item.category_color} />
-            </View>
+          const getGroupStr = (exp) => `${exp.is_paid ? '1' : '0'}-${exp.is_recurring ? '1' : '0'}`;
+          const currentGroup = getGroupStr(item);
 
-            <View style={styles.expenseInfo}>
-              <Text style={[styles.expenseDesc, { color: theme.text, textDecorationLine: item.is_paid ? 'line-through' : 'none' }]}>
-                {item.description}
-              </Text>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{item.category_name}</Text>
-                {item.is_recurring ? (
-                  <View style={{ backgroundColor: '#F59E0B20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
-                    <Text style={{ color: '#F59E0B', fontSize: 10, fontWeight: 'bold' }}>Recurrente</Text>
+          if (index === 0) {
+            showHeader = true;
+          } else {
+            const prevItem = filteredAndSortedExpenses[index - 1];
+            if (getGroupStr(prevItem) !== currentGroup) {
+              showHeader = true;
+            }
+          }
+
+          if (showHeader) {
+            if (!item.is_paid && item.is_recurring) headerText = 'Pendientes Recurrentes';
+            else if (!item.is_paid && !item.is_recurring) headerText = 'Pendientes NO Recurrentes';
+            else if (item.is_paid && item.is_recurring) headerText = 'Pagados Recurrentes';
+            else if (item.is_paid && !item.is_recurring) headerText = 'Pagados NO Recurrentes';
+          }
+
+          return (
+            <View>
+              {showHeader && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: isMobile ? 10 : 20, marginTop: index === 0 ? 0 : 15, marginBottom: 10 }}>
+                  <Text style={{ color: theme.textSecondary, fontWeight: 'bold', fontSize: 13, textTransform: 'uppercase', marginRight: 10 }}>{headerText}</Text>
+                  <View style={{ flex: 1, height: 1, backgroundColor: theme.border }} />
+                </View>
+              )}
+              <TouchableOpacity activeOpacity={0.8} onPress={() => togglePaidStatus(item)} style={[styles.expenseCard, { backgroundColor: theme.card, borderColor: theme.border, padding: isMobile ? 10 : 15, marginHorizontal: isMobile ? 10 : 20 }]}>
+                <TouchableOpacity onPress={() => togglePaidStatus(item)} style={styles.checkbox}>
+                  <Ionicons
+                    name={item.is_paid ? "checkmark-circle" : "ellipse-outline"}
+                    size={28}
+                    color={item.is_paid ? '#10B981' : theme.textSecondary}
+                  />
+                </TouchableOpacity>
+
+                <View style={[styles.catIconWrap, { backgroundColor: item.category_color + '20' }]}>
+                  <Ionicons name={item.category_icon || 'wallet-outline'} size={20} color={item.category_color} />
+                </View>
+
+                <View style={styles.expenseInfo}>
+                  <Text style={[styles.expenseDesc, { color: theme.text, textDecorationLine: item.is_paid ? 'line-through' : 'none' }]}>
+                    {item.description}
+                  </Text>
+                  {(!item.is_paid && item.amount_paid > 0) && (
+                    <Text style={{ color: theme.accent, fontSize: 12, marginTop: 2, fontWeight: 'bold' }}>
+                      Pagado: {formatCurrency(item.amount_paid)} ({(item.amount_paid / item.amount * 100).toFixed(0)}%)
+                    </Text>
+                  )}
+                  <View style={{ flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: 6, marginTop: 4 }}>
+                    <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{item.category_name}</Text>
+                    <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
+                      {item.is_recurring ? (
+                        <View style={{ backgroundColor: '#F59E0B20', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
+                          <Text style={{ color: '#F59E0B', fontSize: 10, fontWeight: 'bold' }}>Recurrente</Text>
+                        </View>
+                      ) : null}
+                      {item.is_reserved ? (
+                        <View style={{ backgroundColor: '#8B5CF620', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 10 }}>
+                          <Text style={{ color: '#8B5CF6', fontSize: 10, fontWeight: 'bold' }}>Reservado</Text>
+                        </View>
+                      ) : null}
+                    </View>
                   </View>
-                ) : null}
-              </View>
-            </View>
+                  {item.reminder_date && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                      <Ionicons name="alarm-outline" size={12} color={theme.textSecondary} />
+                      <Text style={{ color: theme.textSecondary, fontSize: 11 }}>
+                        Recordatorio: {new Date(item.reminder_date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
-            <View style={styles.expenseRight}>
-              <Text style={[styles.expenseAmount, { color: item.is_paid ? '#10B981' : theme.text }]}>
-                {formatCurrency(item.amount)}
-              </Text>
-              <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
-                <TouchableOpacity onPress={() => openExpenseModal(item)}>
-                  <Ionicons name="pencil" size={18} color={theme.accent} />
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => handleDeleteExpense(item.id)}>
-                  <Ionicons name="trash" size={18} color="#EF4444" />
-                </TouchableOpacity>
-              </View>
+                <View style={styles.expenseRight}>
+                  <Text style={[styles.expenseAmount, { color: theme.text, textDecorationLine: item.is_paid ? 'line-through' : 'none' }]}>{formatCurrency(item.amount)}</Text>
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                    {!item.is_paid && (
+                      <TouchableOpacity onPress={() => toggleReserved(item)} style={{ padding: 4 }}>
+                        <Ionicons
+                          name={item.is_reserved ? 'bookmark' : 'bookmark-outline'}
+                          size={20}
+                          color={item.is_reserved ? '#8B5CF6' : theme.textSecondary}
+                        />
+                      </TouchableOpacity>
+                    )}
+                    <TouchableOpacity onPress={() => openExpenseModal(item)} style={{ padding: 4 }}>
+                      <Ionicons name="pencil" size={20} color={theme.accent} />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteExpense(item.id)}>
+                      <Ionicons name="trash" size={18} color="#EF4444" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </TouchableOpacity>
             </View>
-          </View>
-        )}
+          );
+        }}
       />
 
       {/* MODAL GASTOS */}
@@ -580,6 +918,50 @@ export default function ExpensesScreen({ navigation }) {
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 15, paddingHorizontal: 5 }}>
                     <Text style={{ color: theme.text }}>Gasto Recurrente mensual</Text>
                     <Switch value={formIsRecurring} onValueChange={setFormIsRecurring} trackColor={{ false: '#767577', true: theme.accent }} />
+                  </View>
+
+                  <View style={{ marginVertical: 5, paddingHorizontal: 5 }}>
+                    <Text style={{ color: theme.text, marginBottom: 5 }}>Recordatorio (Opcional)</Text>
+                    {Platform.OS === 'web' ? (
+                      <input
+                        type="datetime-local"
+                        value={formReminderDate ? new Date(formReminderDate.getTime() - formReminderDate.getTimezoneOffset() * 60000).toISOString().slice(0, 16) : ''}
+                        onChange={(e) => setFormReminderDate(e.target.value ? new Date(e.target.value) : null)}
+                        style={{ padding: 10, borderRadius: 8, border: `1px solid ${theme.border}`, backgroundColor: 'transparent', color: theme.text, width: '100%', fontSize: 14 }}
+                      />
+                    ) : (
+                      <>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                          <TouchableOpacity onPress={() => setShowDatePicker(true)} style={{ flex: 1, padding: 10, borderWidth: 1, borderColor: theme.border, borderRadius: 8, flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                            <Ionicons name="calendar" size={18} color={theme.accent} />
+                            <Text style={{ color: formReminderDate ? theme.text : theme.textSecondary }}>
+                              {formReminderDate ? formReminderDate.toLocaleString([], { dateStyle: 'short', timeStyle: 'short' }) : 'Seleccionar fecha y hora'}
+                            </Text>
+                          </TouchableOpacity>
+                          {formReminderDate && (
+                            <TouchableOpacity onPress={() => setFormReminderDate(null)} style={{ padding: 10 }}>
+                              <Ionicons name="close-circle" size={20} color="#EF4444" />
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                        {showDatePicker && (
+                          <DateTimePicker
+                            value={formReminderDate || new Date()}
+                            mode="date"
+                            display="default"
+                            onChange={onChangeDate}
+                          />
+                        )}
+                        {showTimePicker && (
+                          <DateTimePicker
+                            value={formReminderDate || new Date()}
+                            mode="time"
+                            display="default"
+                            onChange={onChangeTime}
+                          />
+                        )}
+                      </>
+                    )}
                   </View>
 
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', gap: 10, marginTop: 10 }}>
@@ -735,6 +1117,143 @@ export default function ExpensesScreen({ navigation }) {
         </TouchableWithoutFeedback>
       </Modal>
 
+      {/* MODAL PAGO */}
+      <Modal visible={paymentModalVisible} transparent animationType="fade" onRequestClose={() => setPaymentModalVisible(false)}>
+        <TouchableWithoutFeedback onPress={() => setPaymentModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.modalContent, { backgroundColor: theme.card, padding: 0 }]}>
+                <View style={{ padding: 20 }}>
+                  <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 10 }]}>Registrar Pago</Text>
+                  <Text style={{ color: theme.textSecondary, marginBottom: 20 }}>
+                    ¿Cuánto deseas pagar de <Text style={{ fontWeight: 'bold', color: theme.text }}>{paymentExpense?.description}</Text>?
+                  </Text>
+
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <Text style={{ color: theme.text }}>Total Gasto:</Text>
+                    <Text style={{ color: theme.text, fontWeight: 'bold' }}>{paymentExpense ? formatCurrency(paymentExpense.amount) : ''}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+                    <Text style={{ color: theme.textSecondary }}>Pagado hasta ahora:</Text>
+                    <Text style={{ color: theme.accent }}>{paymentExpense ? formatCurrency(paymentExpense.amount_paid || 0) : ''}</Text>
+                  </View>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 15 }}>
+                    <Text style={{ color: theme.textSecondary }}>Restante:</Text>
+                    <Text style={{ color: '#EF4444', fontWeight: 'bold' }}>{paymentExpense ? formatCurrency(paymentExpense.amount - (paymentExpense.amount_paid || 0)) : ''}</Text>
+                  </View>
+
+                  <Input
+                    label="Monto a Pagar (Parcial o Total)"
+                    placeholder="Ej. 50"
+                    keyboardType="numeric"
+                    value={paymentAmount}
+                    onChangeText={setPaymentAmount}
+                  />
+
+                  <View style={{ flexDirection: 'row', gap: 10, marginTop: 20 }}>
+                    <Button title="Cancelar" variant="secondary" style={{ flex: 1 }} onPress={() => setPaymentModalVisible(false)} />
+                    <Button title="Pagar Completo" variant="primary" style={{ flex: 1 }} onPress={() => handleSavePayment(true)} />
+                  </View>
+                  <View style={{ marginTop: 10 }}>
+                    <Button title="Guardar Pago Parcial" variant="primary" style={{ backgroundColor: theme.accent + '30', borderColor: theme.accent }} textStyle={{ color: theme.accent }} onPress={() => handleSavePayment(false)} />
+                  </View>
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* MODAL IMPORTAR MES ANTERIOR */}
+      <Modal visible={importModalVisible} transparent animationType="slide" onRequestClose={() => setImportModalVisible(false)}>
+        <TouchableWithoutFeedback onPress={() => setImportModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.modalContent, { backgroundColor: theme.card, padding: 0, maxHeight: '90%' }]}>
+                <View style={{ padding: isMobile ? 10 : 20, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+                  <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 5 }]}>Importar Mes Anterior</Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: 13 }}>Selecciona lo que deseas copiar al mes actual.</Text>
+                </View>
+                <ScrollView contentContainerStyle={{ padding: isMobile ? 10 : 20 }} showsVerticalScrollIndicator={false}>
+
+                  {importCandidates.incomes.length > 0 && (
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: theme.text, marginBottom: 10 }}>Ingresos</Text>
+                  )}
+                  {importCandidates.incomes.map(inc => {
+                    const isImported = incomes.some(i => i.description === inc.description && parseFloat(i.amount) === parseFloat(inc.amount));
+                    const isSelected = selectedImportIds.incomes.includes(inc.id);
+                    return (
+                      <TouchableOpacity
+                        key={`inc-${inc.id}`}
+                        activeOpacity={isImported ? 1 : 0.7}
+                        disabled={isImported}
+                        onPress={() => {
+                          setSelectedImportIds(prev => ({
+                            ...prev,
+                            incomes: isSelected ? prev.incomes.filter(id => id !== inc.id) : [...prev.incomes, inc.id]
+                          }));
+                        }}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, backgroundColor: isImported ? theme.border + '30' : (isSelected ? theme.accent + '15' : 'transparent'), padding: 10, borderRadius: 8, borderWidth: 1, borderColor: isImported ? theme.border : (isSelected ? theme.accent : theme.border), opacity: isImported ? 0.6 : 1 }}
+                      >
+                        <Ionicons name={isImported ? "checkmark-done" : (isSelected ? "checkbox" : "square-outline")} size={22} color={isImported ? theme.textSecondary : (isSelected ? theme.accent : theme.textSecondary)} style={{ marginRight: 10 }} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: isImported ? theme.textSecondary : theme.text, fontWeight: '600', textDecorationLine: isImported ? 'line-through' : 'none' }}>{inc.description}</Text>
+                          <Text style={{ color: isImported ? theme.textSecondary : '#10B981', fontSize: 12 }}>+{formatCurrency(inc.amount)} {isImported ? '(Ya importado)' : ''}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    )
+                  })}
+
+                  {importCandidates.expenses.length > 0 && (
+                    <Text style={{ fontSize: 16, fontWeight: 'bold', color: theme.text, marginBottom: 10, marginTop: 0 }}>Gastos Recurrentes</Text>
+                  )}
+                  {importCandidates.expenses.map(exp => {
+                    const isImported = expenses.some(e => e.description === exp.description && parseFloat(e.amount) === parseFloat(exp.amount));
+                    const isSelected = selectedImportIds.expenses.includes(exp.id);
+                    return (
+                      <TouchableOpacity
+                        key={`exp-${exp.id}`}
+                        activeOpacity={isImported ? 1 : 0.7}
+                        disabled={isImported}
+                        onPress={() => {
+                          setSelectedImportIds(prev => ({
+                            ...prev,
+                            expenses: isSelected ? prev.expenses.filter(id => id !== exp.id) : [...prev.expenses, exp.id]
+                          }));
+                        }}
+                        style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12, backgroundColor: isImported ? theme.border + '30' : (isSelected ? theme.accent + '15' : 'transparent'), padding: 10, borderRadius: 8, borderWidth: 1, borderColor: isImported ? theme.border : (isSelected ? theme.accent : theme.border), opacity: isImported ? 0.6 : 1 }}
+                      >
+                        <Ionicons name={isImported ? "checkmark-done" : (isSelected ? "checkbox" : "square-outline")} size={22} color={isImported ? theme.textSecondary : (isSelected ? theme.accent : theme.textSecondary)} style={{ marginRight: 10 }} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={{ color: isImported ? theme.textSecondary : theme.text, fontWeight: '600', textDecorationLine: isImported ? 'line-through' : 'none' }}>{exp.description}</Text>
+                          <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{formatCurrency(exp.amount)} {isImported ? '(Ya importado)' : ''}</Text>
+                        </View>
+                      </TouchableOpacity>
+                    )
+                  })}
+
+                  {importCandidates.incomes.length === 0 && importCandidates.expenses.length === 0 && (
+                    <Text style={{ color: theme.textSecondary, textAlign: 'center', marginVertical: 20 }}>No hay ingresos ni gastos recurrentes en el mes anterior.</Text>
+                  )}
+
+                </ScrollView>
+                <View style={{ padding: isMobile ? 10 : 20, borderTopWidth: 1, borderTopColor: theme.border, flexDirection: 'row', gap: 10 }}>
+                  <Button title="Cancelar" variant="secondary" style={{ flex: 1 }} onPress={() => setImportModalVisible(false)} disabled={isImporting} />
+                  <Button
+                    title={isImporting ? "Importando..." : "Importar"}
+                    variant="primary"
+                    style={{ flex: 1 }}
+                    onPress={handleGenerateMonth}
+                    icon={isImporting ? <ActivityIndicator size="small" color="#FFF" /> : null}
+                    disabled={isImporting || (selectedImportIds.expenses.length === 0 && selectedImportIds.incomes.length === 0)}
+                  />
+                </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
     </SidebarLayout>
   );
 }
@@ -750,7 +1269,7 @@ const styles = StyleSheet.create({
   summaryLabel: { fontSize: 12, marginBottom: 5 },
   summaryValue: { fontSize: 16, fontWeight: 'bold' },
   emptyContainer: { alignItems: 'center', marginTop: 50 },
-  expenseCard: { flexDirection: 'row', padding: 15, borderRadius: 12, borderWidth: 1, marginBottom: 10, alignItems: 'center', height: 70 },
+  expenseCard: { flexDirection: 'row', padding: 15, borderRadius: 12, borderWidth: 1, marginBottom: 10, alignItems: 'center', minHeight: 70 },
   checkbox: { marginRight: 10 },
   catIconWrap: { width: 40, height: 40, borderRadius: 20, justifyContent: 'center', alignItems: 'center', marginRight: 10 },
   expenseInfo: { flex: 1 },

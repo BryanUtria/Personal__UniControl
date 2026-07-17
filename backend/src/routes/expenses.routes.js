@@ -151,15 +151,15 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-    const { category_id, month_year, description, amount, is_paid, is_recurring, reminder_date } = req.body;
+    const { category_id, month_year, description, amount, is_paid, is_recurring, is_reserved, reminder_date, amount_paid } = req.body;
     if (!category_id || !month_year || !description || !amount) {
         return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
     try {
         const result = await db.query(
-            `INSERT INTO expenses (user_id, category_id, month_year, description, amount, is_paid, is_recurring, reminder_date) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-            [req.userId, category_id, month_year, description, amount, is_paid ? 1 : 0, is_recurring ? 1 : 0, reminder_date || null]
+            `INSERT INTO expenses (user_id, category_id, month_year, description, amount, is_paid, is_recurring, is_reserved, reminder_date, amount_paid) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [req.userId, category_id, month_year, description, amount, is_paid ? 1 : 0, is_recurring ? 1 : 0, is_reserved ? 1 : 0, reminder_date || null, amount_paid !== undefined ? amount_paid : (is_paid ? amount : 0)]
         );
         const newExpense = await db.query(`
             SELECT e.*, c.name as category_name, c.icon as category_icon, c.color as category_color 
@@ -174,12 +174,12 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { category_id, description, amount, is_paid, is_recurring, reminder_date } = req.body;
+    const { category_id, description, amount, is_paid, is_recurring, is_reserved, reminder_date, amount_paid } = req.body;
     try {
         await db.query(
-            `UPDATE expenses SET category_id = ?, description = ?, amount = ?, is_paid = ?, is_recurring = ?, reminder_date = ? 
+            `UPDATE expenses SET category_id = ?, description = ?, amount = ?, is_paid = ?, is_recurring = ?, is_reserved = ?, reminder_date = ?, amount_paid = COALESCE(?, amount_paid) 
              WHERE id = ? AND user_id = ?`,
-            [category_id, description, amount, is_paid ? 1 : 0, is_recurring ? 1 : 0, reminder_date || null, id, req.userId]
+            [category_id, description, amount, is_paid ? 1 : 0, is_recurring ? 1 : 0, is_reserved ? 1 : 0, reminder_date || null, amount_paid !== undefined ? amount_paid : null, id, req.userId]
         );
         const updatedExpense = await db.query(`
             SELECT e.*, c.name as category_name, c.icon as category_icon, c.color as category_color 
@@ -204,37 +204,72 @@ router.delete('/:id', async (req, res) => {
 
 // --- GENERAR MES ---
 router.post('/generate-month', async (req, res) => {
-    const { previous_month, target_month } = req.body; // ej: '2026-06', '2026-07'
+    const { previous_month, target_month, expense_ids, income_ids } = req.body;
     if (!previous_month || !target_month) return res.status(400).json({ error: 'Faltan parámetros de mes' });
     
     try {
-        // Buscar recurrentes del mes anterior
-        const recurring = await db.query(
-            'SELECT * FROM expenses WHERE user_id = ? AND month_year = ? AND is_recurring = 1',
-            [req.userId, previous_month]
-        );
+        let expensesCount = 0;
+        let incomesCount = 0;
 
-        let count = 0;
-        for (const exp of recurring) {
-            // Ajustar el reminder_date al nuevo mes
+        // Si pasan expense_ids explícitos, los usamos, sino buscamos los recurrentes (comportamiento legacy)
+        let expensesToImport = [];
+        if (expense_ids && Array.isArray(expense_ids) && expense_ids.length > 0) {
+            const placeholders = expense_ids.map(() => '?').join(',');
+            expensesToImport = await db.query(
+                `SELECT * FROM expenses WHERE user_id = ? AND month_year = ? AND id IN (${placeholders})`,
+                [req.userId, previous_month, ...expense_ids]
+            );
+        } else if (!expense_ids) {
+            // Comportamiento por defecto (legacy)
+            expensesToImport = await db.query(
+                'SELECT * FROM expenses WHERE user_id = ? AND month_year = ? AND is_recurring = 1',
+                [req.userId, previous_month]
+            );
+        }
+
+        const formatToMySQL = (date) => {
+            if (!date) return null;
+            const pad = (n) => n < 10 ? '0' + n : n;
+            return `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+        };
+
+        for (const exp of expensesToImport) {
             let newReminder = null;
             if (exp.reminder_date) {
                 const date = new Date(exp.reminder_date);
                 const [tyear, tmonth] = target_month.split('-');
                 date.setFullYear(parseInt(tyear));
                 date.setMonth(parseInt(tmonth) - 1);
-                newReminder = date;
+                newReminder = formatToMySQL(date);
             }
 
             await db.query(
                 `INSERT INTO expenses (user_id, category_id, month_year, description, amount, is_paid, is_recurring, reminder_date) 
                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-                [req.userId, exp.category_id, target_month, exp.description, exp.amount, 0, 1, newReminder]
+                [req.userId, exp.category_id, target_month, exp.description, exp.amount, 0, exp.is_recurring, newReminder]
             );
-            count++;
+            expensesCount++;
+        }
+
+        // Importar ingresos seleccionados
+        if (income_ids && Array.isArray(income_ids) && income_ids.length > 0) {
+            const placeholders = income_ids.map(() => '?').join(',');
+            const incomesToImport = await db.query(
+                `SELECT * FROM incomes WHERE user_id = ? AND month_year = ? AND id IN (${placeholders})`,
+                [req.userId, previous_month, ...income_ids]
+            );
+
+            for (const inc of incomesToImport) {
+                await db.query(
+                    `INSERT INTO incomes (user_id, month_year, description, amount) 
+                     VALUES (?, ?, ?, ?)`,
+                    [req.userId, target_month, inc.description, inc.amount]
+                );
+                incomesCount++;
+            }
         }
         
-        res.json({ success: true, generated: count });
+        res.json({ success: true, generated: expensesCount, generated_incomes: incomesCount });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }

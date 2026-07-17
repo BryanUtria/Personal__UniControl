@@ -167,15 +167,13 @@ export default function DashboardScreen({ navigation }) {
             {/* FILA 3: Cuentas por cobrar y Saldo a Favor */}
             {moduleSettings.showDebtors && (
               <>
-                <TouchableOpacity
-                  activeOpacity={0.7}
-                  onPress={() => navigation.navigate('DebtorsList')}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 15, marginBottom: 10 }}
-                >
-                  <Text style={[styles.sectionLabel, { color: theme.textSecondary, marginBottom: 0, marginTop: 0 }]}>DEUDAS, DEUDORES Y AHORROS</Text>
-                  <Ionicons name="chevron-forward" size={14} color={theme.textSecondary} />
-                </TouchableOpacity>
-                <View style={[styles.row, isMobile && styles.rowColumn]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 }}>
+                  <Text style={[styles.globalTitle, { color: theme.text, marginTop: 0 }]}>Deudas, Deudores y Ahorros</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('DebtorsList')}>
+                    <Text style={{ color: theme.accent, fontSize: 13, fontWeight: 'bold' }}>Ver todo</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={[styles.row, isMobile && styles.rowColumn, { marginTop: 10 }]}>
                   {/* Card 1: Deuda total de clientes */}
                   <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
@@ -215,6 +213,166 @@ export default function DashboardScreen({ navigation }) {
                     </Text>
                   </View>
                 </View>
+              </>
+            )}
+
+            {/* FILA 4: HÁBITOS Y TAREAS */}
+            {moduleSettings.showHabits && (
+              <>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 }}>
+                  <Text style={[styles.globalTitle, { color: theme.text, marginTop: 0 }]}>Hábitos y Tareas</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('Habits')}>
+                    <Text style={{ color: theme.accent, fontSize: 13, fontWeight: 'bold' }}>Ver todo</Text>
+                  </TouchableOpacity>
+                </View>
+                <View style={[styles.row, isMobile && styles.rowColumn, { marginTop: 10 }]}>
+                  {/* Card 1: HOY */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate('Habits')}
+                    style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <View style={[styles.statIconBg, { backgroundColor: theme.accent + '15', marginVertical: 0 }]}>
+                        <Ionicons name="calendar-outline" size={18} color={theme.accent} />
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: 'bold', color: theme.accent }}>
+                        {stats?.habits_stats?.today?.scheduled > 0 ? Math.round((stats.habits_stats.today.completed / stats.habits_stats.today.scheduled) * 100) : 0}%
+                      </Text>
+                    </View>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Hoy</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 2 }}>
+                      <Text style={[styles.statValue, { color: theme.text, fontSize: 16 }]} numberOfLines={1}>
+                        <Text style={{ color: theme.accent, fontWeight: '900' }}>{stats?.habits_stats?.today?.completed || 0}</Text> / {stats?.habits_stats?.today?.scheduled || 0}
+                      </Text>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontSize: 11, color: theme.textSecondary }}>Hábitos: {stats?.habits_stats?.today?.habits_completed || 0}/{stats?.habits_stats?.today?.habits_scheduled || 0}</Text>
+                        <Text style={{ fontSize: 11, color: theme.textSecondary }}>Tareas: {stats?.habits_stats?.today?.tasks_completed || 0}/{stats?.habits_stats?.today?.tasks_scheduled || 0}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Card 2: SEMANA */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate('Habits')}
+                    style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <View style={[styles.statIconBg, { backgroundColor: '#10B98115', marginVertical: 0 }]}>
+                        <Ionicons name="bar-chart-outline" size={18} color="#10B981" />
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#10B981' }}>
+                        {stats?.habits_stats?.week?.scheduled > 0 ? Math.round((stats.habits_stats.week.completed / stats.habits_stats.week.scheduled) * 100) : 0}%
+                      </Text>
+                    </View>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Últimos 7 días</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 2 }}>
+                      <Text style={[styles.statValue, { color: theme.text, fontSize: 16 }]} numberOfLines={1}>
+                        <Text style={{ color: '#10B981', fontWeight: '900' }}>{stats?.habits_stats?.week?.completed || 0}</Text> / {stats?.habits_stats?.week?.scheduled || 0}
+                      </Text>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontSize: 11, color: theme.textSecondary }}>Hábitos: {stats?.habits_stats?.week?.habits_completed || 0}/{stats?.habits_stats?.week?.habits_scheduled || 0}</Text>
+                        <Text style={{ fontSize: 11, color: theme.textSecondary }}>Tareas: {stats?.habits_stats?.week?.tasks_completed || 0}/{stats?.habits_stats?.week?.tasks_scheduled || 0}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+
+                  {/* Card 3: MES */}
+                  <TouchableOpacity
+                    activeOpacity={0.7}
+                    onPress={() => navigation.navigate('Habits')}
+                    style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <View style={[styles.statIconBg, { backgroundColor: '#8B5CF615', marginVertical: 0 }]}>
+                        <Ionicons name="pie-chart-outline" size={18} color="#8B5CF6" />
+                      </View>
+                      <Text style={{ fontSize: 13, fontWeight: 'bold', color: '#8B5CF6' }}>
+                        {stats?.habits_stats?.month?.scheduled > 0 ? Math.round((stats.habits_stats.month.completed / stats.habits_stats.month.scheduled) * 100) : 0}%
+                      </Text>
+                    </View>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Este mes</Text>
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginTop: 2 }}>
+                      <Text style={[styles.statValue, { color: theme.text, fontSize: 16 }]} numberOfLines={1}>
+                        <Text style={{ color: '#8B5CF6', fontWeight: '900' }}>{stats?.habits_stats?.month?.completed || 0}</Text> / {stats?.habits_stats?.month?.scheduled || 0}
+                      </Text>
+                      <View style={{ alignItems: 'flex-end' }}>
+                        <Text style={{ fontSize: 11, color: theme.textSecondary }}>Hábitos: {stats?.habits_stats?.month?.habits_completed || 0}/{stats?.habits_stats?.month?.habits_scheduled || 0}</Text>
+                        <Text style={{ fontSize: 11, color: theme.textSecondary }}>Tareas: {stats?.habits_stats?.month?.tasks_completed || 0}/{stats?.habits_stats?.month?.tasks_scheduled || 0}</Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {/* CONTROL DE GASTOS */}
+            {moduleSettings.showExpenses && stats?.expenses_stats && (
+              <>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 20 }}>
+                  <Text style={[styles.globalTitle, { color: theme.text, marginTop: 0 }]}>Control de Gastos</Text>
+                  <TouchableOpacity onPress={() => navigation.navigate('Expenses')}>
+                    <Text style={{ color: theme.accent, fontSize: 13, fontWeight: 'bold' }}>Ver todo</Text>
+                  </TouchableOpacity>
+                </View>
+
+                {/* Resumen */}
+                <View style={[styles.row, { marginTop: 10 }]}>
+                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Ingresos (Mes)</Text>
+                    <Text style={[styles.statValue, { color: '#10B981', fontSize: 15 }]} numberOfLines={1}>$ {Math.round(stats.expenses_stats.incomes_total).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</Text>
+                  </View>
+                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Gastos (Mes)</Text>
+                    <Text style={[styles.statValue, { color: theme.text, fontSize: 15 }]} numberOfLines={1}>$ {Math.round(stats.expenses_stats.expenses_total).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</Text>
+                  </View>
+                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Restante</Text>
+                    <Text style={[styles.statValue, { color: (stats.expenses_stats.incomes_total - stats.expenses_stats.expenses_total) < 0 ? '#EF4444' : '#10B981', fontSize: 15 }]} numberOfLines={1}>
+                      $ {Math.round(stats.expenses_stats.incomes_total - stats.expenses_stats.expenses_total).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}
+                    </Text>
+                  </View>
+                </View>
+
+                {/* Desglose de Gastos */}
+                <View style={[styles.row, { marginTop: 10, marginBottom: 15 }]}>
+                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Pagado</Text>
+                    <Text style={[styles.statValue, { color: '#10B981', fontSize: 15 }]} numberOfLines={1}>$ {Math.round(stats.expenses_stats.paid_total).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</Text>
+                  </View>
+                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Pdte. Total</Text>
+                    <Text style={[styles.statValue, { color: '#EF4444', fontSize: 15 }]} numberOfLines={1}>$ {Math.round(stats.expenses_stats.pending_total).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</Text>
+                  </View>
+                  <View style={[styles.statCard, { backgroundColor: theme.card, flex: 1 }]}>
+                    <Text style={[styles.statLabel, { color: theme.textSecondary, fontSize: 11 }]} numberOfLines={1}>Pdte. Libre</Text>
+                    <Text style={[styles.statValue, { color: '#F59E0B', fontSize: 15 }]} numberOfLines={1}>$ {Math.round(stats.expenses_stats.pending_free).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</Text>
+                  </View>
+                </View>
+                {/* Categorías (Gráfica de barras horizontales / Tabla) */}
+                {stats.expenses_stats.categories && stats.expenses_stats.categories.length > 0 && (
+                  <View style={{ backgroundColor: theme.card, padding: 15, borderRadius: 12, marginTop: 0, borderWidth: 1, borderColor: theme.border }}>
+                    <Text style={{ color: theme.textSecondary, fontWeight: 'bold', marginBottom: 15 }}>Distribución por Categorías</Text>
+                    {stats.expenses_stats.categories.map((cat, index) => (
+                      <View key={index} style={{ marginBottom: 12 }}>
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1 }}>
+                            <Ionicons name={cat.icon || 'wallet-outline'} size={14} color={cat.color || theme.text} style={{ marginRight: 6 }} />
+                            <Text style={{ color: theme.text, fontSize: 13, flex: 1 }} numberOfLines={1}>{cat.name}</Text>
+                          </View>
+                          <Text style={{ color: theme.text, fontSize: 13, fontWeight: 'bold' }}>$ {Math.round(cat.total).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}</Text>
+                        </View>
+                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                          <View style={{ flex: 1, height: 6, backgroundColor: theme.border, borderRadius: 3, marginRight: 8, overflow: 'hidden' }}>
+                            <View style={{ width: `${cat.percentage}%`, height: '100%', backgroundColor: cat.color || theme.accent, borderRadius: 3 }} />
+                          </View>
+                          <Text style={{ color: theme.textSecondary, fontSize: 11, width: 35, textAlign: 'right' }}>{cat.percentage}%</Text>
+                        </View>
+                      </View>
+                    ))}
+                  </View>
+                )}
               </>
             )}
 
@@ -451,7 +609,7 @@ export default function DashboardScreen({ navigation }) {
         onRequestClose={() => setCustomRangeModalVisible(false)}
       >
         <TouchableOpacity style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 20 }} onPress={() => setCustomRangeModalVisible(false)} activeOpacity={1}>
-          <TouchableOpacity activeOpacity={1} onPress={() => {}} style={{ backgroundColor: theme.card, padding: 20, borderRadius: 16, maxWidth: 400, width: '100%', alignSelf: 'center' }}>
+          <TouchableOpacity activeOpacity={1} onPress={() => { }} style={{ backgroundColor: theme.card, padding: 20, borderRadius: 16, maxWidth: 400, width: '100%', alignSelf: 'center' }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 15 }}>
               <Text style={{ color: theme.text, fontSize: 18, fontWeight: '800' }}>Consulta Personalizada</Text>
               <TouchableOpacity onPress={() => setCustomRangeModalVisible(false)} style={{ padding: 5 }}>
@@ -460,18 +618,18 @@ export default function DashboardScreen({ navigation }) {
             </View>
             <View style={{ gap: 10, marginBottom: 15 }}>
               <Text style={{ color: theme.textSecondary, fontSize: 12 }}>Selecciona el rango de fechas</Text>
-              
-              <DatePicker 
-                label="Fecha Inicio:" 
-                value={customStartDate} 
-                onChange={setCustomStartDate} 
+
+              <DatePicker
+                label="Fecha Inicio:"
+                value={customStartDate}
+                onChange={setCustomStartDate}
               />
-              <DatePicker 
-                label="Fecha Fin:" 
-                value={customEndDate} 
-                onChange={setCustomEndDate} 
+              <DatePicker
+                label="Fecha Fin:"
+                value={customEndDate}
+                onChange={setCustomEndDate}
               />
-              
+
               <TouchableOpacity style={{ backgroundColor: theme.accent, padding: 14, borderRadius: 10, alignItems: 'center', marginTop: 10 }} onPress={fetchCustomRange}>
                 {loadingCustom ? <ActivityIndicator color="#FFF" /> : <Text style={{ color: '#FFF', fontWeight: '700', fontSize: 15 }}>Consultar Rango</Text>}
               </TouchableOpacity>

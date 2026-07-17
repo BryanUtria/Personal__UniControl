@@ -107,19 +107,7 @@ export default function SidebarLayout({
       icon: 'storefront',
       route: 'ShopMenu',
       visible: moduleSettings.showShop === true || moduleSettings.showShop === 'true'
-    },
-    {
-      label: 'Configuración',
-      icon: 'settings',
-      route: 'Settings',
-      visible: true
-    },
-    {
-      label: 'Buzón de Sugerencias',
-      icon: 'mail',
-      route: 'Suggestions',
-      visible: true
-    },
+    }
   ];
 
   const renderSidebarContent = () => {
@@ -252,47 +240,77 @@ export default function SidebarLayout({
           { borderTopColor: isDarkMode ? '#2D2D2D' : '#E5E7EB' },
           isSidebarCollapsed && { alignItems: 'center' }
         ]}>
-          <Button
-            onPress={toggleTheme}
-            onMouseEnter={() => setHoveredItem('theme')}
-            onMouseLeave={() => setHoveredItem(null)}
-            variant="secondary"
-            backgroundColor="transparent"
-            hoverBackgroundColor={isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'}
-            style={[
-              styles.footerBtn,
-              { borderWidth: 0, height: 38 },
-              isSidebarCollapsed ? { justifyContent: 'center', paddingHorizontal: 0, width: '100%' } : { justifyContent: 'flex-start' }
-            ]}
-            icon={
-              <Ionicons
-                name={isDarkMode ? 'sunny-outline' : 'moon-outline'}
-                size={20}
-                color={theme.textSecondary}
-              />
-            }
-          >
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
+            {/* Settings */}
             {!isSidebarCollapsed && (
-              <Text style={[styles.footerBtnText, { color: theme.textSecondary }]}>
-                Tema {isDarkMode ? 'Claro' : 'Oscuro'}
-              </Text>
-            )}
-            {isSidebarCollapsed && hoveredItem === 'theme' && Platform.OS === 'web' && (
-              <View
+              <Button
+                onPress={() => handleNavigate('Settings')}
+                onMouseEnter={() => setHoveredItem('settings')}
+                onMouseLeave={() => setHoveredItem(null)}
+                variant="secondary"
+                backgroundColor="transparent"
+                hoverBackgroundColor={isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'}
                 style={[
-                  styles.tooltip,
-                  isDarkMode
-                    ? { backgroundColor: '#2D2D2D' }
-                    : { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }
+                  styles.footerBtn,
+                  { borderWidth: 0, height: 38, width: 38, justifyContent: 'center', paddingHorizontal: 0 }
                 ]}
-                pointerEvents="none"
+                icon={<Ionicons name="settings-outline" size={20} color={theme.textSecondary} />}
               >
-                <Text style={[styles.tooltipText, { color: isDarkMode ? '#FFFFFF' : '#1A1A24' }]}>
-                  Tema {isDarkMode ? 'Claro' : 'Oscuro'}
-                </Text>
-              </View>
+                {queueCount > 0 && (
+                  <View style={[styles.miniBadge, { backgroundColor: theme.danger, top: 4, right: 4 }]} />
+                )}
+                {hoveredItem === 'settings' && Platform.OS === 'web' && (
+                  <View style={[styles.tooltip, isDarkMode ? { backgroundColor: '#2D2D2D' } : { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }, { top: -35, left: '50%', transform: [{ translateX: -50 }, { translateY: 0 }] }]} pointerEvents="none">
+                    <Text style={[styles.tooltipText, { color: isDarkMode ? '#FFFFFF' : '#1A1A24' }]}>Ajustes</Text>
+                  </View>
+                )}
+              </Button>
             )}
-          </Button>
+
+            {/* Suggestions */}
+            {!isSidebarCollapsed && (
+              <Button
+                onPress={() => handleNavigate('Suggestions')}
+                onMouseEnter={() => setHoveredItem('suggestions')}
+                onMouseLeave={() => setHoveredItem(null)}
+                variant="secondary"
+                backgroundColor="transparent"
+                hoverBackgroundColor={isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'}
+                style={[
+                  styles.footerBtn,
+                  { borderWidth: 0, height: 38, width: 38, justifyContent: 'center', paddingHorizontal: 0 }
+                ]}
+                icon={<Ionicons name="mail-outline" size={20} color={theme.textSecondary} />}
+              >
+                {hoveredItem === 'suggestions' && Platform.OS === 'web' && (
+                  <View style={[styles.tooltip, isDarkMode ? { backgroundColor: '#2D2D2D' } : { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }, { top: -35, left: '50%', transform: [{ translateX: -50 }, { translateY: 0 }] }]} pointerEvents="none">
+                    <Text style={[styles.tooltipText, { color: isDarkMode ? '#FFFFFF' : '#1A1A24' }]}>Sugerencias</Text>
+                  </View>
+                )}
+              </Button>
+            )}
+
+            {/* Theme */}
+            <Button
+              onPress={toggleTheme}
+              onMouseEnter={() => setHoveredItem('theme')}
+              onMouseLeave={() => setHoveredItem(null)}
+              variant="secondary"
+              backgroundColor="transparent"
+              hoverBackgroundColor={isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'}
+              style={[
+                styles.footerBtn,
+                { borderWidth: 0, height: 38, width: 38, justifyContent: 'center', paddingHorizontal: 0 }
+              ]}
+              icon={<Ionicons name={isDarkMode ? 'sunny-outline' : 'moon-outline'} size={20} color={theme.textSecondary} />}
+            >
+              {hoveredItem === 'theme' && Platform.OS === 'web' && (
+                <View style={[styles.tooltip, isDarkMode ? { backgroundColor: '#2D2D2D' } : { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }, { top: -35, left: '50%', transform: [{ translateX: -50 }, { translateY: 0 }] }]} pointerEvents="none">
+                  <Text style={[styles.tooltipText, { color: isDarkMode ? '#FFFFFF' : '#1A1A24' }]}>Tema</Text>
+                </View>
+              )}
+            </Button>
+          </View>
 
           <Button
             onPress={logout}

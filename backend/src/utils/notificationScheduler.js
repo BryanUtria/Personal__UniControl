@@ -71,6 +71,31 @@ cron.schedule('* * * * *', async () => {
             }
         }
 
+        // Obtener todos los gastos que tienen reminder_date pendientes
+        const expensesSql = `
+            SELECT id, user_id, description, reminder_date
+            FROM expenses
+            WHERE is_paid = 0 AND reminder_date IS NOT NULL
+        `;
+        const expensesRows = await db.query(expensesSql);
+
+        for (let expense of expensesRows) {
+            if (expense.reminder_date) {
+                // expense.reminder_date is a Date object if retrieved from MySQL driver
+                let expDate = new Date(expense.reminder_date);
+                if (expDate.getFullYear() === now.getFullYear() &&
+                    expDate.getMonth() === now.getMonth() &&
+                    expDate.getDate() === now.getDate() &&
+                    expDate.getHours() === currentHour &&
+                    expDate.getMinutes() === currentMinute) {
+                    
+                    const title = 'Recordatorio de Pago';
+                    const body = `No olvides pagar: ${expense.description}`;
+                    await notifyUser(expense.user_id, title, body, { expenseId: expense.id });
+                }
+            }
+        }
+
     } catch (err) {
         console.error('Error en notificationScheduler:', err);
     }

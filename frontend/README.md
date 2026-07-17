@@ -135,7 +135,7 @@ Para hacer todo el proceso automáticamente (limpiar, compilar y extraer el APK 
 Ejecuta el siguiente comando desde la carpeta `frontend/`:
 
 ```bash
-npm run build:apk
+npm run build:apk-prod
 ```
 
 ### 4. Descargar tu APK
@@ -156,7 +156,7 @@ git push
 **Paso 2: Crea el Release en GitHub**
 Asegúrate de estar en la carpeta raíz del proyecto (la carpeta principal, no dentro del frontend) y ejecuta el siguiente comando, ajustando el número de versión (ej. `v1.0.1`):
 ```bash
-gh release create v1.0.2 frontend/Unicontrol.apk --title "Versión 1.0.2" --notes "Nueva actualización disponible"
+gh release create v1.0.4 frontend/Unicontrol.apk --title "Versión 1.0.4" --notes "Nueva actualización disponible"
 ```
 
 **Paso 3: Actualizar Backend**

@@ -199,10 +199,15 @@ const styles = StyleSheet.create({
 });
 
 import { useNotifications } from './src/hooks/useNotifications';
+import { useAuth } from './src/context/AuthContext';
+
+function NotificationInitializer() {
+  const { user } = useAuth();
+  useNotifications(user?.id);
+  return null;
+}
 
 export default function App() {
-  // Inicializa notificaciones, pide permisos y registra token si hay sesión
-  useNotifications();
 
   useEffect(() => {
     // Inicializar RevenueCat al abrir la app
@@ -227,6 +232,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
+        <NotificationInitializer />
         <ModuleProvider>
           <ThemeProvider>
             <ToastProvider>
