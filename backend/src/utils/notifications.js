@@ -37,17 +37,20 @@ async function sendPushNotifications(tokens, message) {
 // Helper to notify a specific user
 async function notifyUser(userId, title, body, data = {}) {
     try {
+        console.log(`[NOTIFY] Intentando notificar a usuario ${userId} con título: "${title}"`);
         const tokensSql = `SELECT token FROM push_tokens WHERE user_id = ?`;
         const tokensRows = await db.query(tokensSql, [userId]);
         const tokens = tokensRows.map(row => row.token);
 
         if (tokens.length > 0) {
-            await sendPushNotifications(tokens, { title, body, data });
+            console.log(`[NOTIFY] Se encontraron ${tokens.length} tokens para usuario ${userId}. Enviando...`);
+            let tickets = await sendPushNotifications(tokens, { title, body, data });
+            console.log(`[NOTIFY] Resultado de envío para usuario ${userId}:`, JSON.stringify(tickets));
         } else {
-            console.log(`Usuario ${userId} no tiene tokens de push registrados.`);
+            console.log(`[NOTIFY] Usuario ${userId} no tiene tokens de push registrados en la DB.`);
         }
     } catch (e) {
-        console.error('Error in notifyUser:', e);
+        console.error('[NOTIFY] Error in notifyUser:', e);
     }
 }
 

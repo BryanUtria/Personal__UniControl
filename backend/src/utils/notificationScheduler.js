@@ -11,6 +11,8 @@ cron.schedule('* * * * *', async () => {
         const todayStr = now.toISOString().split('T')[0];
         const dayOfWeek = now.getDay().toString(); // 0(Dom) a 6(Sab)
 
+        console.log(`[CRON RUN] Server Time: ${now.toString()} | Hora: ${currentHour} Minuto: ${currentMinute}`);
+
         // Obtener todos los hábitos que tienen reminder_time
         const habitsSql = `
             SELECT id, user_id, name, type, frequency, repeat_details, start_date, start_time, reminder_time
