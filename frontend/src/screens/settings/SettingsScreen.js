@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Switch, ScrollView, Platform, Alert, useWindowDimensions, Modal, Linking } from 'react-native';
+import { StyleSheet, Text, View, Switch, ScrollView, Platform, Alert, useWindowDimensions, Modal, Linking, TouchableOpacity } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useModules } from '../../context/ModuleContext';
@@ -135,12 +135,12 @@ export default function SettingsScreen({ navigation }) {
   const getModulePriceText = (key) => {
     const mod = myModules.find(m => m.module_key === key);
     if (!mod) return '';
-    const price = (mod.custom_price_cop !== null && mod.custom_price_cop < mod.base_price_cop) 
-      ? mod.custom_price_cop 
+    const price = (mod.custom_price_cop !== null && mod.custom_price_cop < mod.base_price_cop)
+      ? mod.custom_price_cop
       : mod.base_price_cop;
-    
+
     if (!price || price === 0) return '';
-    
+
     return `- $ ${Math.round(price).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}/mes`;
   };
 
@@ -170,44 +170,6 @@ export default function SettingsScreen({ navigation }) {
   }, []);
 
   const handleToggleModule = (key) => {
-    // Verificación de suscripción para la Tienda
-    if (key === 'showShop' && !moduleSettings[key] && user?.role !== 'admin') {
-      const shopMod = myModules.find(m => m.module_key === 'shop');
-      const isTrialValid = shopMod?.trial_ends_at && new Date(shopMod.trial_ends_at) > new Date();
-      const isSubActive = shopMod?.status === 'active' && new Date(shopMod.expires_at) > new Date();
-
-      if (!isTrialValid && !isSubActive && (!shopMod || !shopMod.is_free)) {
-        setTargetModule('shop');
-        setSubModalVisible(true);
-        return;
-      }
-    }
-
-    // Verificación de suscripción para Hábitos y Tareas
-    if (key === 'showHabits' && !moduleSettings[key] && user?.role !== 'admin') {
-      const habitsMod = myModules.find(m => m.module_key === 'habits');
-      const isTrialValid = habitsMod?.trial_ends_at && new Date(habitsMod.trial_ends_at) > new Date();
-      const isSubActive = habitsMod?.status === 'active' && new Date(habitsMod.expires_at) > new Date();
-
-      if (!isTrialValid && !isSubActive && (!habitsMod || !habitsMod.is_free)) {
-        setTargetModule('habits');
-        setSubModalVisible(true);
-        return;
-      }
-    }
-
-    // Verificación de suscripción para Control de Gastos
-    if (key === 'showExpenses' && !moduleSettings[key] && user?.role !== 'admin') {
-      const expensesMod = myModules.find(m => m.module_key === 'expenses');
-      const isTrialValid = expensesMod?.trial_ends_at && new Date(expensesMod.trial_ends_at) > new Date();
-      const isSubActive = expensesMod?.status === 'active' && new Date(expensesMod.expires_at) > new Date();
-
-      if (!isTrialValid && !isSubActive && (!expensesMod || !expensesMod.is_free)) {
-        setTargetModule('expenses');
-        setSubModalVisible(true);
-        return;
-      }
-    }
 
     const updated = {
       ...moduleSettings,
@@ -369,11 +331,11 @@ export default function SettingsScreen({ navigation }) {
           />
         </View>
 
-        {/* SECCIÓN MÓDULOS */}
-        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
-          <Text style={[styles.sectionTitle, { color: theme.text }]}>Módulos Habilitados</Text>
+        {/* SECCIÓN MÓDULOS PERSONALES */}
+        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginBottom: isMobile ? 10 : 20 }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Módulos Personales</Text>
           <Text style={[styles.sectionDesc, { color: theme.textSecondary }]}>
-            Enciende o apaga los módulos para personalizar el menú lateral y las funciones visibles.
+            Herramientas para organizar tus finanzas personales y tu día a día.
           </Text>
 
           <View style={styles.settingRow}>
@@ -402,11 +364,6 @@ export default function SettingsScreen({ navigation }) {
               <View style={styles.settingTextContainer}>
                 <Text style={[styles.settingTitle, { color: theme.text }]}>Hábitos y Tareas</Text>
                 <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Gestión de rutinas, actividades y calendario.</Text>
-                {user?.role !== 'admin' && (
-                  <Text style={{ fontSize: 10, color: theme.accent, fontWeight: 'bold', marginTop: 2 }}>
-                    Módulo Premium {getModulePriceText('habits')}
-                  </Text>
-                )}
               </View>
             </View>
             <Switch
@@ -417,7 +374,7 @@ export default function SettingsScreen({ navigation }) {
             />
           </View>
 
-          <View style={styles.settingRow}>
+          <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
             <View style={styles.settingLabelWrap}>
               <View style={[styles.iconContainer, { backgroundColor: '#F59E0B15' }]}>
                 <Ionicons name="wallet" size={22} color="#F59E0B" />
@@ -425,11 +382,6 @@ export default function SettingsScreen({ navigation }) {
               <View style={styles.settingTextContainer}>
                 <Text style={[styles.settingTitle, { color: theme.text }]}>Control de Gastos</Text>
                 <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Gestión de gastos recurrentes mes a mes.</Text>
-                {user?.role !== 'admin' && (
-                  <Text style={{ fontSize: 10, color: theme.accent, fontWeight: 'bold', marginTop: 2 }}>
-                    Módulo Premium {getModulePriceText('expenses')}
-                  </Text>
-                )}
               </View>
             </View>
             <Switch
@@ -440,17 +392,42 @@ export default function SettingsScreen({ navigation }) {
             />
           </View>
 
-          <View style={styles.settingRow}>
+          {/* Botón Suscripción Paquete Personal */}
+          {user?.role !== 'admin' && (
+            <View style={styles.premiumBtnWrap}>
+              <TouchableOpacity
+                style={[styles.subscribeBtn, { backgroundColor: theme.accent }]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  setTargetModule('personal');
+                  setSubModalVisible(true);
+                }}
+              >
+                <Ionicons name="star" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                <Text style={styles.subscribeBtnText}>Desbloquear Paquete Personal</Text>
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* SECCIÓN MÓDULOS EMPRESARIALES */}
+        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
+          <Text style={[styles.sectionTitle, { color: theme.text }]}>Módulos Empresariales</Text>
+          <Text style={[styles.sectionDesc, { color: theme.textSecondary }]}>
+            Lleva el control de tu negocio, inventario y ventas.
+          </Text>
+
+          <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
             <View style={styles.settingLabelWrap}>
               <View style={[styles.iconContainer, { backgroundColor: '#3B82F615' }]}>
                 <Ionicons name="cart" size={22} color="#3B82F6" />
               </View>
               <View style={styles.settingTextContainer}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Tienda</Text>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Tienda y Punto de Venta</Text>
                 <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Punto de Venta, Inventario e Historial de Ventas.</Text>
                 {user?.role !== 'admin' && (
                   <Text style={{ fontSize: 10, color: theme.accent, fontWeight: 'bold', marginTop: 2 }}>
-                    Módulo Premium {getModulePriceText('shop')}
+                    Premium
                   </Text>
                 )}
               </View>
@@ -462,6 +439,23 @@ export default function SettingsScreen({ navigation }) {
               thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showShop ? '#FFF' : '#f4f3f4')}
             />
           </View>
+
+          {/* Botón Suscripción Paquete Empresarial */}
+          {user?.role !== 'admin' && (
+            <View style={styles.premiumBtnWrap}>
+              <TouchableOpacity
+                style={[styles.subscribeBtn, { backgroundColor: theme.accent }]}
+                activeOpacity={0.8}
+                onPress={() => {
+                  setTargetModule('shop');
+                  setSubModalVisible(true);
+                }}
+              >
+                <Ionicons name="briefcase" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                <Text style={styles.subscribeBtnText}>Desbloquear Paquete Tienda</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* SECCIÓN SINCRONIZACIÓN */}
@@ -554,6 +548,49 @@ export default function SettingsScreen({ navigation }) {
           />
         </View>
 
+        {/* SECCIÓN PREFERENCIAS Y AYUDA */}
+        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20 }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Preferencias y Ayuda</Text>
+          </View>
+
+          <View style={[styles.settingRow, { borderBottomWidth: 1, borderColor: theme.border }]}>
+            <View style={styles.settingLabelWrap}>
+              <View style={[styles.iconContainer, { backgroundColor: isDarkMode ? '#F59E0B15' : '#4F46E515' }]}>
+                <Ionicons name={isDarkMode ? 'color-palette' : 'color-palette-outline'} size={22} color={isDarkMode ? '#F59E0B' : '#4F46E5'} />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Apariencia y Temas</Text>
+                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Personaliza los colores de la aplicación.</Text>
+              </View>
+            </View>
+            <Button
+              title="Personalizar"
+              variant="secondary"
+              style={{ paddingHorizontal: 15, height: 35 }}
+              onPress={() => navigation.navigate('Appearance')}
+            />
+          </View>
+
+          <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
+            <View style={styles.settingLabelWrap}>
+              <View style={[styles.iconContainer, { backgroundColor: '#10B98115' }]}>
+                <Ionicons name="mail" size={22} color="#10B981" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Buzón de Sugerencias</Text>
+                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Ayúdanos a mejorar enviando tus ideas.</Text>
+              </View>
+            </View>
+            <Button
+              title="Ir a Sugerencias"
+              variant="secondary"
+              style={{ paddingHorizontal: 15, height: 35 }}
+              onPress={() => navigation.navigate('Suggestions')}
+            />
+          </View>
+        </View>
+
         {/* SECCIÓN DESCARGAS/WEB */}
         {appVersionInfo && (
           <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20, marginBottom: 40 }]}>
@@ -561,7 +598,7 @@ export default function SettingsScreen({ navigation }) {
               <Text style={[styles.sectionTitle, { color: theme.text }]}>Plataformas UniControl</Text>
             </View>
             <Text style={[styles.sectionDesc, { color: theme.textSecondary, marginBottom: 15 }]}>
-              {Platform.OS === 'web' 
+              {Platform.OS === 'web'
                 ? 'Descarga nuestra aplicación para Android y lleva UniControl en tu bolsillo.'
                 : 'Accede a la versión web de UniControl desde cualquier computadora.'}
             </Text>
@@ -578,6 +615,7 @@ export default function SettingsScreen({ navigation }) {
           </View>
         )}
       </ScrollView>
+
 
       {/* Modal Editar Perfil */}
       <Modal
@@ -745,6 +783,31 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
+  premiumBtnWrap: {
+    alignSelf: 'center',
+    marginTop: 10,
+    marginHorizontal: 10,
+    marginBottom: 10,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  subscribeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  subscribeBtnText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
   networkBadge: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -839,5 +902,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
+  },
+  subscribeBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+  },
+  subscribeBtnText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
   }
 });

@@ -110,6 +110,11 @@ export default function HabitsScreen({ navigation }) {
       if (h.start_date && dateStr < h.start_date) {
         return false;
       }
+      
+      // Si el hábito fue archivado (editado o eliminado) en el pasado, y esta fecha es posterior, no lo mostramos
+      if (h.archived_date && dateStr > h.archived_date) {
+        return false;
+      }
 
       if (h.frequency === 'daily') return true;
 
@@ -181,7 +186,7 @@ export default function HabitsScreen({ navigation }) {
           'Content-Type': 'application/json',
           'x-user-id': user.id.toString()
         },
-        body: JSON.stringify(habitData)
+        body: JSON.stringify({ ...habitData, edit_date: selectedDate })
       });
 
       if (!response.ok) throw new Error('Error al guardar');
@@ -202,7 +207,7 @@ export default function HabitsScreen({ navigation }) {
     if (!habitToDelete) return;
 
     try {
-      const response = await fetch(`${API_URL}/habits/${habitToDelete.id}`, {
+      const response = await fetch(`${API_URL}/habits/${habitToDelete.id}?date=${selectedDate}`, {
         method: 'DELETE',
         headers: { 'x-user-id': user.id.toString() }
       });

@@ -4,7 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
 import * as WebBrowser from 'expo-web-browser';
-import Purchases from 'react-native-purchases';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 
@@ -15,11 +14,12 @@ const formatCurrency = (amount) => {
 export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop' }) {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
-  
+
   const [moduleInfo, setModuleInfo] = useState(null);
   const [loading, setLoading] = useState(true);
   const [paying, setPaying] = useState(false);
   const [error, setError] = useState(null);
+  const [frequency, setFrequency] = useState('monthly'); // 'monthly' | 'annual'
 
   useEffect(() => {
     if (visible && user) {
@@ -36,7 +36,7 @@ export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop'
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Error al cargar módulos');
-      
+
       const mod = data.find(m => m.module_key === moduleKey);
       if (mod) setModuleInfo(mod);
       else setError('Módulo no encontrado');
@@ -50,43 +50,24 @@ export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop'
   const handleSubscribe = async () => {
     setPaying(true);
     try {
-      if (Platform.OS === 'android') {
-        // Autenticar al usuario en RevenueCat
-        await Purchases.logIn(user.id.toString());
-        
-        // Obtener las ofertas desde RevenueCat
-        const offerings = await Purchases.getOfferings();
-        
-        if (offerings.current !== null && offerings.current.availablePackages.length !== 0) {
-          // Comprar el primer paquete disponible en el offering actual
-          const packageToBuy = offerings.current.availablePackages[0];
-          const { customerInfo } = await Purchases.purchasePackage(packageToBuy);
-          
-          if (typeof customerInfo.entitlements.active['Premium'] !== 'undefined') {
-            onClose();
-            // TODO: Refrescar estado global del usuario
-          }
-        } else {
-          // Sandbox / Mock cuando no hay productos configurados en Google Play
-          setError('Aún estamos configurando los productos en Google Play. Por favor intenta más tarde.');
-        }
-      } else {
-        // Lógica antigua web (Mercado Pago)
-        const response = await fetch(`${API_URL}/subscriptions/checkout`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': user.id.toString()
-          },
-          body: JSON.stringify({ module_key: moduleKey })
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.error || 'Error al generar link de pago');
+      const response = await fetch(`${API_URL}/subscriptions/checkout`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id.toString()
+        },
+        body: JSON.stringify({ module_key: moduleKey, frequency })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Error al generar link de pago');
 
-        if (data.init_point) {
+      if (data.init_point) {
+        if (Platform.OS === 'web') {
           window.open(data.init_point, '_blank');
-          onClose();
+        } else {
+          await WebBrowser.openBrowserAsync(data.init_point);
         }
+        onClose();
       }
     } catch (err) {
       if (!err.userCancelled) {
@@ -106,13 +87,15 @@ export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop'
           <TouchableOpacity style={styles.closeBtn} onPress={onClose}>
             <Ionicons name="close" size={24} color={theme.textSecondary} />
           </TouchableOpacity>
-          
+
           <View style={[styles.iconContainer, { backgroundColor: theme.accent + '20' }]}>
             <Ionicons name="star" size={32} color={theme.accent} />
           </View>
-          
-          <Text style={[styles.title, { color: theme.text }]}>Módulo Premium</Text>
-          
+
+          <Text style={[styles.title, { color: theme.text }]}>
+            {moduleInfo?.name === 'Paquete Personal' ? 'Suscripción Personal' : 'Módulo Premium'}
+          </Text>
+
           {loading ? (
             <ActivityIndicator size="large" color={theme.accent} style={{ marginVertical: 30 }} />
           ) : error ? (
@@ -126,25 +109,44 @@ export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop'
           ) : moduleInfo ? (
             <View style={styles.content}>
               <Text style={[styles.description, { color: theme.textSecondary }]}>
-                {moduleInfo.name === 'Tienda' 
+                {moduleInfo.module_key === 'shop'
                   ? 'Activa el Punto de Venta, Gestión de Inventario y Reporte de Ganancias para llevar tu negocio al siguiente nivel.'
-                  : 'Desbloquea este módulo exclusivo.'}
+                  : moduleInfo.module_key === 'personal'
+                    ? 'Desbloquea funcionalidades completas.'
+                    : 'Desbloquea este módulo exclusivo.'}
               </Text>
 
-              <View style={[styles.priceBox, { backgroundColor: isDarkMode ? '#1e293b' : '#f1f5f9' }]}>
-                {moduleInfo.custom_price_cop !== null && moduleInfo.custom_price_cop < moduleInfo.base_price_cop ? (
-                  <>
-                    <Text style={[styles.oldPrice, { color: theme.textSecondary }]}>{formatCurrency(moduleInfo.base_price_cop)} / mes</Text>
-                    <Text style={[styles.newPrice, { color: theme.accent }]}>{formatCurrency(moduleInfo.custom_price_cop)} <Text style={styles.perMonth}>/ mes</Text></Text>
-                    <View style={styles.discountBadge}>
-                      <Text style={styles.discountText}>Tarifa Especial</Text>
-                    </View>
-                  </>
-                ) : (
-                  <Text style={[styles.newPrice, { color: theme.accent }]}>{formatCurrency(moduleInfo.base_price_cop)} <Text style={styles.perMonth}>/ mes</Text></Text>
-                )}
-                <Text style={{ fontSize: 11, color: theme.textSecondary, marginTop: 4 }}>Renovación automática cada 30 días</Text>
+              <View style={styles.frequencyContainer}>
+                <TouchableOpacity
+                  style={[styles.freqOption, frequency === 'monthly' && { borderColor: theme.accent, backgroundColor: theme.accent + '15' }]}
+                  onPress={() => setFrequency('monthly')}
+                >
+                  <Text style={[styles.freqTitle, frequency === 'monthly' && { color: theme.accent }]}>Mensual</Text>
+                  {moduleInfo.custom_price_cop !== null && moduleInfo.custom_price_cop < moduleInfo.base_price_cop ? (
+                    <>
+                      <Text style={[styles.oldPriceSm, { color: theme.textSecondary }]}>{formatCurrency(moduleInfo.base_price_cop)}</Text>
+                      <Text style={[styles.newPriceSm, { color: theme.accent }]}>{formatCurrency(moduleInfo.custom_price_cop)}</Text>
+                    </>
+                  ) : (
+                    <Text style={[styles.newPriceSm, { color: theme.text }]}>{formatCurrency(moduleInfo.base_price_cop)}</Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.freqOption, frequency === 'annual' && { borderColor: theme.accent, backgroundColor: theme.accent + '15' }]}
+                  onPress={() => setFrequency('annual')}
+                >
+                  <View style={styles.saveBadge}><Text style={styles.saveBadgeText}>Ahorra</Text></View>
+                  <Text style={[styles.freqTitle, frequency === 'annual' && { color: theme.accent }]}>Anual</Text>
+                  <Text style={[styles.newPriceSm, { color: frequency === 'annual' ? theme.accent : theme.text }]}>
+                    {formatCurrency(moduleInfo.annual_price_cop || 75000)}
+                  </Text>
+                </TouchableOpacity>
               </View>
+
+              <Text style={{ fontSize: 11, color: theme.textSecondary, marginBottom: 15 }}>
+                Renovación automática cada {frequency === 'annual' ? 'año' : 'mes'}. Cancela cuando quieras.
+              </Text>
 
               <View style={styles.features}>
                 <View style={styles.featureRow}>
@@ -161,8 +163,8 @@ export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop'
                 </View>
               </View>
 
-              <TouchableOpacity 
-                style={[styles.subscribeBtn, { backgroundColor: theme.accent }, paying && { opacity: 0.7 }]} 
+              <TouchableOpacity
+                style={[styles.subscribeBtn, { backgroundColor: theme.accent }, paying && { opacity: 0.7 }]}
                 onPress={handleSubscribe}
                 disabled={paying}
               >
@@ -170,14 +172,14 @@ export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop'
                   <ActivityIndicator size="small" color="#FFF" />
                 ) : (
                   <Text style={styles.subscribeText}>
-                    {Platform.OS === 'android' ? 'Suscribirse con Google Play' : 'Pagar con Mercado Pago'}
+                    Pagar con MercadoPago
                   </Text>
                 )}
               </TouchableOpacity>
               <View style={styles.secureRow}>
                 <Ionicons name="lock-closed" size={12} color={theme.textSecondary} />
                 <Text style={{ fontSize: 11, color: theme.textSecondary, marginLeft: 4 }}>
-                  {Platform.OS === 'android' ? 'Pagos Seguros por Google Play' : 'Pagos Seguros por Mercado Pago'}
+                  Pagos Seguros por MercadoPago
                 </Text>
               </View>
             </View>
@@ -238,38 +240,44 @@ const styles = StyleSheet.create({
     marginBottom: 20,
     lineHeight: 20
   },
-  priceBox: {
+  frequencyContainer: {
+    flexDirection: 'row',
     width: '100%',
-    borderRadius: 16,
-    padding: 20,
+    gap: 10,
+    marginBottom: 10,
+  },
+  freqOption: {
+    flex: 1,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 15,
     alignItems: 'center',
-    marginBottom: 20,
     position: 'relative'
   },
-  oldPrice: {
-    fontSize: 16,
-    textDecorationLine: 'line-through',
-    marginBottom: 4
+  freqTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 5,
+    color: '#6B7280'
   },
-  newPrice: {
-    fontSize: 32,
+  oldPriceSm: {
+    fontSize: 12,
+    textDecorationLine: 'line-through'
+  },
+  newPriceSm: {
+    fontSize: 18,
     fontWeight: '900'
   },
-  perMonth: {
-    fontSize: 16,
-    fontWeight: 'normal',
-    opacity: 0.8
-  },
-  discountBadge: {
+  saveBadge: {
     position: 'absolute',
     top: -10,
-    right: 20,
     backgroundColor: '#10B981',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 10
   },
-  discountText: {
+  saveBadgeText: {
     color: '#FFF',
     fontSize: 10,
     fontWeight: 'bold'

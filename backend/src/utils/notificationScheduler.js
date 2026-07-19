@@ -24,7 +24,7 @@ cron.schedule('* * * * *', async () => {
         for (let habit of habitsRows) {
             // Verificar si aplica para el día de hoy
             let appliesToday = false;
-            
+
             if (habit.frequency === 'daily') {
                 appliesToday = true;
             } else if (habit.frequency === 'specific_days') {
@@ -34,7 +34,7 @@ cron.schedule('* * * * *', async () => {
                         if (details.days && details.days.includes(dayOfWeek)) {
                             appliesToday = true;
                         }
-                    } catch(e) {}
+                    } catch (e) { }
                 }
             } else if (habit.frequency === 'once' || habit.frequency === 'monthly') {
                 if (habit.start_date) {
@@ -53,7 +53,7 @@ cron.schedule('* * * * *', async () => {
             if (timeParts.length >= 2) {
                 let hHour = parseInt(timeParts[0], 10);
                 let hMin = parseInt(timeParts[1], 10);
-                
+
                 // Restar los minutos de reminder_time
                 let totalMinutes = hHour * 60 + hMin - habit.reminder_time;
                 if (totalMinutes < 0) {
@@ -90,7 +90,7 @@ cron.schedule('* * * * *', async () => {
                     expDate.getDate() === now.getDate() &&
                     expDate.getHours() === currentHour &&
                     expDate.getMinutes() === currentMinute) {
-                    
+
                     const title = 'Recordatorio de Pago';
                     const body = `No olvides pagar: ${expense.description}`;
                     await notifyUser(expense.user_id, title, body, { expenseId: expense.id });

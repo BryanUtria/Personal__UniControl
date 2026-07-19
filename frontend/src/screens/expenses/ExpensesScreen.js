@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { StyleSheet, Text, View, FlatList, TouchableOpacity, Modal, ScrollView, Platform, Alert, RefreshControl, Switch, useWindowDimensions, TouchableWithoutFeedback, ActivityIndicator, TextInput } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
@@ -33,14 +34,18 @@ export default function ExpensesScreen({ navigation }) {
 
   // Modals
   const [expenseModalVisible, setExpenseModalVisible] = useState(false);
-  const [categoryModalVisible, setCategoryModalVisible] = useState(false);
   const [incomeModalVisible, setIncomeModalVisible] = useState(false);
   const [deleteExpenseId, setDeleteExpenseId] = useState(null);
   const [deleteIncomeId, setDeleteIncomeId] = useState(null);
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [historyExpense, setHistoryExpense] = useState(null);
+  const [unmarkModalVisible, setUnmarkModalVisible] = useState(false);
+  const [unmarkExpense, setUnmarkExpense] = useState(null);
 
   // Filters State
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState(null);
+  const [activeTab, setActiveTab] = useState('Pendientes'); // 'Pendientes' or 'Pagadas'
 
   // Expense Form State
   const [editId, setEditId] = useState(null);
@@ -104,9 +109,11 @@ export default function ExpensesScreen({ navigation }) {
   const monthNames = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
   const displayMonth = `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
 
-  useEffect(() => {
-    fetchCategories();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      fetchCategories();
+    }, [])
+  );
 
   useEffect(() => {
     fetchExpenses();
@@ -189,11 +196,7 @@ export default function ExpensesScreen({ navigation }) {
   const openExpenseModal = (expense = null) => {
     if (categories.length === 0) {
       showToast('Debes crear al menos una categoría primero', 'warning');
-      setEditCatId(null);
-      setCatName('');
-      setCatIcon(ICONS[0]);
-      setCatColor(COLORS[0]);
-      setCategoryModalVisible(true);
+      navigation.navigate('ExpensesCategories');
       return;
     }
 
@@ -230,7 +233,8 @@ export default function ExpensesScreen({ navigation }) {
       amount: parseFloat(formAmount),
       is_recurring: formIsRecurring,
       is_paid: formIsPaid,
-      reminder_date: formatToMySQL(formReminderDate)
+      reminder_date: formatToMySQL(formReminderDate),
+      payment_date: formIsPaid ? formatToMySQL(new Date()) : null
     };
 
     try {
@@ -370,24 +374,29 @@ export default function ExpensesScreen({ navigation }) {
     }
   };
 
+  const confirmUnmarkExpense = async () => {
+    if (!unmarkExpense) return;
+    try {
+      const payload = { ...unmarkExpense, is_paid: false, amount_paid: 0, payment_date: null, payment_history: null };
+      const response = await fetch(`${API_URL}/expenses/${unmarkExpense.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-user-id': user.id.toString() },
+        body: JSON.stringify(payload)
+      });
+      if (response.ok) {
+        fetchExpenses();
+        setUnmarkModalVisible(false);
+        setUnmarkExpense(null);
+      }
+    } catch (e) {
+      showToast('Error al cambiar estado', 'error');
+    }
+  };
+
   const togglePaidStatus = async (expense) => {
     if (expense.is_paid) {
-      try {
-        const payload = { ...expense, is_paid: false, amount_paid: 0 };
-        const response = await fetch(`${API_URL}/expenses/${expense.id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-user-id': user.id.toString()
-          },
-          body: JSON.stringify(payload)
-        });
-        if (response.ok) {
-          fetchExpenses();
-        }
-      } catch (e) {
-        showToast('Error al cambiar estado', 'error');
-      }
+      setUnmarkExpense(expense);
+      setUnmarkModalVisible(true);
     } else {
       setPaymentExpense(expense);
       setPaymentAmount((parseFloat(expense.amount) - parseFloat(expense.amount_paid || 0)).toString());
@@ -400,8 +409,16 @@ export default function ExpensesScreen({ navigation }) {
     let newAmountPaid;
     let isNowPaid = false;
 
+    const formatToMySQL = (date) => {
+      if (!date) return null;
+      const pad = (n) => n < 10 ? '0' + n : n;
+      return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+    };
+
+    let addedAmount = 0;
     if (isComplete) {
       newAmountPaid = parseFloat(paymentExpense.amount);
+      addedAmount = parseFloat(paymentExpense.amount) - parseFloat(paymentExpense.amount_paid || 0);
       isNowPaid = true;
     } else {
       const enteredAmount = parseFloat(paymentAmount);
@@ -409,15 +426,33 @@ export default function ExpensesScreen({ navigation }) {
         showToast('Ingresa un monto válido', 'error');
         return;
       }
+      addedAmount = enteredAmount;
       newAmountPaid = parseFloat(paymentExpense.amount_paid || 0) + enteredAmount;
       if (newAmountPaid >= parseFloat(paymentExpense.amount)) {
-        newAmountPaid = parseFloat(paymentExpense.amount);
         isNowPaid = true;
       }
     }
 
+    const currentDateStr = formatToMySQL(new Date());
+    let currentHistory = [];
+    if (paymentExpense.payment_history) {
+      try {
+        currentHistory = JSON.parse(paymentExpense.payment_history);
+      } catch (e) { }
+    }
+    currentHistory.push({
+      date: currentDateStr,
+      amount: addedAmount
+    });
+
     try {
-      const payload = { ...paymentExpense, is_paid: isNowPaid, amount_paid: newAmountPaid };
+      const payload = {
+        ...paymentExpense,
+        is_paid: isNowPaid,
+        amount_paid: newAmountPaid,
+        payment_date: isNowPaid ? currentDateStr : null,
+        payment_history: JSON.stringify(currentHistory)
+      };
       const response = await fetch(`${API_URL}/expenses/${paymentExpense.id}`, {
         method: 'PUT',
         headers: {
@@ -432,64 +467,6 @@ export default function ExpensesScreen({ navigation }) {
         fetchExpenses();
       } else {
         showToast('Error al registrar el pago', 'error');
-      }
-    } catch (e) {
-      showToast('Error de conexión', 'error');
-    }
-  };
-
-  const handleSaveCategory = async () => {
-    if (!catName) {
-      showToast('El nombre de la categoría es obligatorio', 'error');
-      return;
-    }
-    try {
-      const url = editCatId ? `${API_URL}/expenses/categories/${editCatId}` : `${API_URL}/expenses/categories`;
-      const method = editCatId ? 'PUT' : 'POST';
-
-      const response = await fetch(url, {
-        method,
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': user.id.toString()
-        },
-        body: JSON.stringify({ name: catName, icon: catIcon, color: catColor })
-      });
-      if (response.ok) {
-        showToast(editCatId ? 'Categoría actualizada' : 'Categoría creada', 'success');
-        setEditCatId(null);
-        setCatName('');
-        setCatIcon(ICONS[0]);
-        setCatColor(COLORS[0]);
-        fetchCategories();
-      } else {
-        const errorData = await response.json();
-        showToast(errorData.error || 'Error al guardar categoría', 'error');
-      }
-    } catch (e) {
-      showToast('Error de conexión', 'error');
-    }
-  };
-
-  const openEditCategory = (cat) => {
-    setEditCatId(cat.id);
-    setCatName(cat.name);
-    setCatIcon(cat.icon);
-    setCatColor(cat.color);
-  };
-
-  const handleDeleteCategory = async (id) => {
-    try {
-      const response = await fetch(`${API_URL}/expenses/categories/${id}`, {
-        method: 'DELETE',
-        headers: { 'x-user-id': user.id.toString() }
-      });
-      if (response.ok) {
-        showToast('Categoría eliminada', 'success');
-        fetchCategories();
-      } else {
-        const errorData = await response.json();
-        showToast(errorData.error || 'Error al eliminar', 'error');
       }
     } catch (e) {
       showToast('Error de conexión', 'error');
@@ -572,11 +549,28 @@ export default function ExpensesScreen({ navigation }) {
     }
   };
 
-  const totalExpenses = expenses.reduce((sum, item) => sum + parseFloat(item.amount), 0);
-  const paidExpenses = expenses.reduce((sum, item) => sum + (item.is_paid ? parseFloat(item.amount) : parseFloat(item.amount_paid || 0)), 0);
+  const totalExpenses = expenses.reduce((sum, item) => {
+    const amount = parseFloat(item.amount || 0);
+    const amountPaid = parseFloat(item.amount_paid || 0);
+    return sum + Math.max(amount, amountPaid);
+  }, 0);
+
+  const paidExpenses = expenses.reduce((sum, item) => {
+    const amount = parseFloat(item.amount || 0);
+    const amountPaid = parseFloat(item.amount_paid || 0);
+    if (item.is_paid) {
+      return sum + Math.max(amountPaid, amount); // Legacy fallback
+    }
+    return sum + amountPaid;
+  }, 0);
+  
   const pendingExpenses = totalExpenses - paidExpenses;
 
-  const reservedExpenses = expenses.reduce((sum, item) => sum + (!item.is_paid && item.is_reserved ? (parseFloat(item.amount) - parseFloat(item.amount_paid || 0)) : 0), 0);
+  const reservedExpenses = expenses.reduce((sum, item) => {
+    const amount = parseFloat(item.amount || 0);
+    const amountPaid = parseFloat(item.amount_paid || 0);
+    return sum + (!item.is_paid && item.is_reserved ? Math.max(0, amount - amountPaid) : 0);
+  }, 0);
   const pendingWithoutReserve = pendingExpenses - reservedExpenses;
 
   const totalIncomes = incomes.reduce((sum, item) => sum + parseFloat(item.amount), 0);
@@ -594,19 +588,28 @@ export default function ExpensesScreen({ navigation }) {
       filtered = filtered.filter(exp => exp.category_id === filterCategory);
     }
 
+    // Filter by Tab
+    if (activeTab === 'Pendientes') {
+      filtered = filtered.filter(exp => !exp.is_paid);
+    } else {
+      filtered = filtered.filter(exp => exp.is_paid);
+    }
+
     return [...filtered].sort((a, b) => {
-      if (a.is_paid !== b.is_paid) return a.is_paid ? 1 : -1;
+      // First sort by recurring
       if (a.is_recurring !== b.is_recurring) return a.is_recurring ? -1 : 1;
 
+      // Then by category
       const catA = a.category_name || '';
       const catB = b.category_name || '';
       if (catA.localeCompare(catB) !== 0) return catA.localeCompare(catB);
 
+      // Finally by description
       const descA = a.description || '';
       const descB = b.description || '';
       return descA.localeCompare(descB);
     });
-  }, [expenses, searchQuery, filterCategory]);
+  }, [expenses, searchQuery, filterCategory, activeTab]);
 
   return (
     <SidebarLayout navigation={navigation} activeRoute="Expenses">
@@ -620,11 +623,7 @@ export default function ExpensesScreen({ navigation }) {
                 variant="secondary"
                 icon={<Ionicons name="grid-outline" size={18} color={theme.text} />}
                 onPress={() => {
-                  setEditCatId(null);
-                  setCatName('');
-                  setCatIcon(ICONS[0]);
-                  setCatColor(COLORS[0]);
-                  setCategoryModalVisible(true);
+                  navigation.navigate('ExpensesCategories');
                 }}
               />
             </View>
@@ -764,6 +763,22 @@ export default function ExpensesScreen({ navigation }) {
                       </TouchableOpacity>
                     ))}
                   </ScrollView>
+                  
+                  {/* PESTAÑAS (TABS) PENDIENTES / PAGADAS */}
+                  <View style={{ flexDirection: 'row', marginTop: 15, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+                    <TouchableOpacity 
+                      style={{ flex: 1, paddingVertical: 10, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: activeTab === 'Pendientes' ? theme.accent : 'transparent' }}
+                      onPress={() => setActiveTab('Pendientes')}
+                    >
+                      <Text style={{ color: activeTab === 'Pendientes' ? theme.accent : theme.textSecondary, fontWeight: activeTab === 'Pendientes' ? 'bold' : 'normal' }}>Pendientes</Text>
+                    </TouchableOpacity>
+                    <TouchableOpacity 
+                      style={{ flex: 1, paddingVertical: 10, alignItems: 'center', borderBottomWidth: 2, borderBottomColor: activeTab === 'Pagadas' ? theme.accent : 'transparent' }}
+                      onPress={() => setActiveTab('Pagadas')}
+                    >
+                      <Text style={{ color: activeTab === 'Pagadas' ? theme.accent : theme.textSecondary, fontWeight: activeTab === 'Pagadas' ? 'bold' : 'normal' }}>Pagados</Text>
+                    </TouchableOpacity>
+                  </View>
                 </View>
               </>
             )}
@@ -785,7 +800,7 @@ export default function ExpensesScreen({ navigation }) {
           let showHeader = false;
           let headerText = '';
 
-          const getGroupStr = (exp) => `${exp.is_paid ? '1' : '0'}-${exp.is_recurring ? '1' : '0'}`;
+          const getGroupStr = (exp) => `${exp.is_recurring ? '1' : '0'}`;
           const currentGroup = getGroupStr(item);
 
           if (index === 0) {
@@ -798,10 +813,7 @@ export default function ExpensesScreen({ navigation }) {
           }
 
           if (showHeader) {
-            if (!item.is_paid && item.is_recurring) headerText = 'Pendientes Recurrentes';
-            else if (!item.is_paid && !item.is_recurring) headerText = 'Pendientes NO Recurrentes';
-            else if (item.is_paid && item.is_recurring) headerText = 'Pagados Recurrentes';
-            else if (item.is_paid && !item.is_recurring) headerText = 'Pagados NO Recurrentes';
+            headerText = item.is_recurring ? 'Recurrentes' : 'No Recurrentes';
           }
 
           return (
@@ -829,11 +841,15 @@ export default function ExpensesScreen({ navigation }) {
                   <Text style={[styles.expenseDesc, { color: theme.text, textDecorationLine: item.is_paid ? 'line-through' : 'none' }]}>
                     {item.description}
                   </Text>
-                  {(!item.is_paid && item.amount_paid > 0) && (
-                    <Text style={{ color: theme.accent, fontSize: 12, marginTop: 2, fontWeight: 'bold' }}>
-                      Pagado: {formatCurrency(item.amount_paid)} ({(item.amount_paid / item.amount * 100).toFixed(0)}%)
+                  {(parseFloat(item.amount_paid || 0) > parseFloat(item.amount || 0)) ? (
+                    <Text style={{ color: '#EF4444', fontSize: 12, marginTop: 2, fontWeight: 'bold' }}>
+                      Pagado: {formatCurrency(item.amount_paid)} (Proyectado: {formatCurrency(item.amount)})
                     </Text>
-                  )}
+                  ) : (!item.is_paid && parseFloat(item.amount_paid || 0) > 0) ? (
+                    <Text style={{ color: theme.accent, fontSize: 12, marginTop: 2, fontWeight: 'bold' }}>
+                      Pagado: {formatCurrency(item.amount_paid)} ({(parseFloat(item.amount_paid) / parseFloat(item.amount) * 100).toFixed(0)}%)
+                    </Text>
+                  ) : null}
                   <View style={{ flexDirection: isMobile ? 'column' : 'row', alignItems: isMobile ? 'flex-start' : 'center', gap: 6, marginTop: 4 }}>
                     <Text style={{ color: theme.textSecondary, fontSize: 12 }}>{item.category_name}</Text>
                     <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
@@ -863,6 +879,11 @@ export default function ExpensesScreen({ navigation }) {
                   <Text style={[styles.expenseAmount, { color: theme.text, textDecorationLine: item.is_paid ? 'line-through' : 'none' }]}>{formatCurrency(item.amount)}</Text>
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 8 }}>
+                    {(item.payment_history && JSON.parse(item.payment_history).length > 0) && (
+                      <TouchableOpacity onPress={() => { setHistoryExpense(item); setHistoryModalVisible(true); }} style={{ padding: 4 }}>
+                        <Ionicons name="list" size={20} color={theme.textSecondary} />
+                      </TouchableOpacity>
+                    )}
                     {!item.is_paid && (
                       <TouchableOpacity onPress={() => toggleReserved(item)} style={{ padding: 4 }}>
                         <Ionicons
@@ -975,75 +996,23 @@ export default function ExpensesScreen({ navigation }) {
         </TouchableWithoutFeedback>
       </Modal>
 
-      {/* MODAL CATEGORIAS */}
-      <Modal visible={categoryModalVisible} transparent animationType="fade" onRequestClose={() => { setCategoryModalVisible(false); setEditCatId(null); }}>
-        <TouchableWithoutFeedback onPress={() => { setCategoryModalVisible(false); setEditCatId(null); }}>
+      {/* MODAL CONFIRMAR DESMARCAR GASTO */}
+      <Modal visible={unmarkModalVisible} transparent animationType="fade" onRequestClose={() => setUnmarkModalVisible(false)}>
+        <TouchableWithoutFeedback onPress={() => setUnmarkModalVisible(false)}>
           <View style={styles.modalOverlay}>
             <TouchableWithoutFeedback>
-              <View style={[styles.modalContent, { backgroundColor: theme.card, width: '90%', maxWidth: 500, padding: 0 }]}>
-                <ScrollView contentContainerStyle={{ padding: 20 }} showsVerticalScrollIndicator={false}>
-                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                    <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 0 }]}>Mis Categorías</Text>
-                    <TouchableOpacity onPress={() => { setCategoryModalVisible(false); setEditCatId(null); }}>
-                      <Ionicons name="close" size={24} color={theme.textSecondary} />
-                    </TouchableOpacity>
+              <View style={[styles.modalContent, { backgroundColor: theme.card, maxWidth: 350, padding: 20 }]}>
+                <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                  <View style={{ width: 60, height: 60, borderRadius: 30, backgroundColor: '#F59E0B20', justifyContent: 'center', alignItems: 'center', marginBottom: 15 }}>
+                    <Ionicons name="warning-outline" size={30} color="#F59E0B" />
                   </View>
-
-                  <View style={{ marginBottom: 20 }}>
-                    <Input label={editCatId ? "Editar Categoría" : "Nueva Categoría"} value={catName} onChangeText={setCatName} placeholder="Nombre de categoría" />
-
-                    <Text style={{ color: theme.textSecondary, fontSize: 12, marginBottom: 5 }}>Color</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}>
-                      {COLORS.map(c => (
-                        <TouchableOpacity
-                          key={c}
-                          onPress={() => setCatColor(c)}
-                          style={[styles.colorDot, { backgroundColor: c, borderWidth: catColor === c ? 2 : 0, borderColor: theme.text }]}
-                        />
-                      ))}
-                    </View>
-
-                    <Text style={{ color: theme.textSecondary, fontSize: 12, marginBottom: 5 }}>Ícono</Text>
-                    <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10, marginBottom: 15 }}>
-                      {ICONS.map(i => (
-                        <TouchableOpacity
-                          key={i}
-                          onPress={() => setCatIcon(i)}
-                          style={{ padding: 8, borderRadius: 8, backgroundColor: catIcon === i ? theme.accent + '20' : 'transparent' }}
-                        >
-                          <Ionicons name={i} size={24} color={catIcon === i ? theme.accent : theme.textSecondary} />
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-
-                    <View style={{ flexDirection: 'row', gap: 10 }}>
-                      {editCatId && (
-                        <Button title="Cancelar" variant="secondary" style={{ flex: 1 }} onPress={() => { setEditCatId(null); setCatName(''); }} />
-                      )}
-                      <Button title={editCatId ? "Guardar" : "Añadir Categoría"} variant="primary" style={{ flex: 1 }} onPress={handleSaveCategory} />
-                    </View>
-                  </View>
-
-                  <Text style={{ color: theme.text, fontWeight: 'bold', marginBottom: 10, marginTop: 10 }}>Categorías Existentes</Text>
-                  <View>
-                    {categories.map(cat => (
-                      <View key={cat.id} style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, borderBottomWidth: 1, borderBottomColor: theme.border }}>
-                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                          <Ionicons name={cat.icon} size={20} color={cat.color} />
-                          <Text style={{ color: theme.text }}>{cat.name}</Text>
-                        </View>
-                        <View style={{ flexDirection: 'row', gap: 15 }}>
-                          <TouchableOpacity onPress={() => openEditCategory(cat)}>
-                            <Ionicons name="pencil" size={18} color={theme.accent} />
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => handleDeleteCategory(cat.id)}>
-                            <Ionicons name="trash" size={18} color="#EF4444" />
-                          </TouchableOpacity>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-                </ScrollView>
+                  <Text style={{ fontSize: 20, fontWeight: 'bold', color: theme.text, textAlign: 'center', marginBottom: 10 }}>¿Desmarcar gasto?</Text>
+                  <Text style={{ fontSize: 14, color: theme.textSecondary, textAlign: 'center' }}>Si desmarcas este gasto, se borrará su historial de pagos parciales y el monto pagado volverá a cero.</Text>
+                </View>
+                <View style={{ flexDirection: 'row', gap: 10 }}>
+                  <Button title="Cancelar" variant="secondary" style={{ flex: 1 }} onPress={() => setUnmarkModalVisible(false)} />
+                  <Button title="Desmarcar" variant="primary" style={{ flex: 1, backgroundColor: '#EF4444', borderColor: '#EF4444' }} onPress={confirmUnmarkExpense} />
+                </View>
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -1067,6 +1036,51 @@ export default function ExpensesScreen({ navigation }) {
                   <Button title="Cancelar" variant="secondary" style={{ flex: 1 }} onPress={() => setDeleteExpenseId(null)} />
                   <Button title="Eliminar" variant="primary" style={{ flex: 1, backgroundColor: '#EF4444', borderColor: '#EF4444' }} onPress={confirmDeleteExpense} />
                 </View>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* MODAL HISTORIAL DE PAGOS */}
+      <Modal visible={historyModalVisible} transparent animationType="slide" onRequestClose={() => setHistoryModalVisible(false)}>
+        <TouchableWithoutFeedback onPress={() => setHistoryModalVisible(false)}>
+          <View style={styles.modalOverlay}>
+            <TouchableWithoutFeedback>
+              <View style={[styles.modalContent, { backgroundColor: theme.card, maxHeight: '90%' }]}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+                  <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 0 }]}>Historial de Pagos</Text>
+                  <TouchableOpacity onPress={() => setHistoryModalVisible(false)}>
+                    <Ionicons name="close" size={24} color={theme.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+
+                {historyExpense && (
+                  <View style={{ marginBottom: 15, padding: 10, backgroundColor: theme.border + '40', borderRadius: 8 }}>
+                    <Text style={{ color: theme.text, fontWeight: 'bold' }}>{historyExpense.description}</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 13 }}>Monto inicial: {formatCurrency(historyExpense.amount)}</Text>
+                    <Text style={{ color: theme.accent, fontSize: 13, fontWeight: 'bold' }}>Total Pagado: {formatCurrency(historyExpense.amount_paid)}</Text>
+                  </View>
+                )}
+
+                <ScrollView showsVerticalScrollIndicator={false}>
+                  {historyExpense && historyExpense.payment_history && JSON.parse(historyExpense.payment_history).map((ph, idx) => (
+                    <View key={idx} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: theme.border }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                        <View style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: theme.accent + '20', justifyContent: 'center', alignItems: 'center' }}>
+                          <Text style={{ color: theme.accent, fontSize: 12, fontWeight: 'bold' }}>{idx + 1}</Text>
+                        </View>
+                        <Text style={{ color: theme.textSecondary, fontSize: 13 }}>
+                          {new Date(ph.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
+                        </Text>
+                      </View>
+                      <Text style={{ color: theme.text, fontWeight: 'bold' }}>{formatCurrency(ph.amount)}</Text>
+                    </View>
+                  ))}
+                  {historyExpense && (!historyExpense.payment_history || JSON.parse(historyExpense.payment_history).length === 0) && (
+                    <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 20 }}>No hay pagos registrados.</Text>
+                  )}
+                </ScrollView>
               </View>
             </TouchableWithoutFeedback>
           </View>
@@ -1277,7 +1291,7 @@ const styles = StyleSheet.create({
   expenseRight: { alignItems: 'flex-end' },
   expenseAmount: { fontSize: 16, fontWeight: 'bold' },
   modalOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center', padding: 20 },
-  modalContent: { width: '100%', maxWidth: 400, borderRadius: 20, padding: 0, maxHeight: '90%' },
+  modalContent: { width: '100%', maxWidth: 400, borderRadius: 20, padding: 20, maxHeight: '90%' },
   modalTitle: { fontSize: 20, fontWeight: 'bold', marginBottom: 20 },
   catBadge: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20, borderWidth: 1 },
   colorDot: { width: 30, height: 30, borderRadius: 15 }

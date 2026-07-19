@@ -25,7 +25,9 @@ async function initDB() {
         waitForConnections: true,
         connectionLimit: 10,
         queueLimit: 0,
-        dateStrings: true
+        dateStrings: true,
+        enableKeepAlive: true,
+        keepAliveInitialDelay: 0
     });
 
     // 3. Crear tablas si no existen
@@ -36,9 +38,21 @@ async function initDB() {
             username VARCHAR(255) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
             email VARCHAR(255) NULL,
+            google_id VARCHAR(255) NULL UNIQUE,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB;
     `;
+    await pool.query(usersTable);
+
+    // Migración: Añadir google_id si la tabla ya existía sin esa columna
+    try {
+        const columns = await pool.query("SHOW COLUMNS FROM users LIKE 'google_id'");
+        if (columns.length === 0) {
+            await pool.query('ALTER TABLE users ADD COLUMN google_id VARCHAR(255) NULL UNIQUE');
+        }
+    } catch (e) {
+        console.error('Error al añadir google_id:', e);
+    }
 
     const verificationCodesTable = `
         CREATE TABLE IF NOT EXISTS verification_codes (
@@ -223,16 +237,26 @@ async function initDB() {
             module_key VARCHAR(50) NOT NULL UNIQUE,
             name VARCHAR(255) NOT NULL,
             base_price_cop DECIMAL(10,2) NOT NULL DEFAULT 0,
+            annual_price_cop DECIMAL(10,2) NOT NULL DEFAULT 0,
             is_free TINYINT(1) NOT NULL DEFAULT 0,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB;
     `;
     await pool.query(appModulesTable);
 
+    try { await pool.query('ALTER TABLE app_modules ADD COLUMN annual_price_cop DECIMAL(10,2) NOT NULL DEFAULT 0'); } catch (e) {}
+    
     try {
-        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, is_free) VALUES ('shop', 'Tienda', 10000, 0)");
-        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, is_free) VALUES ('habits', 'Hábitos', 5000, 0)");
-        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, is_free) VALUES ('expenses', 'Control de Gastos', 5000, 0)");
+        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, annual_price_cop, is_free) VALUES ('shop', 'Tienda', 7000, 75000, 0)");
+        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, annual_price_cop, is_free) VALUES ('habits', 'Hábitos', 7000, 75000, 0)");
+        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, annual_price_cop, is_free) VALUES ('expenses', 'Control de Gastos', 7000, 75000, 0)");
+        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, annual_price_cop, is_free) VALUES ('debtors', 'Deudas y Ahorros', 7000, 75000, 0)");
+        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, annual_price_cop, is_free) VALUES ('personal', 'Paquete Personal', 7000, 75000, 0)");
+        
+        // Update existents
+        await pool.query("UPDATE app_modules SET base_price_cop = 7000, annual_price_cop = 75000 WHERE module_key IN ('shop', 'habits', 'expenses', 'debtors', 'personal')");
+        // Asegurar que debtors ya no sea gratis si estaba configurado así
+        await pool.query("UPDATE app_modules SET is_free = 0 WHERE module_key = 'debtors'");
     } catch (e) {}
 
     const userSubscriptionsTable = `
@@ -280,6 +304,7 @@ async function initDB() {
             start_time TIME NULL,
             end_time TIME NULL,
             reminder_time INT NULL,
+            archived_date DATE NULL,
             active TINYINT(1) NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -293,6 +318,7 @@ async function initDB() {
     try { await pool.query("ALTER TABLE habits ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'habit'"); } catch (e) {}
     try { await pool.query("ALTER TABLE habits ADD COLUMN start_date DATE NULL"); } catch (e) {}
     try { await pool.query("ALTER TABLE habits ADD COLUMN reminder_time INT NULL"); } catch (e) {}
+    try { await pool.query("ALTER TABLE habits ADD COLUMN archived_date DATE NULL"); } catch (e) {}
 
     const pushTokensTable = `
         CREATE TABLE IF NOT EXISTS push_tokens (
@@ -356,6 +382,8 @@ async function initDB() {
 
     try { await pool.query("ALTER TABLE expenses ADD COLUMN amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0"); } catch (e) {}
     try { await pool.query("ALTER TABLE expenses ADD COLUMN is_reserved TINYINT(1) NOT NULL DEFAULT 0"); } catch (e) {}
+    try { await pool.query("ALTER TABLE expenses ADD COLUMN payment_date DATETIME NULL"); } catch (e) {}
+    try { await pool.query("ALTER TABLE expenses ADD COLUMN payment_history TEXT NULL"); } catch (e) {}
 
     const incomesTable = `
         CREATE TABLE IF NOT EXISTS incomes (

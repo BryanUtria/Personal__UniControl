@@ -13,9 +13,10 @@ router.get('/settings', async (req, res) => {
 
         // Defaults
         const settings = {
-            showShop: false,
+            showShop: true,
             showDebtors: true,
-            showHabits: false
+            showHabits: true,
+            showExpenses: true
         };
 
         // Sobrescribir con lo que haya en la base de datos

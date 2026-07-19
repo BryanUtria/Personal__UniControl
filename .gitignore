@@ -4,8 +4,7 @@
 
 # local env files
 **/.env
-**/UniControl.apk
-**/unicontrol-e84d0-firebase-adminsdk-fbsvc-a5b54040f0.json
+**/private
 
 # generated native folders
 **/ios

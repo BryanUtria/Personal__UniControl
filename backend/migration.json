@@ -1,0 +1,2938 @@
+{
+  "debtors": [
+    {
+      "id": 6,
+      "name": "Johan Brother",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-19T09:56:10.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deudor"
+    },
+    {
+      "id": 7,
+      "name": "Luis Brother",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-19T09:56:30.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deudor"
+    },
+    {
+      "id": 8,
+      "name": "Mama",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-19T09:56:51.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deudor"
+    },
+    {
+      "id": 9,
+      "name": "Papa",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-19T09:56:55.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deudor"
+    },
+    {
+      "id": 10,
+      "name": "Brayan Barrera",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-19T09:57:16.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deudor"
+    },
+    {
+      "id": 11,
+      "name": "Ahorro Claro",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-19T10:35:29.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "ahorro"
+    },
+    {
+      "id": 12,
+      "name": "Johan Brother",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-19T10:49:33.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deuda"
+    },
+    {
+      "id": 13,
+      "name": "Luis Brother",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-19T10:51:03.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deuda"
+    },
+    {
+      "id": 14,
+      "name": "Mama",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-19T10:51:33.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deuda"
+    },
+    {
+      "id": 15,
+      "name": "Viajes",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-19T10:53:56.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "ahorro"
+    },
+    {
+      "id": 16,
+      "name": "Liliana",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-19T11:02:14.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deudor"
+    },
+    {
+      "id": 36,
+      "name": "prueba",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-24T03:38:28.000Z",
+      "active": 0,
+      "user_id": 1,
+      "type": "deudor"
+    },
+    {
+      "id": 37,
+      "name": "Papa de mama",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-25T00:20:45.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deudor"
+    },
+    {
+      "id": 38,
+      "name": "Liliana",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-05-30T05:22:12.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deuda"
+    },
+    {
+      "id": 39,
+      "name": "Rafael Primo",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-06-02T02:11:09.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deuda"
+    },
+    {
+      "id": 40,
+      "name": "Papa",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-06-04T10:05:02.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deuda"
+    },
+    {
+      "id": 41,
+      "name": "Yo",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-06-15T06:40:10.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deuda"
+    },
+    {
+      "id": 42,
+      "name": "Erika Bonilla",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-06-17T03:54:34.000Z",
+      "active": 1,
+      "user_id": 1,
+      "type": "deuda"
+    },
+    {
+      "id": 43,
+      "name": "Prueba",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-07-01T11:29:37.000Z",
+      "active": 0,
+      "user_id": 1,
+      "type": "deudor"
+    },
+    {
+      "id": 44,
+      "name": "Prueba",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-07-01T11:36:56.000Z",
+      "active": 0,
+      "user_id": 1,
+      "type": "deudor"
+    },
+    {
+      "id": 45,
+      "name": "Prueba",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-07-01T11:40:12.000Z",
+      "active": 0,
+      "user_id": 1,
+      "type": "deudor"
+    },
+    {
+      "id": 46,
+      "name": "Prueba",
+      "phone": null,
+      "email": null,
+      "identification": null,
+      "address": null,
+      "notes": null,
+      "created_at": "2026-07-07T09:59:56.000Z",
+      "active": 0,
+      "user_id": 1,
+      "type": "deudor"
+    }
+  ],
+  "debts": [
+    {
+      "id": 11,
+      "debtor_id": 10,
+      "amount": "5100.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-05-19T10:04:06.000Z"
+    },
+    {
+      "id": 12,
+      "debtor_id": 10,
+      "amount": "2008000.00",
+      "quantity": 1,
+      "description": "Prestamo",
+      "type": "debt",
+      "created_at": "2026-05-19T10:04:40.000Z"
+    },
+    {
+      "id": 13,
+      "debtor_id": 10,
+      "amount": "2008000.00",
+      "quantity": 1,
+      "description": "Pago Prestamo",
+      "type": "payment",
+      "created_at": "2026-05-19T10:04:53.000Z"
+    },
+    {
+      "id": 14,
+      "debtor_id": 10,
+      "amount": "5100.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-05-19T10:05:02.000Z"
+    },
+    {
+      "id": 15,
+      "debtor_id": 10,
+      "amount": "5100.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-05-19T10:05:09.000Z"
+    },
+    {
+      "id": 16,
+      "debtor_id": 10,
+      "amount": "1000.00",
+      "quantity": 1,
+      "description": "Desayuno",
+      "type": "debt",
+      "created_at": "2026-05-19T10:05:17.000Z"
+    },
+    {
+      "id": 17,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Octubre 2022",
+      "type": "payment",
+      "created_at": "2026-05-19T10:35:46.000Z"
+    },
+    {
+      "id": 19,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Noviembre 2022",
+      "type": "payment",
+      "created_at": "2026-05-19T10:36:11.000Z"
+    },
+    {
+      "id": 20,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Diciembre 2022",
+      "type": "payment",
+      "created_at": "2026-05-19T10:36:24.000Z"
+    },
+    {
+      "id": 22,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Enero 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:36:42.000Z"
+    },
+    {
+      "id": 23,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Febrero 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:36:56.000Z"
+    },
+    {
+      "id": 24,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Marzo 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:37:18.000Z"
+    },
+    {
+      "id": 25,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Abril 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:37:24.000Z"
+    },
+    {
+      "id": 26,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Mayo 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:37:36.000Z"
+    },
+    {
+      "id": 27,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Junio 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:37:54.000Z"
+    },
+    {
+      "id": 28,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Julio 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:38:00.000Z"
+    },
+    {
+      "id": 29,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Agosto 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:38:06.000Z"
+    },
+    {
+      "id": 30,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Septiembre 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:38:15.000Z"
+    },
+    {
+      "id": 31,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Octubre 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:38:23.000Z"
+    },
+    {
+      "id": 32,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Noviembre 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:38:30.000Z"
+    },
+    {
+      "id": 33,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Diciembre 2023",
+      "type": "payment",
+      "created_at": "2026-05-19T10:38:36.000Z"
+    },
+    {
+      "id": 34,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Enero 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:38:56.000Z"
+    },
+    {
+      "id": 35,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Febrero 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:39:09.000Z"
+    },
+    {
+      "id": 36,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Marzo 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:39:31.000Z"
+    },
+    {
+      "id": 37,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Abril 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:39:38.000Z"
+    },
+    {
+      "id": 38,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Mayo 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:39:45.000Z"
+    },
+    {
+      "id": 39,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Junio 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:39:54.000Z"
+    },
+    {
+      "id": 40,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Julio 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:40:02.000Z"
+    },
+    {
+      "id": 41,
+      "debtor_id": 11,
+      "amount": "1293850.00",
+      "quantity": 1,
+      "description": "Retiro",
+      "type": "debt",
+      "created_at": "2026-05-19T10:40:16.000Z"
+    },
+    {
+      "id": 42,
+      "debtor_id": 11,
+      "amount": "102000.00",
+      "quantity": 1,
+      "description": "Agosto 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:40:41.000Z"
+    },
+    {
+      "id": 43,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Septiembre 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:40:56.000Z"
+    },
+    {
+      "id": 44,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Octubre 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:41:20.000Z"
+    },
+    {
+      "id": 45,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Noviembre 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:41:36.000Z"
+    },
+    {
+      "id": 46,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Diciembre 2024",
+      "type": "payment",
+      "created_at": "2026-05-19T10:41:52.000Z"
+    },
+    {
+      "id": 47,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Enero 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:42:11.000Z"
+    },
+    {
+      "id": 48,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Febrero 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:42:19.000Z"
+    },
+    {
+      "id": 49,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Marzo 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:42:39.000Z"
+    },
+    {
+      "id": 50,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Abril 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:42:46.000Z"
+    },
+    {
+      "id": 51,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Mayo 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:42:53.000Z"
+    },
+    {
+      "id": 52,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Junio 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:43:03.000Z"
+    },
+    {
+      "id": 53,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Julio 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:43:13.000Z"
+    },
+    {
+      "id": 54,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Agosto 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:43:23.000Z"
+    },
+    {
+      "id": 55,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Septiembre 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:43:33.000Z"
+    },
+    {
+      "id": 56,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Octubre 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:43:49.000Z"
+    },
+    {
+      "id": 57,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Noviembre 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:44:03.000Z"
+    },
+    {
+      "id": 58,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Diciembre 2025",
+      "type": "payment",
+      "created_at": "2026-05-19T10:44:16.000Z"
+    },
+    {
+      "id": 59,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Enero 2026",
+      "type": "payment",
+      "created_at": "2026-05-19T10:44:32.000Z"
+    },
+    {
+      "id": 60,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Febrero 2026",
+      "type": "payment",
+      "created_at": "2026-05-19T10:44:45.000Z"
+    },
+    {
+      "id": 61,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Marzo 2026",
+      "type": "payment",
+      "created_at": "2026-05-19T10:44:55.000Z"
+    },
+    {
+      "id": 62,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Abril 2026",
+      "type": "payment",
+      "created_at": "2026-05-19T10:45:05.000Z"
+    },
+    {
+      "id": 63,
+      "debtor_id": 11,
+      "amount": "1790950.00",
+      "quantity": 1,
+      "description": "Retiro",
+      "type": "debt",
+      "created_at": "2026-05-19T10:45:19.000Z"
+    },
+    {
+      "id": 64,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Mayo 2026",
+      "type": "payment",
+      "created_at": "2026-05-19T10:45:30.000Z"
+    },
+    {
+      "id": 65,
+      "debtor_id": 11,
+      "amount": "135500.00",
+      "quantity": 1,
+      "description": "Septiembre 2022",
+      "type": "payment",
+      "created_at": "2026-05-19T10:35:00.000Z"
+    },
+    {
+      "id": 66,
+      "debtor_id": 12,
+      "amount": "8500.00",
+      "quantity": 1,
+      "description": "Pelota de goma",
+      "type": "debt",
+      "created_at": "2026-05-19T10:49:49.000Z"
+    },
+    {
+      "id": 67,
+      "debtor_id": 12,
+      "amount": "17000.00",
+      "quantity": 1,
+      "description": "Pizza",
+      "type": "debt",
+      "created_at": "2026-05-19T10:49:59.000Z"
+    },
+    {
+      "id": 68,
+      "debtor_id": 12,
+      "amount": "6000.00",
+      "quantity": 1,
+      "description": "Cruce cancha de futbol 5",
+      "type": "debt",
+      "created_at": "2026-05-19T10:50:20.000Z"
+    },
+    {
+      "id": 69,
+      "debtor_id": 12,
+      "amount": "27500.00",
+      "quantity": 1,
+      "description": "Cervezas",
+      "type": "debt",
+      "created_at": "2026-05-19T10:50:31.000Z"
+    },
+    {
+      "id": 70,
+      "debtor_id": 13,
+      "amount": "30830.00",
+      "quantity": 1,
+      "description": "Almuerzo dia de las madres",
+      "type": "debt",
+      "created_at": "2026-05-19T10:51:16.000Z"
+    },
+    {
+      "id": 71,
+      "debtor_id": 14,
+      "amount": "27100.00",
+      "quantity": 1,
+      "description": "Almuerzo",
+      "type": "debt",
+      "created_at": "2026-05-19T10:51:43.000Z"
+    },
+    {
+      "id": 72,
+      "debtor_id": 14,
+      "amount": "44800.00",
+      "quantity": 1,
+      "description": "Prestamo zapatos",
+      "type": "debt",
+      "created_at": "2026-05-19T10:51:56.000Z"
+    },
+    {
+      "id": 73,
+      "debtor_id": 14,
+      "amount": "27000.00",
+      "quantity": 1,
+      "description": "Burger master",
+      "type": "debt",
+      "created_at": "2026-05-19T10:52:09.000Z"
+    },
+    {
+      "id": 74,
+      "debtor_id": 14,
+      "amount": "27100.00",
+      "quantity": 1,
+      "description": "Cruce de mi pápa y yo almuerzo salchipapas",
+      "type": "debt",
+      "created_at": "2026-05-19T10:52:40.000Z"
+    },
+    {
+      "id": 75,
+      "debtor_id": 14,
+      "amount": "2000.00",
+      "quantity": 1,
+      "description": "Superbonder",
+      "type": "debt",
+      "created_at": "2026-05-19T10:52:50.000Z"
+    },
+    {
+      "id": 76,
+      "debtor_id": 14,
+      "amount": "29300.00",
+      "quantity": 1,
+      "description": "Regalos Baby Shower",
+      "type": "debt",
+      "created_at": "2026-05-19T10:53:03.000Z"
+    },
+    {
+      "id": 77,
+      "debtor_id": 14,
+      "amount": "19000.00",
+      "quantity": 1,
+      "description": "Cruce de deuda con Rafael",
+      "type": "debt",
+      "created_at": "2026-05-19T10:53:16.000Z"
+    },
+    {
+      "id": 80,
+      "debtor_id": 15,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Brayan Abril",
+      "type": "payment",
+      "created_at": "2026-05-19T10:54:20.000Z"
+    },
+    {
+      "id": 81,
+      "debtor_id": 15,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Johan Abril",
+      "type": "payment",
+      "created_at": "2026-05-19T10:54:30.000Z"
+    },
+    {
+      "id": 82,
+      "debtor_id": 15,
+      "amount": "150000.00",
+      "quantity": 1,
+      "description": "Mama Abril",
+      "type": "payment",
+      "created_at": "2026-05-19T10:54:44.000Z"
+    },
+    {
+      "id": 84,
+      "debtor_id": 15,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Erika Abril",
+      "type": "payment",
+      "created_at": "2026-05-19T10:55:07.000Z"
+    },
+    {
+      "id": 85,
+      "debtor_id": 15,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Brayan Mayo",
+      "type": "payment",
+      "created_at": "2026-05-19T10:55:19.000Z"
+    },
+    {
+      "id": 86,
+      "debtor_id": 15,
+      "amount": "500000.00",
+      "quantity": 1,
+      "description": "Papa Abril y Mayo",
+      "type": "payment",
+      "created_at": "2026-05-19T10:56:01.000Z"
+    },
+    {
+      "id": 87,
+      "debtor_id": 15,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Johan Mayo",
+      "type": "payment",
+      "created_at": "2026-05-19T10:56:11.000Z"
+    },
+    {
+      "id": 88,
+      "debtor_id": 9,
+      "amount": "1200.00",
+      "quantity": 1,
+      "description": "Arepa dia de las madres",
+      "type": "payment",
+      "created_at": "2026-05-19T10:57:23.000Z"
+    },
+    {
+      "id": 89,
+      "debtor_id": 9,
+      "amount": "11900.00",
+      "quantity": 1,
+      "description": "Cruce dia de las madres",
+      "type": "debt",
+      "created_at": "2026-05-19T10:57:39.000Z"
+    },
+    {
+      "id": 90,
+      "debtor_id": 7,
+      "amount": "2309200.00",
+      "quantity": 1,
+      "description": "Prestamo Asus",
+      "type": "debt",
+      "created_at": "2026-05-19T10:58:10.000Z"
+    },
+    {
+      "id": 91,
+      "debtor_id": 7,
+      "amount": "10000.00",
+      "quantity": 1,
+      "description": "Netflix",
+      "type": "debt",
+      "created_at": "2026-05-19T10:58:19.000Z"
+    },
+    {
+      "id": 92,
+      "debtor_id": 7,
+      "amount": "5100.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-05-19T10:58:27.000Z"
+    },
+    {
+      "id": 93,
+      "debtor_id": 7,
+      "amount": "5379.00",
+      "quantity": 1,
+      "description": "Parqueadero",
+      "type": "debt",
+      "created_at": "2026-05-19T10:58:41.000Z"
+    },
+    {
+      "id": 94,
+      "debtor_id": 7,
+      "amount": "13000.00",
+      "quantity": 1,
+      "description": "Cancha",
+      "type": "debt",
+      "created_at": "2026-05-19T10:58:52.000Z"
+    },
+    {
+      "id": 95,
+      "debtor_id": 7,
+      "amount": "5100.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-05-19T10:59:01.000Z"
+    },
+    {
+      "id": 96,
+      "debtor_id": 7,
+      "amount": "20000.00",
+      "quantity": 1,
+      "description": "Aguardiente",
+      "type": "debt",
+      "created_at": "2026-05-19T10:59:14.000Z"
+    },
+    {
+      "id": 97,
+      "debtor_id": 7,
+      "amount": "1000.00",
+      "quantity": 1,
+      "description": "Desayuno",
+      "type": "debt",
+      "created_at": "2026-05-19T10:59:23.000Z"
+    },
+    {
+      "id": 99,
+      "debtor_id": 7,
+      "amount": "84637.00",
+      "quantity": 1,
+      "description": "Cruce de deudas",
+      "type": "payment",
+      "created_at": "2026-05-19T10:59:52.000Z"
+    },
+    {
+      "id": 100,
+      "debtor_id": 7,
+      "amount": "13334.00",
+      "quantity": 1,
+      "description": "Flores dia mama",
+      "type": "debt",
+      "created_at": "2026-05-19T11:00:04.000Z"
+    },
+    {
+      "id": 101,
+      "debtor_id": 7,
+      "amount": "20000.00",
+      "quantity": 1,
+      "description": "Cancha futbol 5",
+      "type": "debt",
+      "created_at": "2026-05-19T11:00:20.000Z"
+    },
+    {
+      "id": 102,
+      "debtor_id": 7,
+      "amount": "3000.00",
+      "quantity": 1,
+      "description": "Parqueadero moto, futbol 5",
+      "type": "debt",
+      "created_at": "2026-05-19T11:00:44.000Z"
+    },
+    {
+      "id": 103,
+      "debtor_id": 7,
+      "amount": "14500.00",
+      "quantity": 1,
+      "description": "Cancha",
+      "type": "debt",
+      "created_at": "2026-05-19T10:58:53.000Z"
+    },
+    {
+      "id": 104,
+      "debtor_id": 16,
+      "amount": "7000.00",
+      "quantity": 1,
+      "description": "Prestamo",
+      "type": "debt",
+      "created_at": "2026-05-19T11:02:24.000Z"
+    },
+    {
+      "id": 105,
+      "debtor_id": 16,
+      "amount": "8000.00",
+      "quantity": 1,
+      "description": "Sandwich",
+      "type": "debt",
+      "created_at": "2026-05-19T11:02:34.000Z"
+    },
+    {
+      "id": 106,
+      "debtor_id": 16,
+      "amount": "3000.00",
+      "quantity": 1,
+      "description": "Parqueadero",
+      "type": "debt",
+      "created_at": "2026-05-19T11:02:45.000Z"
+    },
+    {
+      "id": 107,
+      "debtor_id": 16,
+      "amount": "115400.00",
+      "quantity": 1,
+      "description": "Libros filbo 2026",
+      "type": "debt",
+      "created_at": "2026-05-19T11:03:00.000Z"
+    },
+    {
+      "id": 108,
+      "debtor_id": 16,
+      "amount": "15000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:03:26.000Z"
+    },
+    {
+      "id": 109,
+      "debtor_id": 16,
+      "amount": "3000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:03:34.000Z"
+    },
+    {
+      "id": 110,
+      "debtor_id": 16,
+      "amount": "8500.00",
+      "quantity": 1,
+      "description": "Capuchino",
+      "type": "debt",
+      "created_at": "2026-05-19T11:03:53.000Z"
+    },
+    {
+      "id": 111,
+      "debtor_id": 6,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Prestamo",
+      "type": "debt",
+      "created_at": "2026-05-19T11:04:27.000Z"
+    },
+    {
+      "id": 112,
+      "debtor_id": 6,
+      "amount": "10000.00",
+      "quantity": 1,
+      "description": "Netflix",
+      "type": "debt",
+      "created_at": "2026-05-19T11:04:36.000Z"
+    },
+    {
+      "id": 113,
+      "debtor_id": 6,
+      "amount": "13200.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-05-19T11:04:45.000Z"
+    },
+    {
+      "id": 114,
+      "debtor_id": 6,
+      "amount": "10000.00",
+      "quantity": 1,
+      "description": "Prestamo",
+      "type": "debt",
+      "created_at": "2026-05-19T11:04:53.000Z"
+    },
+    {
+      "id": 115,
+      "debtor_id": 6,
+      "amount": "10000.00",
+      "quantity": 1,
+      "description": "Netflix",
+      "type": "debt",
+      "created_at": "2026-05-19T11:05:07.000Z"
+    },
+    {
+      "id": 116,
+      "debtor_id": 6,
+      "amount": "46000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:05:19.000Z"
+    },
+    {
+      "id": 117,
+      "debtor_id": 6,
+      "amount": "13200.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-05-19T11:05:32.000Z"
+    },
+    {
+      "id": 118,
+      "debtor_id": 6,
+      "amount": "5000.00",
+      "quantity": 1,
+      "description": "Bateria control carro",
+      "type": "debt",
+      "created_at": "2026-05-19T11:05:47.000Z"
+    },
+    {
+      "id": 119,
+      "debtor_id": 6,
+      "amount": "10000.00",
+      "quantity": 1,
+      "description": "Prestamo",
+      "type": "debt",
+      "created_at": "2026-05-19T11:05:55.000Z"
+    },
+    {
+      "id": 120,
+      "debtor_id": 6,
+      "amount": "10000.00",
+      "quantity": 1,
+      "description": "Prestamo",
+      "type": "debt",
+      "created_at": "2026-05-19T11:06:09.000Z"
+    },
+    {
+      "id": 121,
+      "debtor_id": 6,
+      "amount": "6000.00",
+      "quantity": 1,
+      "description": "Papas Erika",
+      "type": "debt",
+      "created_at": "2026-05-19T11:06:20.000Z"
+    },
+    {
+      "id": 122,
+      "debtor_id": 6,
+      "amount": "650.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:06:29.000Z"
+    },
+    {
+      "id": 123,
+      "debtor_id": 6,
+      "amount": "6700.00",
+      "quantity": 1,
+      "description": "Pan bimbo",
+      "type": "debt",
+      "created_at": "2026-05-19T11:06:41.000Z"
+    },
+    {
+      "id": 124,
+      "debtor_id": 6,
+      "amount": "81400.00",
+      "quantity": 1,
+      "description": "Dia de la madre",
+      "type": "debt",
+      "created_at": "2026-05-19T11:06:51.000Z"
+    },
+    {
+      "id": 125,
+      "debtor_id": 6,
+      "amount": "518800.00",
+      "quantity": 1,
+      "description": "Boleta Cristian Nodal",
+      "type": "debt",
+      "created_at": "2026-05-19T11:07:09.000Z"
+    },
+    {
+      "id": 126,
+      "debtor_id": 6,
+      "amount": "126000.00",
+      "quantity": 1,
+      "description": "Boleta Cristian Nodal Papa",
+      "type": "debt",
+      "created_at": "2026-05-19T11:07:19.000Z"
+    },
+    {
+      "id": 127,
+      "debtor_id": 6,
+      "amount": "30000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:07:28.000Z"
+    },
+    {
+      "id": 128,
+      "debtor_id": 6,
+      "amount": "122000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:07:36.000Z"
+    },
+    {
+      "id": 129,
+      "debtor_id": 6,
+      "amount": "40400.00",
+      "quantity": 1,
+      "description": "Lechona",
+      "type": "debt",
+      "created_at": "2026-05-19T11:07:46.000Z"
+    },
+    {
+      "id": 130,
+      "debtor_id": 6,
+      "amount": "706000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:07:58.000Z"
+    },
+    {
+      "id": 131,
+      "debtor_id": 6,
+      "amount": "13500.00",
+      "quantity": 1,
+      "description": "Ensalada de frutas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:08:21.000Z"
+    },
+    {
+      "id": 132,
+      "debtor_id": 6,
+      "amount": "803200.00",
+      "quantity": 1,
+      "description": "Prestamo para steemdeck",
+      "type": "debt",
+      "created_at": "2026-05-19T11:08:37.000Z"
+    },
+    {
+      "id": 133,
+      "debtor_id": 6,
+      "amount": "200800.00",
+      "quantity": 1,
+      "description": "Prestamo para steemdeck 2",
+      "type": "debt",
+      "created_at": "2026-05-19T11:08:58.000Z"
+    },
+    {
+      "id": 134,
+      "debtor_id": 6,
+      "amount": "321280.00",
+      "quantity": 1,
+      "description": "Prestamo para steemdeck 3",
+      "type": "debt",
+      "created_at": "2026-05-19T11:09:14.000Z"
+    },
+    {
+      "id": 135,
+      "debtor_id": 6,
+      "amount": "321280.00",
+      "quantity": 1,
+      "description": "Prestamo para steemdeck 4",
+      "type": "debt",
+      "created_at": "2026-05-19T11:09:26.000Z"
+    },
+    {
+      "id": 136,
+      "debtor_id": 6,
+      "amount": "130520.00",
+      "quantity": 1,
+      "description": "Prestamo para steemdeck 5",
+      "type": "debt",
+      "created_at": "2026-05-19T11:09:36.000Z"
+    },
+    {
+      "id": 137,
+      "debtor_id": 6,
+      "amount": "2951659.00",
+      "quantity": 1,
+      "description": "Prestamo para steemdeck original",
+      "type": "debt",
+      "created_at": "2026-05-19T11:09:52.000Z"
+    },
+    {
+      "id": 138,
+      "debtor_id": 6,
+      "amount": "300000.00",
+      "quantity": 1,
+      "description": "Regalo por prestar",
+      "type": "debt",
+      "created_at": "2026-05-19T11:10:19.000Z"
+    },
+    {
+      "id": 139,
+      "debtor_id": 6,
+      "amount": "21000.00",
+      "quantity": 1,
+      "description": "Prestamo arepas rellenas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:10:37.000Z"
+    },
+    {
+      "id": 140,
+      "debtor_id": 6,
+      "amount": "21167.00",
+      "quantity": 1,
+      "description": "Cervezas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:10:45.000Z"
+    },
+    {
+      "id": 142,
+      "debtor_id": 6,
+      "amount": "14700.00",
+      "quantity": 1,
+      "description": "Almuerzo pollo frito",
+      "type": "debt",
+      "created_at": "2026-05-19T11:11:09.000Z"
+    },
+    {
+      "id": 143,
+      "debtor_id": 6,
+      "amount": "81000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:11:26.000Z"
+    },
+    {
+      "id": 144,
+      "debtor_id": 6,
+      "amount": "6500.00",
+      "quantity": 1,
+      "description": "Desayuno, huevos pericos y pan",
+      "type": "debt",
+      "created_at": "2026-05-19T11:11:47.000Z"
+    },
+    {
+      "id": 145,
+      "debtor_id": 6,
+      "amount": "79750.00",
+      "quantity": 1,
+      "description": "Gastos feria del hogar",
+      "type": "debt",
+      "created_at": "2026-05-19T11:12:02.000Z"
+    },
+    {
+      "id": 146,
+      "debtor_id": 6,
+      "amount": "23100.00",
+      "quantity": 1,
+      "description": "Taxi Nodal",
+      "type": "debt",
+      "created_at": "2026-05-19T11:12:14.000Z"
+    },
+    {
+      "id": 147,
+      "debtor_id": 6,
+      "amount": "21817.00",
+      "quantity": 1,
+      "description": "Cervezas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:12:27.000Z"
+    },
+    {
+      "id": 148,
+      "debtor_id": 6,
+      "amount": "104247.00",
+      "quantity": 1,
+      "description": "Almuerzo",
+      "type": "debt",
+      "created_at": "2026-05-19T11:12:42.000Z"
+    },
+    {
+      "id": 150,
+      "debtor_id": 6,
+      "amount": "16650.00",
+      "quantity": 1,
+      "description": "Cervezas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:13:08.000Z"
+    },
+    {
+      "id": 151,
+      "debtor_id": 6,
+      "amount": "127000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:13:19.000Z"
+    },
+    {
+      "id": 152,
+      "debtor_id": 6,
+      "amount": "24825.00",
+      "quantity": 1,
+      "description": "Vino",
+      "type": "debt",
+      "created_at": "2026-05-19T11:13:35.000Z"
+    },
+    {
+      "id": 153,
+      "debtor_id": 6,
+      "amount": "211788.00",
+      "quantity": 1,
+      "description": "Cumpleaños Papa",
+      "type": "debt",
+      "created_at": "2026-05-19T11:13:51.000Z"
+    },
+    {
+      "id": 154,
+      "debtor_id": 6,
+      "amount": "3000000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:14:07.000Z"
+    },
+    {
+      "id": 155,
+      "debtor_id": 6,
+      "amount": "33000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:14:15.000Z"
+    },
+    {
+      "id": 156,
+      "debtor_id": 6,
+      "amount": "1355400.00",
+      "quantity": 1,
+      "description": "Prestamo cama doble",
+      "type": "debt",
+      "created_at": "2026-05-19T11:14:30.000Z"
+    },
+    {
+      "id": 158,
+      "debtor_id": 6,
+      "amount": "328000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:15:03.000Z"
+    },
+    {
+      "id": 159,
+      "debtor_id": 6,
+      "amount": "377031.00",
+      "quantity": 1,
+      "description": "Platzi",
+      "type": "debt",
+      "created_at": "2026-05-19T11:15:17.000Z"
+    },
+    {
+      "id": 160,
+      "debtor_id": 6,
+      "amount": "1000000.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-05-19T11:15:28.000Z"
+    },
+    {
+      "id": 161,
+      "debtor_id": 6,
+      "amount": "6800.00",
+      "quantity": 1,
+      "description": "Prestamo para la ropa",
+      "type": "debt",
+      "created_at": "2026-05-19T11:15:56.000Z"
+    },
+    {
+      "id": 162,
+      "debtor_id": 6,
+      "amount": "5700.00",
+      "quantity": 1,
+      "description": "Prestamo por parqueadero joyas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:16:11.000Z"
+    },
+    {
+      "id": 163,
+      "debtor_id": 6,
+      "amount": "35000.00",
+      "quantity": 1,
+      "description": "Prestamo por jarra cerveza",
+      "type": "debt",
+      "created_at": "2026-05-19T11:16:31.000Z"
+    },
+    {
+      "id": 164,
+      "debtor_id": 6,
+      "amount": "14500.00",
+      "quantity": 1,
+      "description": "Ensalada de frutas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:16:45.000Z"
+    },
+    {
+      "id": 165,
+      "debtor_id": 6,
+      "amount": "59487.00",
+      "quantity": 1,
+      "description": "Almuerzo",
+      "type": "debt",
+      "created_at": "2026-05-19T11:16:56.000Z"
+    },
+    {
+      "id": 166,
+      "debtor_id": 6,
+      "amount": "74800.00",
+      "quantity": 1,
+      "description": "Año viejo, whiskey y vino",
+      "type": "debt",
+      "created_at": "2026-05-19T11:17:13.000Z"
+    },
+    {
+      "id": 167,
+      "debtor_id": 6,
+      "amount": "22000.00",
+      "quantity": 1,
+      "description": "Prestamo de apuesta helados",
+      "type": "debt",
+      "created_at": "2026-05-19T11:17:31.000Z"
+    },
+    {
+      "id": 168,
+      "debtor_id": 6,
+      "amount": "14000.00",
+      "quantity": 1,
+      "description": "Sandwich Johan",
+      "type": "debt",
+      "created_at": "2026-05-19T11:17:45.000Z"
+    },
+    {
+      "id": 169,
+      "debtor_id": 6,
+      "amount": "20000.00",
+      "quantity": 1,
+      "description": "Impresion 3D",
+      "type": "debt",
+      "created_at": "2026-05-19T11:17:56.000Z"
+    },
+    {
+      "id": 170,
+      "debtor_id": 6,
+      "amount": "90500.00",
+      "quantity": 1,
+      "description": "Cervezas navidad",
+      "type": "debt",
+      "created_at": "2026-05-19T11:18:08.000Z"
+    },
+    {
+      "id": 171,
+      "debtor_id": 6,
+      "amount": "2000.00",
+      "quantity": 1,
+      "description": "Prestamo pastas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:18:22.000Z"
+    },
+    {
+      "id": 172,
+      "debtor_id": 6,
+      "amount": "23900.00",
+      "quantity": 2,
+      "description": "Cervezas concierto Erika y Johan",
+      "type": "debt",
+      "created_at": "2026-05-19T11:18:46.000Z"
+    },
+    {
+      "id": 173,
+      "debtor_id": 6,
+      "amount": "367830.00",
+      "quantity": 1,
+      "description": "Prestamo comunal reunion politica",
+      "type": "debt",
+      "created_at": "2026-05-19T11:19:18.000Z"
+    },
+    {
+      "id": 174,
+      "debtor_id": 6,
+      "amount": "652600.00",
+      "quantity": 1,
+      "description": "Prestamo reunion politica trago",
+      "type": "debt",
+      "created_at": "2026-05-19T11:19:49.000Z"
+    },
+    {
+      "id": 175,
+      "debtor_id": 6,
+      "amount": "401600.00",
+      "quantity": 1,
+      "description": "Prestamo plata fisica para reunion politica",
+      "type": "debt",
+      "created_at": "2026-05-19T11:20:15.000Z"
+    },
+    {
+      "id": 176,
+      "debtor_id": 6,
+      "amount": "381520.00",
+      "quantity": 1,
+      "description": "Prestamo banda reunion ",
+      "type": "debt",
+      "created_at": "2026-05-19T11:20:40.000Z"
+    },
+    {
+      "id": 177,
+      "debtor_id": 6,
+      "amount": "5379.00",
+      "quantity": 1,
+      "description": "Parqueadero",
+      "type": "debt",
+      "created_at": "2026-05-19T11:21:01.000Z"
+    },
+    {
+      "id": 178,
+      "debtor_id": 6,
+      "amount": "13000.00",
+      "quantity": 1,
+      "description": "Cancha",
+      "type": "debt",
+      "created_at": "2026-05-19T11:21:10.000Z"
+    },
+    {
+      "id": 179,
+      "debtor_id": 6,
+      "amount": "9000.00",
+      "quantity": 1,
+      "description": "Empanadas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:21:23.000Z"
+    },
+    {
+      "id": 180,
+      "debtor_id": 6,
+      "amount": "181000.00",
+      "quantity": 1,
+      "description": "Libros Filbo 2026",
+      "type": "debt",
+      "created_at": "2026-05-19T11:21:44.000Z"
+    },
+    {
+      "id": 181,
+      "debtor_id": 6,
+      "amount": "13334.00",
+      "quantity": 1,
+      "description": "Flores dia mama",
+      "type": "debt",
+      "created_at": "2026-05-19T11:22:01.000Z"
+    },
+    {
+      "id": 182,
+      "debtor_id": 6,
+      "amount": "12900.00",
+      "quantity": 1,
+      "description": "Cervezas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:22:18.000Z"
+    },
+    {
+      "id": 183,
+      "debtor_id": 6,
+      "amount": "6850.00",
+      "quantity": 1,
+      "description": "Cancha futbol 5 torneo de invitacion",
+      "type": "debt",
+      "created_at": "2026-05-19T11:22:49.000Z"
+    },
+    {
+      "id": 184,
+      "debtor_id": 6,
+      "amount": "4000.00",
+      "quantity": 1,
+      "description": "Parqueadero futbol 5",
+      "type": "debt",
+      "created_at": "2026-05-19T11:23:07.000Z"
+    },
+    {
+      "id": 186,
+      "debtor_id": 6,
+      "amount": "6000.00",
+      "quantity": 1,
+      "description": "Abono cruce con comida, arepa y choirizo",
+      "type": "payment",
+      "created_at": "2026-05-19T11:23:56.000Z"
+    },
+    {
+      "id": 187,
+      "debtor_id": 6,
+      "amount": "19500.00",
+      "quantity": 1,
+      "description": "Cervezas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:24:09.000Z"
+    },
+    {
+      "id": 188,
+      "debtor_id": 6,
+      "amount": "1650.00",
+      "quantity": 1,
+      "description": "Agua con gas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:24:22.000Z"
+    },
+    {
+      "id": 189,
+      "debtor_id": 6,
+      "amount": "60240.00",
+      "quantity": 1,
+      "description": "Prestamo para joyas",
+      "type": "debt",
+      "created_at": "2026-05-19T11:26:58.000Z"
+    },
+    {
+      "id": 190,
+      "debtor_id": 6,
+      "amount": "20000.00",
+      "quantity": 1,
+      "description": "Prestamo que pidio para cafe",
+      "type": "debt",
+      "created_at": "2026-05-19T11:27:59.000Z"
+    },
+    {
+      "id": 191,
+      "debtor_id": 6,
+      "amount": "180720.00",
+      "quantity": 1,
+      "description": "Salon Comunal reunion politica",
+      "type": "debt",
+      "created_at": "2026-05-19T11:28:32.000Z"
+    },
+    {
+      "id": 221,
+      "debtor_id": 10,
+      "amount": "5100.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-05-20T11:48:43.000Z"
+    },
+    {
+      "id": 222,
+      "debtor_id": 12,
+      "amount": "23600.00",
+      "quantity": 1,
+      "description": "Hamburguesas Tattos",
+      "type": "debt",
+      "created_at": "2026-05-20T11:49:14.000Z"
+    },
+    {
+      "id": 223,
+      "debtor_id": 6,
+      "amount": "96203.00",
+      "quantity": 1,
+      "description": "Hamburguesas La Hamburgueseria Erika y Johan",
+      "type": "debt",
+      "created_at": "2026-05-20T11:50:34.000Z"
+    },
+    {
+      "id": 224,
+      "debtor_id": 6,
+      "amount": "5100.00",
+      "quantity": 3,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-05-20T11:50:49.000Z"
+    },
+    {
+      "id": 225,
+      "debtor_id": 7,
+      "amount": "89203.00",
+      "quantity": 1,
+      "description": "Hamburguesas La Hamburgueseria Luis y Mapi",
+      "type": "debt",
+      "created_at": "2026-05-20T11:51:46.000Z"
+    },
+    {
+      "id": 226,
+      "debtor_id": 7,
+      "amount": "5100.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-05-20T11:51:54.000Z"
+    },
+    {
+      "id": 244,
+      "debtor_id": 8,
+      "amount": "30000.00",
+      "quantity": 1,
+      "description": "Balde con trapero",
+      "type": "debt",
+      "created_at": "2026-05-21T05:55:09.000Z"
+    },
+    {
+      "id": 246,
+      "debtor_id": 8,
+      "amount": "30000.00",
+      "quantity": 1,
+      "description": "Pago el trapero",
+      "type": "payment",
+      "created_at": "2026-05-21T18:26:20.000Z"
+    },
+    {
+      "id": 248,
+      "debtor_id": 15,
+      "amount": "150000.00",
+      "quantity": 1,
+      "description": "Mama Mayo",
+      "type": "payment",
+      "created_at": "2026-05-21T18:31:23.000Z"
+    },
+    {
+      "id": 249,
+      "debtor_id": 10,
+      "amount": "21400.00",
+      "quantity": 1,
+      "description": "Pago la deuda",
+      "type": "payment",
+      "created_at": "2026-05-21T19:52:47.000Z"
+    },
+    {
+      "id": 257,
+      "debtor_id": 16,
+      "amount": "20500.00",
+      "quantity": 1,
+      "description": "Salón de onces",
+      "type": "payment",
+      "created_at": "2026-05-23T05:59:18.000Z"
+    },
+    {
+      "id": 268,
+      "debtor_id": 9,
+      "amount": "10700.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-05-25T00:20:34.000Z"
+    },
+    {
+      "id": 269,
+      "debtor_id": 37,
+      "amount": "29300.00",
+      "quantity": 1,
+      "description": "Regalos Baby Shower",
+      "type": "debt",
+      "created_at": "2026-05-25T00:21:04.000Z"
+    },
+    {
+      "id": 270,
+      "debtor_id": 37,
+      "amount": "29300.00",
+      "quantity": 1,
+      "description": "Pago de deuda",
+      "type": "payment",
+      "created_at": "2026-05-25T00:21:16.000Z"
+    },
+    {
+      "id": 271,
+      "debtor_id": 37,
+      "amount": "8000.00",
+      "quantity": 1,
+      "description": "Prestamo almuerzo",
+      "type": "debt",
+      "created_at": "2026-05-25T05:24:58.000Z"
+    },
+    {
+      "id": 272,
+      "debtor_id": 37,
+      "amount": "8000.00",
+      "quantity": 1,
+      "description": "Pago",
+      "type": "payment",
+      "created_at": "2026-05-25T06:14:55.000Z"
+    },
+    {
+      "id": 275,
+      "debtor_id": 7,
+      "amount": "29875.00",
+      "quantity": 1,
+      "description": "Antioqueño y jugo de naranaja",
+      "type": "debt",
+      "created_at": "2026-05-25T23:13:54.000Z"
+    },
+    {
+      "id": 276,
+      "debtor_id": 12,
+      "amount": "6500.00",
+      "quantity": 1,
+      "description": "Arepa y chorizo, media arepa con jamón y queso",
+      "type": "debt",
+      "created_at": "2026-05-27T07:32:00.000Z"
+    },
+    {
+      "id": 277,
+      "debtor_id": 6,
+      "amount": "15300.00",
+      "quantity": 1,
+      "description": "Pago Spotify ",
+      "type": "payment",
+      "created_at": "2026-05-27T07:34:13.000Z"
+    },
+    {
+      "id": 278,
+      "debtor_id": 15,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Erika Mayo",
+      "type": "payment",
+      "created_at": "2026-05-28T05:55:56.000Z"
+    },
+    {
+      "id": 280,
+      "debtor_id": 16,
+      "amount": "15000.00",
+      "quantity": 1,
+      "description": "Cancha Futbol 5",
+      "type": "payment",
+      "created_at": "2026-05-30T05:23:04.000Z"
+    },
+    {
+      "id": 281,
+      "debtor_id": 8,
+      "amount": "6500.00",
+      "quantity": 1,
+      "description": "Tamal",
+      "type": "debt",
+      "created_at": "2026-05-31T02:41:47.000Z"
+    },
+    {
+      "id": 282,
+      "debtor_id": 39,
+      "amount": "48000.00",
+      "quantity": 1,
+      "description": "Cervezas",
+      "type": "debt",
+      "created_at": "2026-06-02T02:11:20.000Z"
+    },
+    {
+      "id": 283,
+      "debtor_id": 39,
+      "amount": "3000.00",
+      "quantity": 3,
+      "description": "Cervezas",
+      "type": "debt",
+      "created_at": "2026-06-02T05:18:11.000Z"
+    },
+    {
+      "id": 284,
+      "debtor_id": 39,
+      "amount": "2800.00",
+      "quantity": 1,
+      "description": "Todo rico",
+      "type": "debt",
+      "created_at": "2026-06-02T05:18:20.000Z"
+    },
+    {
+      "id": 287,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Junio 2026",
+      "type": "payment",
+      "created_at": "2026-06-04T10:07:31.000Z"
+    },
+    {
+      "id": 288,
+      "debtor_id": 15,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Brayan Junio",
+      "type": "payment",
+      "created_at": "2026-06-04T10:26:21.000Z"
+    },
+    {
+      "id": 289,
+      "debtor_id": 16,
+      "amount": "22500.00",
+      "quantity": 1,
+      "description": "Salón de onces",
+      "type": "payment",
+      "created_at": "2026-06-06T05:01:51.000Z"
+    },
+    {
+      "id": 290,
+      "debtor_id": 16,
+      "amount": "65900.00",
+      "quantity": 1,
+      "description": "Pago toda la deuda",
+      "type": "payment",
+      "created_at": "2026-06-06T05:06:19.000Z"
+    },
+    {
+      "id": 292,
+      "debtor_id": 16,
+      "amount": "5300.00",
+      "quantity": 1,
+      "description": "Compra D1 La Vega",
+      "type": "debt",
+      "created_at": "2026-06-08T03:40:14.000Z"
+    },
+    {
+      "id": 293,
+      "debtor_id": 39,
+      "amount": "1500.00",
+      "quantity": 1,
+      "description": "Trocipollo",
+      "type": "debt",
+      "created_at": "2026-06-08T06:33:10.000Z"
+    },
+    {
+      "id": 294,
+      "debtor_id": 39,
+      "amount": "61300.00",
+      "quantity": 1,
+      "description": "Pago de la deuda",
+      "type": "payment",
+      "created_at": "2026-06-08T06:39:04.000Z"
+    },
+    {
+      "id": 295,
+      "debtor_id": 14,
+      "amount": "176300.00",
+      "quantity": 1,
+      "description": "Pago Deuda",
+      "type": "payment",
+      "created_at": "2026-06-08T07:33:33.000Z"
+    },
+    {
+      "id": 296,
+      "debtor_id": 13,
+      "amount": "30830.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-06-08T07:36:43.000Z"
+    },
+    {
+      "id": 297,
+      "debtor_id": 12,
+      "amount": "89100.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-06-08T07:39:43.000Z"
+    },
+    {
+      "id": 298,
+      "debtor_id": 12,
+      "amount": "8100.00",
+      "quantity": 1,
+      "description": "Café en Juan valdez",
+      "type": "debt",
+      "created_at": "2026-06-09T06:12:17.000Z"
+    },
+    {
+      "id": 299,
+      "debtor_id": 13,
+      "amount": "16700.00",
+      "quantity": 1,
+      "description": "Album mundial",
+      "type": "debt",
+      "created_at": "2026-06-09T06:12:44.000Z"
+    },
+    {
+      "id": 300,
+      "debtor_id": 12,
+      "amount": "8100.00",
+      "quantity": 1,
+      "description": "Pago cafe",
+      "type": "payment",
+      "created_at": "2026-06-09T06:50:32.000Z"
+    },
+    {
+      "id": 301,
+      "debtor_id": 15,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Johan Junio",
+      "type": "payment",
+      "created_at": "2026-06-11T21:20:09.000Z"
+    },
+    {
+      "id": 302,
+      "debtor_id": 13,
+      "amount": "15000.00",
+      "quantity": 1,
+      "description": "Pizza Little Cessar",
+      "type": "debt",
+      "created_at": "2026-06-12T09:23:49.000Z"
+    },
+    {
+      "id": 303,
+      "debtor_id": 39,
+      "amount": "39000.00",
+      "quantity": 1,
+      "description": "Cervezas y doritos",
+      "type": "debt",
+      "created_at": "2026-06-14T04:59:55.000Z"
+    },
+    {
+      "id": 304,
+      "debtor_id": 41,
+      "amount": "26250.00",
+      "quantity": 1,
+      "description": "Cervezas NU",
+      "type": "debt",
+      "created_at": "2026-06-15T06:40:27.000Z"
+    },
+    {
+      "id": 305,
+      "debtor_id": 12,
+      "amount": "13400.00",
+      "quantity": 1,
+      "description": "Hamburguesa Sencilla Jacks",
+      "type": "debt",
+      "created_at": "2026-06-15T06:40:44.000Z"
+    },
+    {
+      "id": 306,
+      "debtor_id": 12,
+      "amount": "2800.00",
+      "quantity": 1,
+      "description": "Empanada",
+      "type": "debt",
+      "created_at": "2026-06-15T06:40:53.000Z"
+    },
+    {
+      "id": 307,
+      "debtor_id": 12,
+      "amount": "6500.00",
+      "quantity": 1,
+      "description": "Tamal",
+      "type": "debt",
+      "created_at": "2026-06-16T00:56:57.000Z"
+    },
+    {
+      "id": 308,
+      "debtor_id": 12,
+      "amount": "14200.00",
+      "quantity": 1,
+      "description": "Pollo Broster Ferias",
+      "type": "debt",
+      "created_at": "2026-06-16T01:22:34.000Z"
+    },
+    {
+      "id": 309,
+      "debtor_id": 13,
+      "amount": "1000.00",
+      "quantity": 1,
+      "description": "Pollo Broster ferias",
+      "type": "debt",
+      "created_at": "2026-06-16T01:26:40.000Z"
+    },
+    {
+      "id": 310,
+      "debtor_id": 41,
+      "amount": "10000.00",
+      "quantity": 1,
+      "description": "Apuesta Betplay 1",
+      "type": "debt",
+      "created_at": "2026-06-16T05:02:10.000Z"
+    },
+    {
+      "id": 311,
+      "debtor_id": 41,
+      "amount": "100000.00",
+      "quantity": 1,
+      "description": "Apuesta Betplay 2",
+      "type": "debt",
+      "created_at": "2026-06-16T05:02:17.000Z"
+    },
+    {
+      "id": 312,
+      "debtor_id": 9,
+      "amount": "301200.00",
+      "quantity": 1,
+      "description": "Prestamo desde mesitas",
+      "type": "debt",
+      "created_at": "2026-06-16T06:25:17.000Z"
+    },
+    {
+      "id": 313,
+      "debtor_id": 41,
+      "amount": "400.00",
+      "quantity": 1,
+      "description": "4x1000",
+      "type": "debt",
+      "created_at": "2026-06-16T06:26:58.000Z"
+    },
+    {
+      "id": 314,
+      "debtor_id": 41,
+      "amount": "50200.00",
+      "quantity": 1,
+      "description": "Betplay 3",
+      "type": "debt",
+      "created_at": "2026-06-17T00:18:14.000Z"
+    },
+    {
+      "id": 316,
+      "debtor_id": 6,
+      "amount": "5100.00",
+      "quantity": 3,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-06-17T02:41:11.000Z"
+    },
+    {
+      "id": 317,
+      "debtor_id": 10,
+      "amount": "5100.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-06-17T02:41:59.000Z"
+    },
+    {
+      "id": 318,
+      "debtor_id": 7,
+      "amount": "5100.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-06-17T02:42:25.000Z"
+    },
+    {
+      "id": 319,
+      "debtor_id": 42,
+      "amount": "60000.00",
+      "quantity": 1,
+      "description": "Cancha de tenis",
+      "type": "debt",
+      "created_at": "2026-06-17T03:54:46.000Z"
+    },
+    {
+      "id": 320,
+      "debtor_id": 12,
+      "amount": "36900.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-06-17T07:50:11.000Z"
+    },
+    {
+      "id": 321,
+      "debtor_id": 40,
+      "amount": "13700.00",
+      "quantity": 1,
+      "description": "Hamburguesa San Juan",
+      "type": "debt",
+      "created_at": "2026-06-17T07:51:19.000Z"
+    },
+    {
+      "id": 323,
+      "debtor_id": 39,
+      "amount": "3000.00",
+      "quantity": 5,
+      "description": "Cervezas partido Colombia ",
+      "type": "debt",
+      "created_at": "2026-06-18T09:08:12.000Z"
+    },
+    {
+      "id": 325,
+      "debtor_id": 16,
+      "amount": "7600.00",
+      "quantity": 1,
+      "description": "Helados",
+      "type": "debt",
+      "created_at": "2026-06-19T23:20:23.000Z"
+    },
+    {
+      "id": 326,
+      "debtor_id": 39,
+      "amount": "2800.00",
+      "quantity": 1,
+      "description": "Todo rico",
+      "type": "debt",
+      "created_at": "2026-06-20T02:08:32.000Z"
+    },
+    {
+      "id": 327,
+      "debtor_id": 39,
+      "amount": "800.00",
+      "quantity": 1,
+      "description": "Abono vueltas de hamburguesas en la serafina",
+      "type": "payment",
+      "created_at": "2026-06-20T06:37:54.000Z"
+    },
+    {
+      "id": 329,
+      "debtor_id": 15,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Erika Junio",
+      "type": "payment",
+      "created_at": "2026-06-21T03:56:14.000Z"
+    },
+    {
+      "id": 330,
+      "debtor_id": 15,
+      "amount": "150000.00",
+      "quantity": 1,
+      "description": "Mama Junio",
+      "type": "payment",
+      "created_at": "2026-06-21T03:56:22.000Z"
+    },
+    {
+      "id": 331,
+      "debtor_id": 6,
+      "amount": "15300.00",
+      "quantity": 1,
+      "description": "Pago Spotify",
+      "type": "payment",
+      "created_at": "2026-06-21T04:03:51.000Z"
+    },
+    {
+      "id": 332,
+      "debtor_id": 41,
+      "amount": "15300.00",
+      "quantity": 1,
+      "description": "Abono",
+      "type": "payment",
+      "created_at": "2026-06-21T04:45:47.000Z"
+    },
+    {
+      "id": 334,
+      "debtor_id": 41,
+      "amount": "38000.00",
+      "quantity": 1,
+      "description": "Abono ",
+      "type": "payment",
+      "created_at": "2026-06-23T07:50:35.000Z"
+    },
+    {
+      "id": 335,
+      "debtor_id": 14,
+      "amount": "3000.00",
+      "quantity": 1,
+      "description": "Dedo de Jamon",
+      "type": "debt",
+      "created_at": "2026-06-24T05:41:15.000Z"
+    },
+    {
+      "id": 336,
+      "debtor_id": 14,
+      "amount": "50000.00",
+      "quantity": 1,
+      "description": "Arroz día padre",
+      "type": "debt",
+      "created_at": "2026-06-24T05:41:29.000Z"
+    },
+    {
+      "id": 337,
+      "debtor_id": 14,
+      "amount": "34000.00",
+      "quantity": 1,
+      "description": "Pizzas Little Cessar ",
+      "type": "debt",
+      "created_at": "2026-06-24T05:41:40.000Z"
+    },
+    {
+      "id": 342,
+      "debtor_id": 15,
+      "amount": "250000.00",
+      "quantity": 1,
+      "description": "Papa junio",
+      "type": "payment",
+      "created_at": "2026-06-24T08:07:26.000Z"
+    },
+    {
+      "id": 343,
+      "debtor_id": 9,
+      "amount": "301200.00",
+      "quantity": 1,
+      "description": "Pago prestamo",
+      "type": "payment",
+      "created_at": "2026-06-26T05:02:43.000Z"
+    },
+    {
+      "id": 346,
+      "debtor_id": 39,
+      "amount": "36000.00",
+      "quantity": 1,
+      "description": "Cervezas ",
+      "type": "debt",
+      "created_at": "2026-06-27T09:43:37.000Z"
+    },
+    {
+      "id": 347,
+      "debtor_id": 38,
+      "amount": "16000.00",
+      "quantity": 1,
+      "description": "Pelicula",
+      "type": "debt",
+      "created_at": "2026-06-29T02:58:15.000Z"
+    },
+    {
+      "id": 348,
+      "debtor_id": 38,
+      "amount": "8900.00",
+      "quantity": 1,
+      "description": "Cafe",
+      "type": "debt",
+      "created_at": "2026-06-29T02:58:20.000Z"
+    },
+    {
+      "id": 349,
+      "debtor_id": 12,
+      "amount": "10600.00",
+      "quantity": 1,
+      "description": "Cine",
+      "type": "debt",
+      "created_at": "2026-06-29T19:50:53.000Z"
+    },
+    {
+      "id": 350,
+      "debtor_id": 8,
+      "amount": "14250.00",
+      "quantity": 1,
+      "description": "Palomitas cine",
+      "type": "debt",
+      "created_at": "2026-06-30T00:04:42.000Z"
+    },
+    {
+      "id": 351,
+      "debtor_id": 8,
+      "amount": "20750.00",
+      "quantity": 1,
+      "description": "Cruce de cuentas",
+      "type": "payment",
+      "created_at": "2026-06-30T00:10:01.000Z"
+    },
+    {
+      "id": 353,
+      "debtor_id": 14,
+      "amount": "20750.00",
+      "quantity": 1,
+      "description": "Cruce cuentas",
+      "type": "payment",
+      "created_at": "2026-06-30T00:10:37.000Z"
+    },
+    {
+      "id": 358,
+      "debtor_id": 12,
+      "amount": "4000.00",
+      "quantity": 1,
+      "description": "Cerveza",
+      "type": "debt",
+      "created_at": "2026-06-30T04:33:27.000Z"
+    },
+    {
+      "id": 359,
+      "debtor_id": 12,
+      "amount": "14000.00",
+      "quantity": 1,
+      "description": "Pizzas",
+      "type": "debt",
+      "created_at": "2026-06-30T06:26:53.000Z"
+    },
+    {
+      "id": 360,
+      "debtor_id": 8,
+      "amount": "21250.00",
+      "quantity": 1,
+      "description": "Baño zoe",
+      "type": "debt",
+      "created_at": "2026-07-01T01:58:55.000Z"
+    },
+    {
+      "id": 361,
+      "debtor_id": 6,
+      "amount": "21250.00",
+      "quantity": 1,
+      "description": "Baño zoe",
+      "type": "debt",
+      "created_at": "2026-07-01T01:59:21.000Z"
+    },
+    {
+      "id": 362,
+      "debtor_id": 7,
+      "amount": "21250.00",
+      "quantity": 1,
+      "description": "Baño zoe",
+      "type": "debt",
+      "created_at": "2026-07-01T01:59:37.000Z"
+    },
+    {
+      "id": 364,
+      "debtor_id": 40,
+      "amount": "10000.00",
+      "quantity": 1,
+      "description": "Hamburguesa KFC",
+      "type": "debt",
+      "created_at": "2026-07-01T02:01:58.000Z"
+    },
+    {
+      "id": 365,
+      "debtor_id": 14,
+      "amount": "21250.00",
+      "quantity": 1,
+      "description": "Cruce baño zoe",
+      "type": "payment",
+      "created_at": "2026-07-01T04:56:26.000Z"
+    },
+    {
+      "id": 366,
+      "debtor_id": 8,
+      "amount": "21250.00",
+      "quantity": 1,
+      "description": "Cruce de cuentas",
+      "type": "payment",
+      "created_at": "2026-07-01T04:56:42.000Z"
+    },
+    {
+      "id": 367,
+      "debtor_id": 39,
+      "amount": "92000.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-07-01T05:00:07.000Z"
+    },
+    {
+      "id": 368,
+      "debtor_id": 40,
+      "amount": "23700.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-07-01T05:07:18.000Z"
+    },
+    {
+      "id": 369,
+      "debtor_id": 12,
+      "amount": "28600.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-07-01T05:15:19.000Z"
+    },
+    {
+      "id": 370,
+      "debtor_id": 41,
+      "amount": "133550.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-07-01T05:19:21.000Z"
+    },
+    {
+      "id": 371,
+      "debtor_id": 38,
+      "amount": "12900.00",
+      "quantity": 1,
+      "description": "Cruce de cuentas",
+      "type": "payment",
+      "created_at": "2026-07-01T05:33:47.000Z"
+    },
+    {
+      "id": 372,
+      "debtor_id": 16,
+      "amount": "12900.00",
+      "quantity": 1,
+      "description": "Cruce de cuentas",
+      "type": "payment",
+      "created_at": "2026-07-01T05:34:02.000Z"
+    },
+    {
+      "id": 373,
+      "debtor_id": 38,
+      "amount": "12000.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-07-01T05:59:55.000Z"
+    },
+    {
+      "id": 374,
+      "debtor_id": 7,
+      "amount": "32700.00",
+      "quantity": 1,
+      "description": "Cruce de cuentas",
+      "type": "payment",
+      "created_at": "2026-07-01T06:10:44.000Z"
+    },
+    {
+      "id": 375,
+      "debtor_id": 13,
+      "amount": "32700.00",
+      "quantity": 1,
+      "description": "Cruce de cuentas",
+      "type": "payment",
+      "created_at": "2026-07-01T06:10:54.000Z"
+    },
+    {
+      "id": 376,
+      "debtor_id": 14,
+      "amount": "45000.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-07-01T06:44:13.000Z"
+    },
+    {
+      "id": 377,
+      "debtor_id": 42,
+      "amount": "60000.00",
+      "quantity": 1,
+      "description": "Pago en abono viaje",
+      "type": "payment",
+      "created_at": "2026-07-01T07:51:46.000Z"
+    },
+    {
+      "id": 378,
+      "debtor_id": 15,
+      "amount": "60000.00",
+      "quantity": 1,
+      "description": "Erika Julio (Abono)",
+      "type": "payment",
+      "created_at": "2026-07-01T07:54:03.000Z"
+    },
+    {
+      "id": 386,
+      "debtor_id": 16,
+      "amount": "7600.00",
+      "quantity": 1,
+      "description": "Helados Oxxo",
+      "type": "debt",
+      "created_at": "2026-07-03T23:11:29.000Z"
+    },
+    {
+      "id": 387,
+      "debtor_id": 16,
+      "amount": "5500.00",
+      "quantity": 1,
+      "description": "Cafe",
+      "type": "debt",
+      "created_at": "2026-07-04T04:39:06.000Z"
+    },
+    {
+      "id": 388,
+      "debtor_id": 16,
+      "amount": "13100.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-07-04T05:57:17.000Z"
+    },
+    {
+      "id": 389,
+      "debtor_id": 39,
+      "amount": "9000.00",
+      "quantity": 1,
+      "description": "Cervezas",
+      "type": "debt",
+      "created_at": "2026-07-04T08:49:45.000Z"
+    },
+    {
+      "id": 390,
+      "debtor_id": 11,
+      "amount": "114000.00",
+      "quantity": 1,
+      "description": "Julio 2026",
+      "type": "payment",
+      "created_at": "2026-07-05T23:01:06.000Z"
+    },
+    {
+      "id": 391,
+      "debtor_id": 15,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Brayan Julio",
+      "type": "payment",
+      "created_at": "2026-07-06T03:59:04.000Z"
+    },
+    {
+      "id": 392,
+      "debtor_id": 15,
+      "amount": "150000.00",
+      "quantity": 1,
+      "description": "Mama Julio",
+      "type": "payment",
+      "created_at": "2026-07-07T02:22:24.000Z"
+    },
+    {
+      "id": 393,
+      "debtor_id": 7,
+      "amount": "2452804.00",
+      "quantity": 1,
+      "description": "Pago de deuda",
+      "type": "payment",
+      "created_at": "2026-07-07T19:51:47.000Z"
+    },
+    {
+      "id": 394,
+      "debtor_id": 15,
+      "amount": "200000.00",
+      "quantity": 1,
+      "description": "Johan Julio",
+      "type": "payment",
+      "created_at": "2026-07-10T21:16:06.000Z"
+    },
+    {
+      "id": 396,
+      "debtor_id": 38,
+      "amount": "26000.00",
+      "quantity": 1,
+      "description": "Cancha Lucho y Yo",
+      "type": "debt",
+      "created_at": "2026-07-11T06:25:28.000Z"
+    },
+    {
+      "id": 397,
+      "debtor_id": 7,
+      "amount": "13000.00",
+      "quantity": 1,
+      "description": "Cancha Futbol 5",
+      "type": "debt",
+      "created_at": "2026-07-11T06:26:19.000Z"
+    },
+    {
+      "id": 399,
+      "debtor_id": 7,
+      "amount": "24375.00",
+      "quantity": 2,
+      "description": "Salchipapa Luis y Mapi",
+      "type": "debt",
+      "created_at": "2026-07-12T03:10:55.000Z"
+    },
+    {
+      "id": 400,
+      "debtor_id": 39,
+      "amount": "9000.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-07-15T02:34:55.000Z"
+    },
+    {
+      "id": 401,
+      "debtor_id": 38,
+      "amount": "26000.00",
+      "quantity": 1,
+      "description": "Pago deuda",
+      "type": "payment",
+      "created_at": "2026-07-15T02:37:28.000Z"
+    },
+    {
+      "id": 402,
+      "debtor_id": 15,
+      "amount": "1204800.00",
+      "quantity": 1,
+      "description": "Pago de Reserva",
+      "type": "debt",
+      "created_at": "2026-07-15T09:24:04.000Z"
+    },
+    {
+      "id": 403,
+      "debtor_id": 7,
+      "amount": "24000.00",
+      "quantity": 1,
+      "description": "María pagó la salchicha de ella",
+      "type": "payment",
+      "created_at": "2026-07-15T20:08:30.000Z"
+    },
+    {
+      "id": 404,
+      "debtor_id": 15,
+      "amount": "150000.00",
+      "quantity": 1,
+      "description": "María Pagó Reserva",
+      "type": "payment",
+      "created_at": "2026-07-15T20:09:42.000Z"
+    },
+    {
+      "id": 406,
+      "debtor_id": 15,
+      "amount": "150000.00",
+      "quantity": 1,
+      "description": "Luis Pagó Reserva",
+      "type": "payment",
+      "created_at": "2026-07-15T20:10:25.000Z"
+    },
+    {
+      "id": 407,
+      "debtor_id": 15,
+      "amount": "125000.00",
+      "quantity": 1,
+      "description": "Papa Julio (Abono)",
+      "type": "payment",
+      "created_at": "2026-07-16T04:28:13.000Z"
+    },
+    {
+      "id": 408,
+      "debtor_id": 15,
+      "amount": "125000.00",
+      "quantity": 1,
+      "description": "Papa Julio (Abono)",
+      "type": "payment",
+      "created_at": "2026-07-16T18:38:47.000Z"
+    },
+    {
+      "id": 409,
+      "debtor_id": 15,
+      "amount": "41603.00",
+      "quantity": 1,
+      "description": "Intereses Generados Hasta la Fecha",
+      "type": "payment",
+      "created_at": "2026-07-16T19:39:57.000Z"
+    },
+    {
+      "id": 410,
+      "debtor_id": 10,
+      "amount": "5100.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-07-16T20:42:50.000Z"
+    },
+    {
+      "id": 411,
+      "debtor_id": 7,
+      "amount": "5100.00",
+      "quantity": 1,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-07-16T20:43:53.000Z"
+    },
+    {
+      "id": 412,
+      "debtor_id": 6,
+      "amount": "5100.00",
+      "quantity": 3,
+      "description": "Spotify",
+      "type": "debt",
+      "created_at": "2026-07-16T20:44:27.000Z"
+    }
+  ]
+}

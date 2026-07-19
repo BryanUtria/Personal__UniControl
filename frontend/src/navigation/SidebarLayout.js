@@ -237,80 +237,56 @@ export default function SidebarLayout({
         {/* Sidebar Footer */}
         <View style={[
           styles.sidebarFooter,
-          { borderTopColor: isDarkMode ? '#2D2D2D' : '#E5E7EB' },
+          { borderTopColor: theme.border },
           isSidebarCollapsed && { alignItems: 'center' }
         ]}>
-          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 10, marginBottom: 8 }}>
-            {/* Settings */}
+          {/* Settings */}
+          <Button
+            onPress={() => handleNavigate('Settings')}
+            onMouseEnter={() => setHoveredItem('settings')}
+            onMouseLeave={() => setHoveredItem(null)}
+            variant="secondary"
+            backgroundColor={activeRoute === 'Settings' ? theme.accent + '15' : "transparent"}
+            hoverBackgroundColor={activeRoute === 'Settings' ? theme.accent + '20' : (isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)')}
+            style={[
+              styles.footerBtn,
+              { borderWidth: 0, height: 42, marginBottom: 4 },
+              activeRoute === 'Settings' ? { borderColor: theme.accent } : { borderColor: 'transparent' },
+              isSidebarCollapsed ? { justifyContent: 'center', paddingHorizontal: 0, width: '100%', borderLeftWidth: 0 } : { justifyContent: 'flex-start' }
+            ]}
+            icon={<Ionicons name={activeRoute === 'Settings' ? 'settings' : 'settings-outline'} size={20} color={activeRoute === 'Settings' ? theme.accent : theme.textSecondary} />}
+          >
             {!isSidebarCollapsed && (
-              <Button
-                onPress={() => handleNavigate('Settings')}
-                onMouseEnter={() => setHoveredItem('settings')}
-                onMouseLeave={() => setHoveredItem(null)}
-                variant="secondary"
-                backgroundColor="transparent"
-                hoverBackgroundColor={isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'}
-                style={[
-                  styles.footerBtn,
-                  { borderWidth: 0, height: 38, width: 38, justifyContent: 'center', paddingHorizontal: 0 }
-                ]}
-                icon={<Ionicons name="settings-outline" size={20} color={theme.textSecondary} />}
-              >
-                {queueCount > 0 && (
-                  <View style={[styles.miniBadge, { backgroundColor: theme.danger, top: 4, right: 4 }]} />
-                )}
-                {hoveredItem === 'settings' && Platform.OS === 'web' && (
-                  <View style={[styles.tooltip, isDarkMode ? { backgroundColor: '#2D2D2D' } : { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }, { top: -35, left: '50%', transform: [{ translateX: -50 }, { translateY: 0 }] }]} pointerEvents="none">
-                    <Text style={[styles.tooltipText, { color: isDarkMode ? '#FFFFFF' : '#1A1A24' }]}>Ajustes</Text>
-                  </View>
-                )}
-              </Button>
+              <Text style={[
+                styles.footerBtnText,
+                { color: activeRoute === 'Settings' ? theme.text : theme.textSecondary },
+                activeRoute === 'Settings' && { fontWeight: '700' }
+              ]}>
+                Configuración
+              </Text>
             )}
-
-            {/* Suggestions */}
-            {!isSidebarCollapsed && (
-              <Button
-                onPress={() => handleNavigate('Suggestions')}
-                onMouseEnter={() => setHoveredItem('suggestions')}
-                onMouseLeave={() => setHoveredItem(null)}
-                variant="secondary"
-                backgroundColor="transparent"
-                hoverBackgroundColor={isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'}
-                style={[
-                  styles.footerBtn,
-                  { borderWidth: 0, height: 38, width: 38, justifyContent: 'center', paddingHorizontal: 0 }
-                ]}
-                icon={<Ionicons name="mail-outline" size={20} color={theme.textSecondary} />}
-              >
-                {hoveredItem === 'suggestions' && Platform.OS === 'web' && (
-                  <View style={[styles.tooltip, isDarkMode ? { backgroundColor: '#2D2D2D' } : { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }, { top: -35, left: '50%', transform: [{ translateX: -50 }, { translateY: 0 }] }]} pointerEvents="none">
-                    <Text style={[styles.tooltipText, { color: isDarkMode ? '#FFFFFF' : '#1A1A24' }]}>Sugerencias</Text>
-                  </View>
-                )}
-              </Button>
+            {!isSidebarCollapsed && queueCount > 0 && (
+              <View style={[styles.badge, { backgroundColor: theme.danger, marginLeft: 'auto' }]}>
+                <Text style={styles.badgeText}>{queueCount}</Text>
+              </View>
             )}
-
-            {/* Theme */}
-            <Button
-              onPress={toggleTheme}
-              onMouseEnter={() => setHoveredItem('theme')}
-              onMouseLeave={() => setHoveredItem(null)}
-              variant="secondary"
-              backgroundColor="transparent"
-              hoverBackgroundColor={isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)'}
-              style={[
-                styles.footerBtn,
-                { borderWidth: 0, height: 38, width: 38, justifyContent: 'center', paddingHorizontal: 0 }
-              ]}
-              icon={<Ionicons name={isDarkMode ? 'sunny-outline' : 'moon-outline'} size={20} color={theme.textSecondary} />}
-            >
-              {hoveredItem === 'theme' && Platform.OS === 'web' && (
-                <View style={[styles.tooltip, isDarkMode ? { backgroundColor: '#2D2D2D' } : { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }, { top: -35, left: '50%', transform: [{ translateX: -50 }, { translateY: 0 }] }]} pointerEvents="none">
-                  <Text style={[styles.tooltipText, { color: isDarkMode ? '#FFFFFF' : '#1A1A24' }]}>Tema</Text>
-                </View>
-              )}
-            </Button>
-          </View>
+            {isSidebarCollapsed && queueCount > 0 && (
+              <View style={[styles.miniBadge, { backgroundColor: theme.danger, top: 4, right: 4 }]} />
+            )}
+            {isSidebarCollapsed && hoveredItem === 'settings' && Platform.OS === 'web' && (
+              <View
+                style={[
+                  styles.tooltip,
+                  isDarkMode
+                    ? { backgroundColor: '#2D2D2D' }
+                    : { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }
+                ]}
+                pointerEvents="none"
+              >
+                <Text style={[styles.tooltipText, { color: isDarkMode ? '#FFFFFF' : '#1A1A24' }]}>Configuración</Text>
+              </View>
+            )}
+          </Button>
 
           <Button
             onPress={logout}
@@ -357,7 +333,7 @@ export default function SidebarLayout({
         {!isMobile && (
           <View style={[
             styles.desktopSidebar,
-            { borderRightColor: isDarkMode ? '#2D2D2D' : '#E5E7EB' },
+            { borderRightColor: theme.border },
             isSidebarCollapsed ? { width: 70 } : { width: 230 }
           ]}>
             {renderSidebarContent()}
@@ -367,7 +343,7 @@ export default function SidebarLayout({
         {/* CONTENEDOR DE CONTENIDO PRINCIPAL */}
         <View style={styles.contentContainer}>
           {/* HEADER PRINCIPAL */}
-          <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: isDarkMode ? '#2D2D2D' : '#E5E7EB', paddingHorizontal: isMobile ? 10 : 16 }]}>
+          <View style={[styles.header, { backgroundColor: theme.card, borderBottomColor: theme.border, paddingHorizontal: isMobile ? 10 : 16 }]}>
             <View style={styles.headerLeft}>
               {onBackPress ? (
                 <Button

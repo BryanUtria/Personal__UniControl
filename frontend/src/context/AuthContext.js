@@ -43,6 +43,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const loginWithGoogle = async (idToken) => {
+    try {
+      const response = await fetch(`${API_URL}/auth/google`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Error con Google Sign-In');
+      }
+      await AsyncStorage.setItem('@unicontrol_user', JSON.stringify(data));
+      setUser(data);
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
   const sendVerificationCode = async (email, username) => {
     try {
       const response = await fetch(`${API_URL}/auth/send-code`, {
@@ -116,7 +135,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, sendVerificationCode, register, updateProfile, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, loginWithGoogle, sendVerificationCode, register, updateProfile, logout }}>
       {children}
     </AuthContext.Provider>
   );

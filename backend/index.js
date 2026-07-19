@@ -12,8 +12,8 @@ app.use(express.json());
 app.use(morgan('dev')); // Logger HTTP para ver peticiones en consola
 
 app.get('/api/version', (req, res) => {
-    res.json({ 
-        version: process.env.version || '1.0.0',
+    res.json({
+        version: process.env.VERSION || '1.0.0',
         apkUrl: process.env.APK_URL || 'https://github.com/BryanUtria/Personal__UniControl/releases/download/v1.0.3/Unicontrol.apk',
         webUrl: process.env.WEB_URL || 'https://unicontrol.onrender.com/'
     });

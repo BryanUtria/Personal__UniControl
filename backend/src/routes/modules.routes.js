@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../../db');
-const { MercadoPagoConfig, Preference } = require('mercadopago');
+const { MercadoPagoConfig, Preference, PreApproval } = require('mercadopago');
 const mpClient = new MercadoPagoConfig({ accessToken: process.env.MP_ACCESS_TOKEN || 'TEST-12345' });
 // --- ENDPOINTS DE SUSCRIPCIONES Y MÓDULOS ---
 router.get('/modules', async (req, res) => {
@@ -39,46 +39,39 @@ router.get('/modules', async (req, res) => {
 
 router.post('/subscriptions/checkout', async (req, res) => {
     const userId = req.headers['x-user-id'];
-    const { module_key } = req.body;
+    const { module_key, frequency = 'monthly' } = req.body;
     if (!userId || !module_key) return res.status(400).json({ error: 'Faltan datos.' });
 
     try {
         // Verificar si el usuario ya tiene la fila, si no, crearla
         await db.query('INSERT IGNORE INTO user_subscriptions (user_id, module_key, status) VALUES (?, ?, ?)', [userId, module_key, 'pending']);
         
-        const modInfo = await db.query('SELECT name, base_price_cop FROM app_modules WHERE module_key = ?', [module_key]);
+        const modInfo = await db.query('SELECT name, base_price_cop, annual_price_cop FROM app_modules WHERE module_key = ?', [module_key]);
         const subInfo = await db.query('SELECT custom_price_cop FROM user_subscriptions WHERE user_id = ? AND module_key = ?', [userId, module_key]);
         const user = await db.query('SELECT email FROM users WHERE id = ?', [userId]);
 
         if (modInfo.length === 0) return res.status(404).json({ error: 'Módulo no encontrado.' });
         
-        let price = parseFloat(modInfo[0].base_price_cop);
-        if (subInfo.length > 0 && subInfo[0].custom_price_cop !== null) {
+        let price = parseFloat(frequency === 'annual' ? modInfo[0].annual_price_cop : modInfo[0].base_price_cop);
+        // Descuentos custom solo aplican al plan base por ahora para evitar lio
+        if (frequency === 'monthly' && subInfo.length > 0 && subInfo[0].custom_price_cop !== null) {
             price = parseFloat(subInfo[0].custom_price_cop);
         }
 
-        const preference = new Preference(mpClient);
-        const response = await preference.create({
+        const preApproval = new PreApproval(mpClient);
+        const response = await preApproval.create({
             body: {
-                items: [
-                    {
-                        id: module_key,
-                        title: `Suscripción 1 Mes - ${modInfo[0].name}`,
-                        quantity: 1,
-                        unit_price: price,
-                        currency_id: 'COP'
-                    }
-                ],
-                payer: {
-                    email: user[0]?.email || 'test@test.com'
+                back_url: 'https://unicontrol.app/success',
+                reason: `Suscripción ${frequency === 'annual' ? 'Anual' : 'Mensual'} - ${modInfo[0].name}`,
+                auto_recurring: {
+                    frequency: 1,
+                    frequency_type: frequency === 'annual' ? 'years' : 'months',
+                    transaction_amount: price,
+                    currency_id: 'COP'
                 },
-                external_reference: `${userId}_${module_key}`, // Para saber quién pagó en el webhook
-                back_urls: {
-                    success: 'https://unicontrol.app/success', // placeholder
-                    failure: 'https://unicontrol.app/failure',
-                    pending: 'https://unicontrol.app/pending'
-                },
-                auto_return: 'approved'
+                payer_email: user[0]?.email || 'test@test.com',
+                external_reference: `${userId}_${module_key}_${frequency}`,
+                status: 'pending'
             }
         });
         
@@ -92,29 +85,26 @@ router.post('/subscriptions/checkout', async (req, res) => {
 router.post('/subscriptions/webhook', async (req, res) => {
     const { type, data } = req.body;
     
-    // Simplificación de webhook para Preference payments de MP
-    if (type === 'payment' && data && data.id) {
+    // Webhook para Preapproval (Suscripciones)
+    if (type === 'subscription_preapproval' && data && data.id) {
         try {
-            // Aquí tendrías que consultar el payment API de MP usando el ID para obtener la info
-            // Por simplicidad, simularemos que external_reference viene en el pago y activamos
-            // En un caso real harías fetch al Payment API usando mpClient
-            
             const fetch = require('node-fetch');
-            const paymentRes = await fetch(`https://api.mercadopago.com/v1/payments/${data.id}`, {
+            const subRes = await fetch(`https://api.mercadopago.com/preapproval/${data.id}`, {
                 headers: { 'Authorization': `Bearer ${process.env.MP_ACCESS_TOKEN || 'TEST-12345'}` }
             });
-            const payment = await paymentRes.json();
+            const subscription = await subRes.json();
             
-            if (payment.status === 'approved' && payment.external_reference) {
-                const [userId, module_key] = payment.external_reference.split('_');
-                // Agregar 30 días a expires_at
+            if (subscription.status === 'authorized' && subscription.external_reference) {
+                const [userId, module_key, frequency] = subscription.external_reference.split('_');
+                // Agregar 30 días o 1 año a expires_at
+                const interval = frequency === 'annual' ? '1 YEAR' : '30 DAY';
                 await db.query(`
                     UPDATE user_subscriptions 
                     SET status = 'active', 
-                        expires_at = DATE_ADD(COALESCE(expires_at, NOW()), INTERVAL 30 DAY)
+                        expires_at = DATE_ADD(COALESCE(expires_at, NOW()), INTERVAL ${interval})
                     WHERE user_id = ? AND module_key = ?
                 `, [userId, module_key]);
-                console.log(`Pago aprobado para usuario ${userId} módulo ${module_key}`);
+                console.log(`Suscripción aprobada para usuario ${userId} módulo ${module_key} (${frequency})`);
             }
         } catch (err) {
             console.error('Webhook error', err);

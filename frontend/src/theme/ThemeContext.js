@@ -1,23 +1,34 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { darkTheme, lightTheme } from './colors';
+import { predefinedThemes, lightTheme } from './colors';
 import { useModules } from '../context/ModuleContext';
 
 const ThemeContext = createContext();
 
 export const ThemeProvider = ({ children }) => {
   const { moduleSettings, saveModuleSettings } = useModules();
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  
+  // themeConfig: { mode: 'light', customColors: null }
+  const [themeConfig, setThemeConfig] = useState({ mode: 'light', customColors: null });
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
     try {
-      if (moduleSettings.theme_is_dark !== undefined) {
-        setIsDarkMode(moduleSettings.theme_is_dark === true || moduleSettings.theme_is_dark === 'true');
+      if (moduleSettings.themeConfig !== undefined) {
+        setThemeConfig(
+          typeof moduleSettings.themeConfig === 'string' 
+            ? JSON.parse(moduleSettings.themeConfig) 
+            : moduleSettings.themeConfig
+        );
       } else if (typeof window !== 'undefined' && window.localStorage) {
-        // Fallback for initial load before settings exist
-        const savedTheme = window.localStorage.getItem('@theme_is_dark');
-        if (savedTheme !== null) {
-          setIsDarkMode(savedTheme === 'true');
+        const savedTheme = window.localStorage.getItem('@themeConfig');
+        if (savedTheme) {
+          setThemeConfig(JSON.parse(savedTheme));
+        } else {
+          // Backward compatibility
+          const savedDark = window.localStorage.getItem('@theme_is_dark');
+          if (savedDark === 'true') {
+            setThemeConfig({ mode: 'dark', customColors: null });
+          }
         }
       }
     } catch (error) {
@@ -25,33 +36,43 @@ export const ThemeProvider = ({ children }) => {
     } finally {
       setIsLoaded(true);
     }
-  }, [moduleSettings.theme_is_dark]);
+  }, [moduleSettings.themeConfig]);
 
-  const toggleTheme = async () => {
+  const updateThemeConfig = async (newConfig) => {
     try {
-      const newValue = !isDarkMode;
-      setIsDarkMode(newValue);
+      setThemeConfig(newConfig);
       
-      // Guardar también localmente para que se vea rápido en el próximo inicio
       if (typeof window !== 'undefined' && window.localStorage) {
-        window.localStorage.setItem('@theme_is_dark', String(newValue));
+        window.localStorage.setItem('@themeConfig', JSON.stringify(newConfig));
       }
 
-      await saveModuleSettings({ ...moduleSettings, theme_is_dark: newValue });
+      await saveModuleSettings({ 
+        ...moduleSettings, 
+        themeConfig: JSON.stringify(newConfig) 
+      });
     } catch (error) {
       console.error("Error guardando el tema:", error);
     }
   };
 
-  const theme = isDarkMode ? darkTheme : lightTheme;
+  // Derive final theme object
+  let theme = lightTheme; // Default
+  if (themeConfig.mode === 'custom' && themeConfig.customColors) {
+    theme = { ...lightTheme, ...themeConfig.customColors, isDark: themeConfig.customColors.background < '#888888' }; // basic heuristic
+  } else if (predefinedThemes[themeConfig.mode]) {
+    theme = predefinedThemes[themeConfig.mode];
+  }
+
+  const isDarkMode = theme.isDark;
 
   if (!isLoaded) return null;
 
   return (
-    <ThemeContext.Provider value={{ theme, isDarkMode, toggleTheme }}>
+    <ThemeContext.Provider value={{ theme, isDarkMode, themeConfig, updateThemeConfig }}>
       {children}
     </ThemeContext.Provider>
   );
 };
 
 export const useTheme = () => useContext(ThemeContext);
+

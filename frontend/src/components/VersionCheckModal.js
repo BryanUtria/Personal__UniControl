@@ -3,7 +3,7 @@ import { Modal, View, Text, StyleSheet, Platform, Linking, Alert } from 'react-n
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../theme/ThemeContext';
 import Button from './Button';
-import packageJson from '../../package.json';
+import Constants from 'expo-constants';
 import { useToast } from '../context/ToastContext';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
@@ -14,7 +14,7 @@ export default function VersionCheckModal() {
   const [isVisible, setIsVisible] = useState(false);
   const [serverVersion, setServerVersion] = useState('');
   const [apkUrl, setApkUrl] = useState('');
-  const localVersion = packageJson.version;
+  const localVersion = Constants.expoConfig?.version || '1.0.0';
 
   useEffect(() => {
     checkVersion();

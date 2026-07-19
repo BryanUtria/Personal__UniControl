@@ -130,6 +130,55 @@ router.post('/register', async (req, res) => {
     }
 });
 
+const { OAuth2Client } = require('google-auth-library');
+const googleClient = new OAuth2Client(process.env.GOOGLE_WEB_CLIENT_ID);
+
+// Inicio de sesión y Registro con Google
+router.post('/google', async (req, res) => {
+    const { idToken } = req.body;
+    if (!idToken) return res.status(400).json({ error: 'Token de Google requerido.' });
+
+    try {
+        // Verificar el token con Google
+        const ticket = await googleClient.verifyIdToken({
+            idToken,
+            audience: process.env.GOOGLE_WEB_CLIENT_ID, 
+        });
+        const payload = ticket.getPayload();
+        const { sub: googleId, email, name } = payload;
+
+        // 1. Buscar si el usuario ya existe (por google_id o correo)
+        let usersRows = await db.query('SELECT * FROM users WHERE google_id = ? OR email = ?', [googleId, email]);
+        let user = usersRows[0];
+
+        if (!user) {
+            // El usuario no existe, registrar automáticamente
+            const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+            const randomPassword = await bcrypt.hash(Math.random().toString(36).slice(-10), 10); // Contraseña inutilizable
+
+            const insertResult = await db.query(
+                'INSERT INTO users (name, username, password, email, google_id) VALUES (?, ?, ?, ?, ?)',
+                [name, username, randomPassword, email, googleId]
+            );
+
+            user = { id: insertResult.insertId, name, username, email, google_id: googleId };
+        } else {
+            // Si el usuario existe por correo pero no tiene google_id, lo vinculamos
+            if (!user.google_id) {
+                await db.query('UPDATE users SET google_id = ? WHERE id = ?', [googleId, user.id]);
+            }
+        }
+
+        // Fetch subscriptions igual que en /login
+        const subs = await db.query('SELECT module_key, status, trial_ends_at, expires_at FROM user_subscriptions WHERE user_id = ?', [user.id]);
+
+        res.json({ id: user.id, name: user.name, username: user.username, email: user.email, role: user.role, subscriptions: subs });
+    } catch (err) {
+        console.error('Error verificando Google Token:', err);
+        res.status(401).json({ error: 'Token de Google inválido o expirado.' });
+    }
+});
+
 // Iniciar sesión
 router.post('/login', async (req, res) => {
     const { username, password } = req.body;

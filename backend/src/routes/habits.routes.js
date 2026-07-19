@@ -16,7 +16,7 @@ const requireAuth = (req, res, next) => {
 router.get('/', requireAuth, async (req, res) => {
     try {
         const habitsSql = `
-            SELECT id, name, description, color, type, frequency, repeat_details, start_date, start_time, end_time, reminder_time, created_at
+            SELECT id, name, description, color, type, frequency, repeat_details, start_date, start_time, end_time, reminder_time, archived_date, created_at
             FROM habits
             WHERE user_id = ? AND active = 1
             ORDER BY created_at ASC
@@ -62,6 +62,7 @@ router.get('/', requireAuth, async (req, res) => {
                 start_time: habit.start_time,
                 end_time: habit.end_time,
                 reminder_time: habit.reminder_time,
+                archived_date: habit.archived_date,
                 logs
             };
         });
@@ -105,28 +106,80 @@ router.post('/', requireAuth, async (req, res) => {
     }
 });
 
-// Actualizar un hábito
+// Actualizar un hábito (con versionado si es necesario)
 router.put('/:id', requireAuth, async (req, res) => {
-    const { name, description, color, type, frequency, repeat_details, start_date, start_time, end_time, reminder_time } = req.body;
+    const { name, description, color, type, frequency, repeat_details, start_date, start_time, end_time, reminder_time, edit_date } = req.body;
     const { id } = req.params;
 
     try {
         const detailsStr = repeat_details ? JSON.stringify(repeat_details) : null;
-        await db.query(
-            'UPDATE habits SET name = ?, description = ?, color = ?, type = ?, frequency = ?, repeat_details = ?, start_date = ?, start_time = ?, end_time = ?, reminder_time = ? WHERE id = ? AND user_id = ?',
-            [name, description || null, color, type || 'habit', frequency, detailsStr, start_date || null, start_time || null, end_time || null, reminder_time || null, id, req.userId]
-        );
-        res.json({ success: true });
+        
+        // Buscar el hábito actual
+        const currentRows = await db.query('SELECT start_date FROM habits WHERE id = ? AND user_id = ?', [id, req.userId]);
+        if (currentRows.length === 0) return res.status(404).json({ error: 'No encontrado' });
+        const currentHabit = currentRows[0];
+
+        // Si el edit_date no existe, se hace update normal
+        // O si el start_date original es igual o mayor al edit_date, actualizamos en el mismo registro.
+        const shouldBranch = edit_date && (!currentHabit.start_date || currentHabit.start_date < edit_date);
+
+        if (shouldBranch) {
+            // Archivar el viejo (hasta un día antes de edit_date)
+            // Parsear como fecha local para evitar desfases horarios
+            const [y, m, d] = edit_date.split('-');
+            const eDate = new Date(y, m - 1, d);
+            eDate.setDate(eDate.getDate() - 1);
+            const archiveDate = `${eDate.getFullYear()}-${String(eDate.getMonth() + 1).padStart(2, '0')}-${String(eDate.getDate()).padStart(2, '0')}`;
+
+            await db.query('UPDATE habits SET archived_date = ? WHERE id = ?', [archiveDate, id]);
+
+            // Crear el nuevo
+            const newHabitStart = edit_date;
+            const insertRes = await db.query(
+                'INSERT INTO habits (user_id, name, description, color, type, frequency, repeat_details, start_date, start_time, end_time, reminder_time) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+                [req.userId, name, description || null, color || '#4caf50', type || 'habit', frequency, detailsStr, newHabitStart, start_time || null, end_time || null, reminder_time || null]
+            );
+            const newId = insertRes.insertId;
+
+            // Transferir logs desde el edit_date en adelante al nuevo hábito
+            await db.query(
+                'UPDATE habit_logs SET habit_id = ? WHERE habit_id = ? AND log_date >= ?',
+                [newId, id, edit_date]
+            );
+            
+            res.json({ success: true, newId });
+        } else {
+            // Update normal
+            await db.query(
+                'UPDATE habits SET name = ?, description = ?, color = ?, type = ?, frequency = ?, repeat_details = ?, start_date = ?, start_time = ?, end_time = ?, reminder_time = ? WHERE id = ? AND user_id = ?',
+                [name, description || null, color, type || 'habit', frequency, detailsStr, start_date || null, start_time || null, end_time || null, reminder_time || null, id, req.userId]
+            );
+            res.json({ success: true });
+        }
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
-// Eliminar un hábito (soft delete)
+// Eliminar un hábito (versionado)
 router.delete('/:id', requireAuth, async (req, res) => {
     const { id } = req.params;
+    const { date } = req.query; // ?date=YYYY-MM-DD
+    
     try {
-        await db.query('UPDATE habits SET active = 0 WHERE id = ? AND user_id = ?', [id, req.userId]);
+        if (date) {
+            // Archivar el día anterior a la fecha seleccionada
+            const [y, m, d] = date.split('-');
+            const eDate = new Date(y, m - 1, d);
+            eDate.setDate(eDate.getDate() - 1);
+            const archiveDate = `${eDate.getFullYear()}-${String(eDate.getMonth() + 1).padStart(2, '0')}-${String(eDate.getDate()).padStart(2, '0')}`;
+            
+            await db.query('UPDATE habits SET archived_date = ? WHERE id = ? AND user_id = ?', [archiveDate, id, req.userId]);
+            // Borrar logs futuros o de ese día si es que existen
+            await db.query('DELETE FROM habit_logs WHERE habit_id = ? AND log_date >= ?', [id, date]);
+        } else {
+            await db.query('UPDATE habits SET active = 0 WHERE id = ? AND user_id = ?', [id, req.userId]);
+        }
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: err.message });

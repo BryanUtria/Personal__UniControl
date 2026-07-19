@@ -151,15 +151,15 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-    const { category_id, month_year, description, amount, is_paid, is_recurring, is_reserved, reminder_date, amount_paid } = req.body;
+    const { category_id, month_year, description, amount, is_paid, is_recurring, is_reserved, reminder_date, amount_paid, payment_date, payment_history } = req.body;
     if (!category_id || !month_year || !description || !amount) {
         return res.status(400).json({ error: 'Faltan campos obligatorios' });
     }
     try {
         const result = await db.query(
-            `INSERT INTO expenses (user_id, category_id, month_year, description, amount, is_paid, is_recurring, is_reserved, reminder_date, amount_paid) 
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-            [req.userId, category_id, month_year, description, amount, is_paid ? 1 : 0, is_recurring ? 1 : 0, is_reserved ? 1 : 0, reminder_date || null, amount_paid !== undefined ? amount_paid : (is_paid ? amount : 0)]
+            `INSERT INTO expenses (user_id, category_id, month_year, description, amount, is_paid, is_recurring, is_reserved, reminder_date, amount_paid, payment_date, payment_history) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [req.userId, category_id, month_year, description, amount, is_paid ? 1 : 0, is_recurring ? 1 : 0, is_reserved ? 1 : 0, reminder_date || null, amount_paid !== undefined ? amount_paid : (is_paid ? amount : 0), payment_date || null, payment_history || null]
         );
         const newExpense = await db.query(`
             SELECT e.*, c.name as category_name, c.icon as category_icon, c.color as category_color 
@@ -174,12 +174,12 @@ router.post('/', async (req, res) => {
 
 router.put('/:id', async (req, res) => {
     const { id } = req.params;
-    const { category_id, description, amount, is_paid, is_recurring, is_reserved, reminder_date, amount_paid } = req.body;
+    const { category_id, description, amount, is_paid, is_recurring, is_reserved, reminder_date, amount_paid, payment_date, payment_history } = req.body;
     try {
         await db.query(
-            `UPDATE expenses SET category_id = ?, description = ?, amount = ?, is_paid = ?, is_recurring = ?, is_reserved = ?, reminder_date = ?, amount_paid = COALESCE(?, amount_paid) 
+            `UPDATE expenses SET category_id = ?, description = ?, amount = ?, is_paid = ?, is_recurring = ?, is_reserved = ?, reminder_date = ?, amount_paid = COALESCE(?, amount_paid), payment_date = ?, payment_history = ? 
              WHERE id = ? AND user_id = ?`,
-            [category_id, description, amount, is_paid ? 1 : 0, is_recurring ? 1 : 0, is_reserved ? 1 : 0, reminder_date || null, amount_paid !== undefined ? amount_paid : null, id, req.userId]
+            [category_id, description, amount, is_paid ? 1 : 0, is_recurring ? 1 : 0, is_reserved ? 1 : 0, reminder_date || null, amount_paid !== undefined ? amount_paid : null, payment_date || null, payment_history || null, id, req.userId]
         );
         const updatedExpense = await db.query(`
             SELECT e.*, c.name as category_name, c.icon as category_icon, c.color as category_color 

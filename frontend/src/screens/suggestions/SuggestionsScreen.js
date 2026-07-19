@@ -203,7 +203,7 @@ export default function SuggestionsScreen({ navigation }) {
 
               {item.status === 'replied' ? (
                 <View style={{ backgroundColor: theme.accent + '15', padding: 10, borderRadius: 8, marginTop: 5, borderWidth: 1, borderColor: theme.accent + '30' }}>
-                  <Text style={{ fontWeight: 'bold', color: theme.accent, fontSize: 12, marginBottom: 2 }}>Respuesta de Admin:</Text>
+                  <Text style={{ fontWeight: 'bold', color: theme.accent, fontSize: 12, marginBottom: 2 }}>Respuesta del Desarrollador:</Text>
                   <Text style={{ color: theme.text, fontSize: 14 }}>{item.admin_reply}</Text>
                 </View>
               ) : (

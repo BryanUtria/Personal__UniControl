@@ -11,7 +11,6 @@ import { syncOfflineQueue, getOfflineQueue, isConnected } from './src/utils/offl
 import { Ionicons } from '@expo/vector-icons';
 import { ModuleProvider } from './src/context/ModuleContext';
 import VersionCheckModal from './src/components/VersionCheckModal';
-import Purchases from 'react-native-purchases';
 
 function OfflineSyncManager() {
   const { showToast } = useToast();
@@ -208,26 +207,6 @@ function NotificationInitializer() {
 }
 
 export default function App() {
-
-  useEffect(() => {
-    // Inicializar RevenueCat al abrir la app
-    const initPurchases = async () => {
-      try {
-        if (Platform.OS === 'android') {
-          const apiKey = process.env.EXPO_PUBLIC_REVENUECAT_API_KEY;
-          if (apiKey) {
-            Purchases.configure({ apiKey });
-            console.log('[RevenueCat] Configurado correctamente con API Key');
-          } else {
-            console.warn('[RevenueCat] No se encontró EXPO_PUBLIC_REVENUECAT_API_KEY en .env');
-          }
-        }
-      } catch (e) {
-        console.error('[RevenueCat] Error al inicializar:', e);
-      }
-    };
-    initPurchases();
-  }, []);
 
   return (
     <SafeAreaProvider>

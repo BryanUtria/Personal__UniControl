@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ActivityIndicator, KeyboardAvoidingView, Platform, ScrollView, useWindowDimensions, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useAuth } from '../../context/AuthContext';
@@ -6,12 +6,44 @@ import { useTheme } from '../../theme/ThemeContext';
 import { Ionicons } from '@expo/vector-icons';
 import Button from '../../components/Button';
 import Input from '../../components/Input';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
+
+import * as WebBrowser from 'expo-web-browser';
+import * as Google from 'expo-auth-session/providers/google';
+
+WebBrowser.maybeCompleteAuthSession();
 
 import LogoImage from '../../../assets/Navegador.png';
 
 export default function LoginScreen() {
-  const { login, sendVerificationCode, register } = useAuth();
+  const { login, loginWithGoogle, sendVerificationCode, register } = useAuth();
   const { theme } = useTheme();
+
+  // AuthRequest para Web
+  const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
+    clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'TBD_CLIENT_ID',
+  });
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') {
+      GoogleSignin.configure({
+        webClientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'TBD_CLIENT_ID',
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (response?.type === 'success' && Platform.OS === 'web') {
+      const idToken = response.params?.id_token || response.authentication?.idToken;
+      if (idToken) {
+        setLoading(true);
+        loginWithGoogle(idToken).then(res => {
+          setLoading(false);
+          if (!res.success) setErrorMsg(res.error);
+        });
+      }
+    }
+  }, [response]);
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
 
@@ -38,6 +70,38 @@ export default function LoginScreen() {
     setSandboxMode(false);
     setErrorMsg('');
     setSuccessMsg('');
+  };
+
+  const handleGoogleSignIn = async () => {
+    if (Platform.OS === 'web') {
+      promptAsync();
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setErrorMsg('');
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      // userInfo.idToken contains the JWT token we need to send to the backend
+      const res = await loginWithGoogle(userInfo.idToken || userInfo.data?.idToken); // Depends on the version of google-signin
+      if (!res.success) {
+        setErrorMsg(res.error);
+      }
+    } catch (error) {
+      console.error(error);
+      if (error.code === 'SIGN_IN_CANCELLED') {
+        // user cancelled the login flow
+      } else if (error.code === 'IN_PROGRESS') {
+        // operation (e.g. sign in) is in progress already
+      } else if (error.code === 'PLAY_SERVICES_NOT_AVAILABLE') {
+        setErrorMsg('Play Services no disponibles o desactualizados');
+      } else {
+        setErrorMsg('Ha ocurrido un error al iniciar sesión con Google.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -276,6 +340,20 @@ export default function LoginScreen() {
               style={[styles.submitBtn, { backgroundColor: theme.accent }]}
             />
 
+            {/* Google Sign In Button */}
+            {!isVerifying && (
+              <TouchableOpacity
+                style={[styles.googleBtn, { borderColor: theme.border, backgroundColor: theme.card }]}
+                onPress={handleGoogleSignIn}
+                disabled={loading}
+              >
+                <Ionicons name="logo-google" size={20} color={theme.text} style={{ marginRight: 10 }} />
+                <Text style={[styles.googleBtnText, { color: theme.text }]}>
+                  {isRegisterMode ? 'Registrarse con Google' : 'Continuar con Google'}
+                </Text>
+              </TouchableOpacity>
+            )}
+
             {/* Cancel/Go Back Verification Button */}
             {isRegisterMode && isVerifying && (
               <Button
@@ -317,8 +395,9 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
     padding: 24,
+    paddingTop: 50
   },
   headerContainer: {
     alignItems: 'center',
@@ -350,7 +429,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     paddingHorizontal: 20,
-    lineHeight: 20,
+    lineHeight: 18,
+  },
+  googleBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 14,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginTop: 15,
+  },
+  googleBtnText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
   formCard: {
     alignSelf: 'center',
