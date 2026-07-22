@@ -205,6 +205,92 @@ router.post('/login', async (req, res) => {
     }
 });
 
+// Recuperación de Contraseña - Enviar Código
+router.post('/recover-password/send-code', async (req, res) => {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: 'El correo es obligatorio.' });
 
+    try {
+        const users = await db.query('SELECT * FROM users WHERE email = ?', [email]);
+        if (users.length === 0) {
+            // Retornar error genérico por seguridad o específico
+            return res.status(404).json({ error: 'No existe una cuenta con este correo.' });
+        }
+
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        
+        await db.query(
+            'INSERT INTO verification_codes (email, code, expires_at) VALUES (?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))',
+            [email, code]
+        );
+
+        let emailSent = false;
+        let sandboxMode = true;
+        const transporter = createTransporter();
+
+        if (transporter) {
+            try {
+                await transporter.sendMail({
+                    from: `"UniControl Admin" <${process.env.SMTP_USER}>`,
+                    to: email,
+                    subject: 'Recuperación de Contraseña - UniControl',
+                    html: `
+                        <div style="font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: 0 auto; border: 1px solid #e0e0e0; border-radius: 10px;">
+                            <h2 style="color: #2563EB; text-align: center;">Recuperación de Contraseña</h2>
+                            <p>¡Hola!</p>
+                            <p>Has solicitado restablecer tu contraseña en UniControl. Usa el siguiente código para crear una nueva:</p>
+                            <div style="background-color: #f3f4f6; border-radius: 8px; padding: 15px; text-align: center; font-size: 24px; font-weight: bold; letter-spacing: 4px; color: #111827; margin: 20px 0;">
+                                ${code}
+                            </div>
+                            <p style="font-size: 12px; color: #6b7280; text-align: center;">Este código expirará en 10 minutos. Si no has solicitado esto, puedes ignorar este mensaje.</p>
+                        </div>
+                    `
+                });
+                emailSent = true;
+                sandboxMode = false;
+            } catch (mailErr) {
+                console.error('Error enviando correo SMTP de recuperación:', mailErr);
+            }
+        }
+
+        console.log('\n┌────────────────────────────────────────────────────────');
+        console.log(`│  [UNICONTROL RECUPERACIÓN DE CONTRASEÑA]                 `);
+        console.log(`│  Destinatario: ${email.padEnd(40)}                       `);
+        console.log(`│  Código:       \x1b[32m\x1b[1m${code}\x1b[0m             `);
+        console.log(`│  Estado:       ${(emailSent ? 'ENVIADO POR SMTP' : 'SANDBOX / CONSOLA').padEnd(39)} `);
+        console.log('└────────────────────────────────────────────────────────\n');
+
+        res.json({ success: true, sandboxMode, sandboxCode: sandboxMode ? code : null });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Recuperación de Contraseña - Cambiar Contraseña
+router.post('/recover-password/reset', async (req, res) => {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+        return res.status(400).json({ error: 'Faltan datos obligatorios.' });
+    }
+
+    try {
+        const codes = await db.query(
+            'SELECT * FROM verification_codes WHERE email = ? AND code = ? AND expires_at > NOW() ORDER BY id DESC LIMIT 1',
+            [email, code]
+        );
+
+        if (codes.length === 0) {
+            return res.status(400).json({ error: 'El código es incorrecto o ha expirado.' });
+        }
+
+        const hashedPassword = await bcrypt.hash(newPassword, 10);
+        await db.query('UPDATE users SET password = ? WHERE email = ?', [hashedPassword, email]);
+        await db.query('DELETE FROM verification_codes WHERE email = ?', [email]);
+
+        res.json({ success: true });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
 
 module.exports = router;

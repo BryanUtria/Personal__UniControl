@@ -22,6 +22,7 @@ export default function LoginScreen() {
   // AuthRequest para Web
   const [request, response, promptAsync] = Google.useIdTokenAuthRequest({
     clientId: process.env.EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID || 'TBD_CLIENT_ID',
+    prompt: 'select_account'
   });
 
   useEffect(() => {
@@ -63,6 +64,12 @@ export default function LoginScreen() {
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  // Estados de recuperación de contraseña
+  const [recoveryStep, setRecoveryStep] = useState(0); // 0 = No, 1 = Email, 2 = Código, 3 = Nueva
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
   const handleCancelVerification = () => {
     setIsVerifying(false);
     setVerificationCode('');
@@ -82,6 +89,12 @@ export default function LoginScreen() {
       setLoading(true);
       setErrorMsg('');
       await GoogleSignin.hasPlayServices();
+      // Forzar siempre a elegir cuenta cerrando cualquier sesión previa
+      try {
+        await GoogleSignin.signOut();
+      } catch (e) {
+        // Ignorar si no había sesión
+      }
       const userInfo = await GoogleSignin.signIn();
       // userInfo.idToken contains the JWT token we need to send to the backend
       const res = await loginWithGoogle(userInfo.idToken || userInfo.data?.idToken); // Depends on the version of google-signin
@@ -191,6 +204,88 @@ export default function LoginScreen() {
     }
   };
 
+  const handleRequestRecoveryCode = async () => {
+    if (!recoveryEmail) {
+      setErrorMsg('Ingresa tu correo para recuperar la contraseña.');
+      return;
+    }
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api'}/auth/recover-password/send-code`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: recoveryEmail.trim() })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setErrorMsg(data.error || 'Error al enviar código.');
+      } else {
+        setSandboxMode(data.sandboxMode);
+        if (data.sandboxMode && data.sandboxCode) setSandboxCode(data.sandboxCode);
+        setSuccessMsg('Código enviado al correo.');
+        setRecoveryStep(2);
+      }
+    } catch (e) {
+      setErrorMsg('Error de conexión.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleVerifyRecoveryCode = () => {
+    if (verificationCode.length !== 6) {
+      setErrorMsg('El código debe tener 6 dígitos.');
+      return;
+    }
+    setErrorMsg('');
+    setSuccessMsg('Código aceptado. Ingresa tu nueva contraseña.');
+    setRecoveryStep(3);
+  };
+
+  const handleResetPassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      setErrorMsg('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setErrorMsg('Las contraseñas no coinciden.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMsg('');
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api'}/auth/recover-password/reset`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: recoveryEmail.trim(), code: verificationCode.trim(), newPassword })
+      });
+      const data = await response.json();
+      if (!response.ok) {
+        setErrorMsg(data.error || 'Error al restablecer contraseña.');
+      } else {
+        setSuccessMsg('Contraseña restablecida exitosamente. Ahora puedes iniciar sesión.');
+        cancelRecovery();
+      }
+    } catch (e) {
+      setErrorMsg('Error de conexión.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const cancelRecovery = () => {
+    setRecoveryStep(0);
+    setRecoveryEmail('');
+    setVerificationCode('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setErrorMsg('');
+    setSandboxCode(null);
+    setSandboxMode(false);
+  };
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView
@@ -223,9 +318,11 @@ export default function LoginScreen() {
           {/* Form Card */}
           <View style={[styles.formCard, { backgroundColor: theme.card, shadowColor: theme.shadow, width: isMobile ? '100%' : '50%' }]}>
             <Text style={[styles.formTitle, { color: theme.text }]}>
-              {isRegisterMode
-                ? (isVerifying ? 'Verificar Correo' : 'Crear Cuenta')
-                : 'Iniciar Sesión'}
+              {recoveryStep > 0
+                ? (recoveryStep === 1 ? 'Recuperar Contraseña' : recoveryStep === 2 ? 'Ingresa el Código' : 'Nueva Contraseña')
+                : isRegisterMode
+                  ? (isVerifying ? 'Verificar Correo' : 'Crear Cuenta')
+                  : 'Iniciar Sesión'}
             </Text>
 
             {errorMsg ? (
@@ -256,7 +353,7 @@ export default function LoginScreen() {
               </View>
             ) : null}
 
-            {!isVerifying ? (
+            {!isVerifying && recoveryStep === 0 ? (
               <>
                 {/* Full Name Input (Register Only) */}
                 {isRegisterMode && (
@@ -303,8 +400,15 @@ export default function LoginScreen() {
                   isPassword={true}
                   autoCapitalize="none"
                 />
+
+                {/* Botón de Olvidaste tu contraseña */}
+                {!isRegisterMode && (
+                  <TouchableOpacity onPress={() => setRecoveryStep(1)} style={{ alignSelf: 'flex-end', marginBottom: 5 }}>
+                    <Text style={{ color: theme.accent, fontSize: 13, fontWeight: '600' }}>¿Olvidaste tu contraseña?</Text>
+                  </TouchableOpacity>
+                )}
               </>
-            ) : (
+            ) : recoveryStep === 0 ? (
               <>
                 {/* Information Header */}
                 <View style={{ marginBottom: 20 }}>
@@ -327,21 +431,86 @@ export default function LoginScreen() {
                   containerStyle={{ minHeight: 60 }}
                 />
               </>
+            ) : null}
+
+            {/* RECOVERY FLOW */}
+            {recoveryStep === 1 && (
+              <>
+                <Text style={{ color: theme.textSecondary, fontSize: 14, textAlign: 'center', marginBottom: 20 }}>
+                  Ingresa el correo asociado a tu cuenta. Te enviaremos un código para restablecer tu contraseña.
+                </Text>
+                <Input
+                  label="Correo Electrónico"
+                  icon="mail-outline"
+                  placeholder="ejemplo@correo.com"
+                  value={recoveryEmail}
+                  onChangeText={setRecoveryEmail}
+                  keyboardType="email-address"
+                  autoCapitalize="none"
+                />
+              </>
+            )}
+            {recoveryStep === 2 && (
+              <>
+                <Text style={{ color: theme.textSecondary, fontSize: 14, textAlign: 'center', marginBottom: 20 }}>
+                  Hemos enviado un código a <Text style={{ fontWeight: '700', color: theme.text }}>{recoveryEmail}</Text>.
+                </Text>
+                <Input
+                  label="Código de Seguridad"
+                  icon="key-outline"
+                  placeholder="123456"
+                  value={verificationCode}
+                  onChangeText={setVerificationCode}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  autoFocus={true}
+                  inputStyle={{ fontSize: 20, letterSpacing: 6, fontWeight: '700', textAlign: 'center' }}
+                  containerStyle={{ minHeight: 60 }}
+                />
+              </>
+            )}
+            {recoveryStep === 3 && (
+              <>
+                <Input
+                  label="Nueva Contraseña"
+                  icon="lock-closed-outline"
+                  placeholder="Mínimo 6 caracteres"
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  isPassword={true}
+                />
+                <Input
+                  label="Confirmar Contraseña"
+                  icon="lock-closed-outline"
+                  placeholder="Mínimo 6 caracteres"
+                  value={confirmNewPassword}
+                  onChangeText={setConfirmNewPassword}
+                  isPassword={true}
+                />
+              </>
             )}
 
             {/* Submit Button */}
             <Button
-              title={isRegisterMode
-                ? (isVerifying ? 'Verificar y Registrarse' : 'Continuar al Registro')
-                : 'Entrar'}
-              onPress={handleSubmit}
+              title={
+                recoveryStep === 1 ? 'Enviar Código' :
+                  recoveryStep === 2 ? 'Verificar Código' :
+                    recoveryStep === 3 ? 'Restablecer Contraseña' :
+                      isRegisterMode ? (isVerifying ? 'Verificar y Registrarse' : 'Continuar al Registro') : 'Entrar'
+              }
+              onPress={
+                recoveryStep === 1 ? handleRequestRecoveryCode :
+                  recoveryStep === 2 ? handleVerifyRecoveryCode :
+                    recoveryStep === 3 ? handleResetPassword :
+                      handleSubmit
+              }
               loading={loading}
               variant="primary"
               style={[styles.submitBtn, { backgroundColor: theme.accent }]}
             />
 
             {/* Google Sign In Button */}
-            {!isVerifying && (
+            {!isVerifying && recoveryStep === 0 && (
               <TouchableOpacity
                 style={[styles.googleBtn, { borderColor: theme.border, backgroundColor: theme.card }]}
                 onPress={handleGoogleSignIn}
@@ -355,33 +524,28 @@ export default function LoginScreen() {
             )}
 
             {/* Cancel/Go Back Verification Button */}
-            {isRegisterMode && isVerifying && (
+            {((isRegisterMode && isVerifying) || recoveryStep > 0) && (
               <Button
-                title="Cancelar y cambiar datos"
-                onPress={handleCancelVerification}
+                title={recoveryStep > 0 ? "Cancelar Recuperación" : "Cancelar y cambiar datos"}
+                onPress={recoveryStep > 0 ? cancelRecovery : handleCancelVerification}
                 variant="danger"
                 disabled={loading}
-                style={styles.cancelBtn}
+                style={[styles.googleBtn, { marginTop: 15, backgroundColor: theme.danger + '10', borderColor: theme.danger }]}
               />
             )}
 
-            {/* Toggle Mode Link (only if not verifying code) */}
-            {!isVerifying && (
-              <TouchableOpacity
-                style={styles.toggleModeBtn}
-                onPress={() => {
-                  setIsRegisterMode(!isRegisterMode);
-                  setErrorMsg('');
-                  setSuccessMsg('');
-                }}
-              >
-                <Text style={[styles.toggleModeText, { color: theme.textSecondary }]}>
-                  {isRegisterMode ? '¿Ya tienes una cuenta? ' : '¿No tienes una cuenta todavía? '}
-                  <Text style={{ color: theme.accent, fontWeight: '700' }}>
-                    {isRegisterMode ? 'Inicia Sesión' : 'Regístrate'}
-                  </Text>
+            {/* Footer Text (Login <-> Register) */}
+            {recoveryStep === 0 && (
+              <View style={[styles.footerContainer, { alignItems: 'center', paddingTop: 10 }]}>
+                <Text style={[styles.footerText, { color: theme.textSecondary }]}>
+                  {isRegisterMode ? '¿Ya tienes una cuenta?' : '¿No tienes una cuenta?'}
                 </Text>
-              </TouchableOpacity>
+                <TouchableOpacity onPress={() => setIsRegisterMode(!isRegisterMode)} disabled={isVerifying || loading}>
+                  <Text style={[styles.footerLink, { color: theme.accent }]}>
+                    {isRegisterMode ? 'Inicia Sesión' : 'Regístrate aquí'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
 
           </View>
