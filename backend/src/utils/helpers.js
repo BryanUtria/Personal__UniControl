@@ -17,6 +17,10 @@ const createTransporter = () => {
                 user: process.env.SMTP_USER,
                 pass: process.env.SMTP_PASS,
             },
+            tls: {
+                rejectUnauthorized: false
+            },
+            family: 4 // Fuerza a usar IPv4 para evitar el error ENETUNREACH de IPv6
         });
     }
     return null;
