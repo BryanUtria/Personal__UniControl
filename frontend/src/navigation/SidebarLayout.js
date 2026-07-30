@@ -407,6 +407,23 @@ export default function SidebarLayout({
           <View style={styles.pageBody}>
             {children}
           </View>
+
+          {/* BANNER DE PUBLICIDAD PARA USUARIOS GRATUITOS */}
+          {(!user?.plan || user?.plan === 'free') && (
+            <View style={{ 
+              width: '100%', 
+              backgroundColor: isDarkMode ? '#1e1e1e' : '#f5f5f5', 
+              borderTopWidth: 1, 
+              borderTopColor: theme.border, 
+              paddingVertical: 24, 
+              paddingHorizontal: 15,
+              alignItems: 'center', 
+              justifyContent: 'center' 
+            }}>
+              <Text style={{ fontSize: 14, fontWeight: 'bold', color: theme.text, letterSpacing: 0.5, marginBottom: 4 }}>Espacio Publicitario</Text>
+              <Text style={{ fontSize: 12, color: theme.textSecondary }}>Actualiza a una Suscripción Premium para eliminar anuncios</Text>
+            </View>
+          )}
         </View>
 
         {/* DRAWER PARA MÓVIL (MENÚ COLAPSIBLE) */}

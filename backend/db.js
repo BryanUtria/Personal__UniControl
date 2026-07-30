@@ -44,16 +44,6 @@ async function initDB() {
     `;
     await pool.query(usersTable);
 
-    // Migración: Añadir google_id si la tabla ya existía sin esa columna
-    try {
-        const columns = await pool.query("SHOW COLUMNS FROM users LIKE 'google_id'");
-        if (columns.length === 0) {
-            await pool.query('ALTER TABLE users ADD COLUMN google_id VARCHAR(255) NULL UNIQUE');
-        }
-    } catch (e) {
-        console.error('Error al añadir google_id:', e);
-    }
-
     const verificationCodesTable = `
         CREATE TABLE IF NOT EXISTS verification_codes (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -154,38 +144,6 @@ async function initDB() {
     await pool.query(ordersTable);
     await pool.query(orderItemsTable);
     await pool.query(debtorsTable);
-
-    // Migraciones seguras para columnas opcionales adicionales
-    try { await pool.query('ALTER TABLE users ADD COLUMN name VARCHAR(255) NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE users ADD COLUMN email VARCHAR(255) NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE users ADD UNIQUE INDEX (email)'); } catch (e) {}
-
-    try { await pool.query('ALTER TABLE debtors ADD COLUMN email VARCHAR(255) NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE debtors ADD COLUMN identification VARCHAR(100) NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE debtors ADD COLUMN address VARCHAR(255) NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE debtors ADD COLUMN notes TEXT NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE debtors ADD COLUMN user_id INT NULL'); } catch (e) {}
-    try { await pool.query("ALTER TABLE debtors ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'client'"); } catch (e) {}
-
-    // Isolación multiusuario (user_id)
-    try { await pool.query('ALTER TABLE products ADD COLUMN user_id INT NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE products ADD COLUMN cost_price DECIMAL(10, 2) NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE products ADD COLUMN profit_margin DECIMAL(5, 2) NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE products ADD COLUMN code VARCHAR(100) NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE products ADD COLUMN min_stock INT NULL DEFAULT 5'); } catch (e) {}
-    try { await pool.query('ALTER TABLE sales ADD COLUMN user_id INT NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE sales ADD COLUMN order_id INT NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE sales ADD COLUMN order_reference VARCHAR(255) NULL'); } catch (e) {}
-    try { await pool.query('ALTER TABLE sales ADD COLUMN debtor_id INT NULL'); } catch (e) {}
-
-    // Soft-delete: columna active
-    try { await pool.query("ALTER TABLE products ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1"); } catch (e) {}
-    try { await pool.query("ALTER TABLE debtors ADD COLUMN active TINYINT(1) NOT NULL DEFAULT 1"); } catch (e) {}
-    // Agregar llaves foráneas opcionales si se desea
-    try { await pool.query('ALTER TABLE debtors ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE'); } catch (e) {}
-    try { await pool.query('ALTER TABLE products ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE'); } catch (e) {}
-    try { await pool.query('ALTER TABLE sales ADD FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE'); } catch (e) {}
-
     await pool.query(debtsTable);
 
     const productBatchesTable = `
@@ -203,34 +161,6 @@ async function initDB() {
     `;
     await pool.query(productBatchesTable);
 
-    // Migración inicial para mover el stock previo a lotes
-    try {
-        const productsWithoutBatches = await pool.query(
-            `SELECT p.id, p.stock, p.price, p.cost_price, p.profit_margin 
-             FROM products p 
-             LEFT JOIN product_batches b ON p.id = b.product_id 
-             WHERE b.id IS NULL AND p.stock > 0`
-        );
-        const rows = productsWithoutBatches[0];
-        if (Array.isArray(rows)) {
-            for (let prod of rows) {
-                await pool.query(
-                    'INSERT INTO product_batches (product_id, initial_quantity, quantity, cost_price, profit_margin, price) VALUES (?, ?, ?, ?, ?, ?)',
-                    [prod.id, prod.stock, prod.stock, prod.cost_price || 0, prod.profit_margin || 0, prod.price]
-                );
-            }
-        }
-    } catch (migErr) {
-        console.error('Error al migrar stock a lotes iniciales:', migErr);
-    }
-
-    // --- SAAS SUBSCRIPTIONS & ROLES ---
-    try { await pool.query("ALTER TABLE users ADD COLUMN role VARCHAR(20) NOT NULL DEFAULT 'client'"); } catch (e) {}
-    try {
-        // Asignar el primer usuario como admin de manera segura si no hay ninguno
-        await pool.query("UPDATE users SET role = 'admin' WHERE id = (SELECT min_id FROM (SELECT MIN(id) as min_id FROM users) as tmp) AND NOT EXISTS (SELECT 1 FROM (SELECT id FROM users WHERE role = 'admin') as tmp2)");
-    } catch (e) {}
-
     const appModulesTable = `
         CREATE TABLE IF NOT EXISTS app_modules (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -243,21 +173,6 @@ async function initDB() {
         ) ENGINE=InnoDB;
     `;
     await pool.query(appModulesTable);
-
-    try { await pool.query('ALTER TABLE app_modules ADD COLUMN annual_price_cop DECIMAL(10,2) NOT NULL DEFAULT 0'); } catch (e) {}
-    
-    try {
-        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, annual_price_cop, is_free) VALUES ('shop', 'Tienda', 7000, 75000, 0)");
-        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, annual_price_cop, is_free) VALUES ('habits', 'Hábitos', 7000, 75000, 0)");
-        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, annual_price_cop, is_free) VALUES ('expenses', 'Control de Gastos', 7000, 75000, 0)");
-        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, annual_price_cop, is_free) VALUES ('debtors', 'Deudas y Ahorros', 7000, 75000, 0)");
-        await pool.query("INSERT IGNORE INTO app_modules (module_key, name, base_price_cop, annual_price_cop, is_free) VALUES ('personal', 'Paquete Personal', 7000, 75000, 0)");
-        
-        // Update existents
-        await pool.query("UPDATE app_modules SET base_price_cop = 7000, annual_price_cop = 75000 WHERE module_key IN ('shop', 'habits', 'expenses', 'debtors', 'personal')");
-        // Asegurar que debtors ya no sea gratis si estaba configurado así
-        await pool.query("UPDATE app_modules SET is_free = 0 WHERE module_key = 'debtors'");
-    } catch (e) {}
 
     const userSubscriptionsTable = `
         CREATE TABLE IF NOT EXISTS user_subscriptions (
@@ -311,14 +226,6 @@ async function initDB() {
         ) ENGINE=InnoDB;
     `;
     await pool.query(habitsTable);
-
-    try { await pool.query("ALTER TABLE habits ADD COLUMN description TEXT NULL"); } catch (e) {}
-    try { await pool.query("ALTER TABLE habits ADD COLUMN start_time TIME NULL"); } catch (e) {}
-    try { await pool.query("ALTER TABLE habits ADD COLUMN end_time TIME NULL"); } catch (e) {}
-    try { await pool.query("ALTER TABLE habits ADD COLUMN type VARCHAR(20) NOT NULL DEFAULT 'habit'"); } catch (e) {}
-    try { await pool.query("ALTER TABLE habits ADD COLUMN start_date DATE NULL"); } catch (e) {}
-    try { await pool.query("ALTER TABLE habits ADD COLUMN reminder_time INT NULL"); } catch (e) {}
-    try { await pool.query("ALTER TABLE habits ADD COLUMN archived_date DATE NULL"); } catch (e) {}
 
     const pushTokensTable = `
         CREATE TABLE IF NOT EXISTS push_tokens (
@@ -379,11 +286,6 @@ async function initDB() {
         ) ENGINE=InnoDB;
     `;
     await pool.query(expensesTable);
-
-    try { await pool.query("ALTER TABLE expenses ADD COLUMN amount_paid DECIMAL(10,2) NOT NULL DEFAULT 0"); } catch (e) {}
-    try { await pool.query("ALTER TABLE expenses ADD COLUMN is_reserved TINYINT(1) NOT NULL DEFAULT 0"); } catch (e) {}
-    try { await pool.query("ALTER TABLE expenses ADD COLUMN payment_date DATETIME NULL"); } catch (e) {}
-    try { await pool.query("ALTER TABLE expenses ADD COLUMN payment_history TEXT NULL"); } catch (e) {}
 
     const incomesTable = `
         CREATE TABLE IF NOT EXISTS incomes (
