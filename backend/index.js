@@ -20,6 +20,9 @@ app.get('/api/version', (req, res) => {
 });
 
 // Registrar Rutas
+// Ruta de retorno de MercadoPago (sin prefijo /api, apunta a /success)
+app.use('/', require('./src/routes/success.routes'));
+
 app.use('/api/auth', require('./src/routes/auth.routes'));
 app.use('/api/dashboard', require('./src/routes/dashboard.routes'));
 app.use('/api/products', require('./src/routes/products.routes'));

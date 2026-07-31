@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, Text, View, Switch, ScrollView, Platform, Alert, useWindowDimensions, Modal, Linking, TouchableOpacity } from 'react-native';
+import { StyleSheet, Text, View, Switch, ScrollView, Platform, Alert, useWindowDimensions, Modal, Linking, TouchableOpacity, ActivityIndicator } from 'react-native';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useModules } from '../../context/ModuleContext';
@@ -26,6 +26,7 @@ export default function SettingsScreen({ navigation }) {
   const [appVersionInfo, setAppVersionInfo] = useState(null);
   const [targetModule, setTargetModule] = useState(null);
   const [myModules, setMyModules] = useState([]);
+  const [trialLoading, setTrialLoading] = useState(null); // module_key que está activando trial
 
   // Perfil Edit States
   const [profileModalVisible, setProfileModalVisible] = useState(false);
@@ -142,6 +143,72 @@ export default function SettingsScreen({ navigation }) {
     if (!price || price === 0) return '';
 
     return `- $ ${Math.round(price).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}/mes`;
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    try {
+      return new Date(dateStr).toLocaleDateString('es-CO', {
+        year: 'numeric', month: 'short', day: 'numeric'
+      });
+    } catch {
+      return dateStr;
+    }
+  };
+
+  const getModuleActive = (key) => {
+    const mod = myModules.find(m => m.module_key === key);
+    if (!mod) return false;
+    // Suscripción activa y vigente (no expirada)
+    return mod.status === 'active' && mod.expires_at && new Date(mod.expires_at) > new Date();
+  };
+
+  const getModuleActiveInfo = (key) => {
+    const mod = myModules.find(m => m.module_key === key);
+    if (!mod || !getModuleActive(key)) return null;
+    // Si trial_ends_at tiene fecha => es un trial gratuito
+    const isTrial = mod.trial_ends_at && new Date(mod.trial_ends_at) > new Date();
+    return {
+      isTrial,
+      expiresAt: mod.expires_at,
+      expiresText: formatDate(mod.expires_at),
+      remainingDays: Math.max(1, Math.ceil((new Date(mod.expires_at) - new Date()) / (1000 * 60 * 60 * 24)))
+    };
+  };
+
+  const getModuleTrialAvailable = (key) => {
+    const mod = myModules.find(m => m.module_key === key);
+    if (!mod) return false;
+    // Solo mostrar si no ha usado el trial (trial_ends_at es null) y no tiene suscripción activa vigente
+    if (getModuleActive(key)) return false;
+    return mod.trial_available === true;
+  };
+
+  const handleStartTrial = async (moduleKey) => {
+    if (trialLoading) return;
+    setTrialLoading(moduleKey);
+    try {
+      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api'}/subscriptions/trial`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-user-id': user.id.toString()
+        },
+        body: JSON.stringify({ module_key: moduleKey })
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        showToast('¡Prueba gratuita activada por 1 mes!', 'success');
+        await fetchModules();
+      } else {
+        showToast(data.error || 'No se pudo activar la prueba gratuita', 'danger');
+      }
+    } catch (e) {
+      console.log('Error activando trial:', e);
+      showToast('Error activando la prueba gratuita', 'danger');
+    } finally {
+      setTrialLoading(null);
+    }
   };
 
   // Cargar la cola de sincronización offline
@@ -392,20 +459,63 @@ export default function SettingsScreen({ navigation }) {
             />
           </View>
 
-          {/* Botón Suscripción Paquete Personal */}
+          {/* Botón Suscripción + Trial / Estado Activo Paquete Personal */}
           {user?.role !== 'admin' && (
-            <View style={styles.premiumBtnWrap}>
-              <TouchableOpacity
-                style={[styles.subscribeBtn, { backgroundColor: theme.accent }]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  setTargetModule('personal');
-                  setSubModalVisible(true);
-                }}
-              >
-                <Ionicons name="star" size={20} color="#FFF" style={{ marginRight: 8 }} />
-                <Text style={styles.subscribeBtnText}>Desbloquear Paquete Personal</Text>
-              </TouchableOpacity>
+            <View style={[styles.premiumActionsWrap, { flexDirection: isMobile ? 'column' : 'row' }]}>
+              {getModuleActive('personal') ? (
+                <View style={[styles.activeBadge, { backgroundColor: '#10B98115', borderColor: '#10B981' }]}>
+                  <Ionicons name="checkmark-circle" size={22} color="#10B981" style={{ marginRight: 8 }} />
+                  <View>
+                    <Text style={[styles.activeBadgeTitle, { color: '#10B981' }]}>
+                      {getModuleActiveInfo('personal')?.isTrial ? 'Prueba Gratis Activa' : 'Suscripción Activa'}
+                    </Text>
+                    <Text style={[styles.activeBadgeSub, { color: theme.textSecondary }]}>
+                      Vence: {getModuleActiveInfo('personal')?.expiresText} ({getModuleActiveInfo('personal')?.remainingDays} días)
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  {getModuleTrialAvailable('personal') && (
+                    <TouchableOpacity
+                      style={[
+                        styles.actionBtnBase,
+                        styles.trialBtn,
+                        { borderColor: theme.accent, backgroundColor: theme.card },
+                        !isMobile && getModuleTrialAvailable('personal') && { flex: 1 }
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={() => handleStartTrial('personal')}
+                      disabled={trialLoading === 'personal'}
+                    >
+                      {trialLoading === 'personal' ? (
+                        <ActivityIndicator size="small" color={theme.accent} />
+                      ) : (
+                        <>
+                          <Ionicons name="gift" size={18} color={theme.accent} style={{ marginRight: 8 }} />
+                          <Text style={[styles.trialBtnText, { color: theme.accent }]}>Probar Gratis</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={[
+                      styles.actionBtnBase,
+                      styles.subscribeBtn,
+                      { backgroundColor: theme.accent },
+                      !isMobile && { flex: 1 }
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setTargetModule('personal');
+                      setSubModalVisible(true);
+                    }}
+                  >
+                    <Ionicons name="star" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                    <Text style={styles.subscribeBtnText}>Desbloquear Paquete Personal</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           )}
         </View>
@@ -440,20 +550,63 @@ export default function SettingsScreen({ navigation }) {
             />
           </View>
 
-          {/* Botón Suscripción Paquete Empresarial */}
+          {/* Botón Suscripción + Trial / Estado Activo Paquete Empresarial */}
           {user?.role !== 'admin' && (
-            <View style={styles.premiumBtnWrap}>
-              <TouchableOpacity
-                style={[styles.subscribeBtn, { backgroundColor: theme.accent }]}
-                activeOpacity={0.8}
-                onPress={() => {
-                  setTargetModule('shop');
-                  setSubModalVisible(true);
-                }}
-              >
-                <Ionicons name="briefcase" size={20} color="#FFF" style={{ marginRight: 8 }} />
-                <Text style={styles.subscribeBtnText}>Desbloquear Paquete Tienda</Text>
-              </TouchableOpacity>
+            <View style={[styles.premiumActionsWrap, { flexDirection: isMobile ? 'column' : 'row' }]}>
+              {getModuleActive('shop') ? (
+                <View style={[styles.activeBadge, { backgroundColor: '#10B98115', borderColor: '#10B981' }]}>
+                  <Ionicons name="checkmark-circle" size={22} color="#10B981" style={{ marginRight: 8 }} />
+                  <View>
+                    <Text style={[styles.activeBadgeTitle, { color: '#10B981' }]}>
+                      {getModuleActiveInfo('shop')?.isTrial ? 'Prueba Gratis Activa' : 'Suscripción Activa'}
+                    </Text>
+                    <Text style={[styles.activeBadgeSub, { color: theme.textSecondary }]}>
+                      Vence: {getModuleActiveInfo('shop')?.expiresText} ({getModuleActiveInfo('shop')?.remainingDays} días)
+                    </Text>
+                  </View>
+                </View>
+              ) : (
+                <>
+                  {getModuleTrialAvailable('shop') && (
+                    <TouchableOpacity
+                      style={[
+                        styles.actionBtnBase,
+                        styles.trialBtn,
+                        { borderColor: theme.accent, backgroundColor: theme.card },
+                        !isMobile && getModuleTrialAvailable('shop') && { flex: 1 }
+                      ]}
+                      activeOpacity={0.8}
+                      onPress={() => handleStartTrial('shop')}
+                      disabled={trialLoading === 'shop'}
+                    >
+                      {trialLoading === 'shop' ? (
+                        <ActivityIndicator size="small" color={theme.accent} />
+                      ) : (
+                        <>
+                          <Ionicons name="gift" size={18} color={theme.accent} style={{ marginRight: 8 }} />
+                          <Text style={[styles.trialBtnText, { color: theme.accent }]}>Probar Gratis</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
+                  <TouchableOpacity
+                    style={[
+                      styles.actionBtnBase,
+                      styles.subscribeBtn,
+                      { backgroundColor: theme.accent },
+                      !isMobile && { flex: 1 }
+                    ]}
+                    activeOpacity={0.8}
+                    onPress={() => {
+                      setTargetModule('shop');
+                      setSubModalVisible(true);
+                    }}
+                  >
+                    <Ionicons name="briefcase" size={20} color="#FFF" style={{ marginRight: 8 }} />
+                    <Text style={styles.subscribeBtnText}>Desbloquear Paquete Tienda</Text>
+                  </TouchableOpacity>
+                </>
+              )}
             </View>
           )}
         </View>
@@ -783,11 +936,16 @@ const styles = StyleSheet.create({
     fontSize: 11,
     marginTop: 2,
   },
-  premiumBtnWrap: {
-    alignSelf: 'center',
+  premiumActionsWrap: {
+    alignItems: 'stretch',
+    justifyContent: 'center',
+    gap: 10,
     marginTop: 10,
     marginHorizontal: 10,
     marginBottom: 10,
+    width: 'auto',
+  },
+  premiumBtnWrap: {
     borderRadius: 16,
     overflow: 'hidden',
     shadowColor: '#000',
@@ -796,11 +954,48 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  subscribeBtn: {
+  actionBtnBase: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 16,
     paddingVertical: 16,
     paddingHorizontal: 20,
+  },
+  activeBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 2,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    flex: 1,
+  },
+  activeBadgeTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  activeBadgeSub: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  trialBtn: {
+    borderWidth: 2,
+    backgroundColor: 'transparent',
+  },
+  trialBtnText: {
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  subscribeBtn: {
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 6,
   },
   subscribeBtnText: {
     color: '#FFF',
@@ -902,17 +1097,5 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 10,
-  },
-  subscribeBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-  },
-  subscribeBtnText: {
-    color: '#FFF',
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.3,
   }
 });

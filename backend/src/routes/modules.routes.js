@@ -17,7 +17,7 @@ router.get('/modules', async (req, res) => {
         const isAdmin = userRows.length > 0 && userRows[0].role === 'admin';
 
         // Combinar con descuentos y trials del usuario
-        const subs = await db.query('SELECT module_key, status, custom_price_cop, trial_ends_at, expires_at FROM user_subscriptions WHERE user_id = ?', [userId]);
+        const subs = await db.query('SELECT module_key, status, custom_price_cop, trial_ends_at, expires_at, mp_subscription_id, mp_reference FROM user_subscriptions WHERE user_id = ?', [userId]);
         
         const merged = modules.map(m => {
             const sub = subs.find(s => s.module_key === m.module_key);
@@ -29,7 +29,10 @@ router.get('/modules', async (req, res) => {
                 custom_price_cop: sub ? sub.custom_price_cop : null,
                 trial_ends_at: sub ? sub.trial_ends_at : null,
                 status: currentStatus,
-                expires_at: sub ? sub.expires_at : null
+                expires_at: sub ? sub.expires_at : null,
+                mp_subscription_id: sub ? sub.mp_subscription_id : null,
+                mp_reference: sub ? sub.mp_reference : null,
+                trial_available: sub ? (sub.trial_ends_at === null) : true
             };
         });
         res.json(merged);
@@ -90,10 +93,10 @@ router.post('/subscriptions/checkout', async (req, res) => {
         const payerEmail = userEmail;
 
         const mpPayloadObj = {
-            reason: `${frequency === 'annual' ? 'Anual' : 'Mensual'} - ${modInfo[0].name}`,
+            reason: `UniControl - Suscripción ${frequency === 'annual' ? 'Anual' : 'Mensual'} - ${modInfo[0].name}`,
             auto_recurring,
             external_reference: `${userId}_${module_key}_${frequency}`,
-            back_url: 'https://unicontrol.onrender.com/success',
+            back_url: 'https://unicontrol-backend.onrender.com/success',
             payer_email: payerEmail
         };
 
@@ -138,6 +141,18 @@ router.post('/subscriptions/checkout', async (req, res) => {
             });
         }
 
+        // Guardar el ID de la suscripción de MercadoPago y la referencia
+        try {
+            await db.query(`
+                UPDATE user_subscriptions 
+                SET mp_subscription_id = ?, mp_reference = ?
+                WHERE user_id = ? AND module_key = ?
+            `, [mpResponse.body.id, mpResponse.body.external_reference, userId, module_key]);
+            console.log(`MP subscription guardado: ${mpResponse.body.id} (${mpResponse.body.external_reference})`);
+        } catch (e) {
+            console.error('Error guardando mp_subscription_id:', e.message);
+        }
+
         res.json({ init_point: mpResponse.body.init_point });
     } catch (err) {
         console.error('[CHECKOUT ERROR]', err);
@@ -145,13 +160,61 @@ router.post('/subscriptions/checkout', async (req, res) => {
     }
 });
 
-function validateMpSignature(req) {
+// Endpoint para activar período de prueba (trial) de un módulo
+router.post('/subscriptions/trial', async (req, res) => {
+    const userId = req.headers['x-user-id'];
+    const { module_key } = req.body;
+    if (!userId || !module_key) return res.status(400).json({ error: 'Faltan datos.' });
+
+    try {
+        // Verificar si el usuario ya tiene fila, si no, crearla
+        await db.query('INSERT IGNORE INTO user_subscriptions (user_id, module_key, status) VALUES (?, ?, ?)', [userId, module_key, 'pending']);
+
+        const subRows = await db.query(
+            'SELECT status, trial_ends_at, expires_at FROM user_subscriptions WHERE user_id = ? AND module_key = ?',
+            [userId, module_key]
+        );
+
+        const sub = subRows[0];
+
+        // Si ya tiene trial usado (trial_ends_at no es NULL), rechazar
+        if (sub && sub.trial_ends_at !== null) {
+            return res.status(400).json({ error: 'Ya has utilizado tu prueba gratuita para este módulo.' });
+        }
+
+        // Si ya tiene suscripción activa vigente, no necesita trial
+        if (sub && sub.status === 'active' && sub.expires_at && new Date(sub.expires_at) > new Date()) {
+            return res.status(400).json({ error: 'Ya tienes una suscripción activa para este módulo.' });
+        }
+
+        // Activar trial por 1 mes (30 días)
+        await db.query(`
+            UPDATE user_subscriptions 
+            SET status = 'active', 
+                trial_ends_at = DATE_ADD(NOW(), INTERVAL 1 MONTH),
+                expires_at = DATE_ADD(NOW(), INTERVAL 1 MONTH)
+            WHERE user_id = ? AND module_key = ?
+        `, [userId, module_key]);
+
+        console.log(`Trial activado para usuario ${userId} módulo ${module_key} (1 mes)`);
+        res.json({
+            success: true,
+            message: 'Prueba gratuita activada por 1 mes.',
+            trial_ends_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
+        });
+    } catch (err) {
+        console.error('[TRIAL ERROR]', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+function validateMpSignature(req, dataId) {
     const clientSecret = process.env.MP_WEBHOOK_SECRET || '';
     if (!clientSecret) return true; // Si no hay secreto configurado, saltar validación
 
     const signatureHeader = req.headers['x-signature'];
     const requestId = req.headers['x-request-id'];
-    if (!signatureHeader || !requestId) return false;
+    if (!signatureHeader || !requestId || !dataId) return false;
 
     // Parsear el header "ts=...v1=..."
     const parts = {};
@@ -162,13 +225,14 @@ function validateMpSignature(req) {
 
     if (!parts.ts || !parts.v1) return false;
 
-    // Generar el string a firmar: "requestId.body"
-    const dataToSign = `id:${requestId};request-id:${requestId};ts:${parts.ts};`;
+    // Generar el string a firmar según documentación de MercadoPago:
+    // dataToSign = "id:{data.id};request-id:{x-request-id};ts:{ts};"
+    const dataToSign = `id:${dataId};request-id:${requestId};ts:${parts.ts};`;
     const hmac = crypto.createHmac('sha256', clientSecret).update(dataToSign).digest('hex');
 
     // Comparar usando timing-safe comparison
     try {
-        return crypto.timingSafeEqual(Buffer.from(hmac), Buffer.from(parts.v1));
+        return crypto.timingSafeEqual(Buffer.from(hmac, 'hex'), Buffer.from(parts.v1, 'hex'));
     } catch {
         return false;
     }
@@ -181,7 +245,8 @@ router.post('/subscriptions/webhook', async (req, res) => {
     res.status(200).send('OK');
 
     // --- VERIFICACIÓN DE FIRMA (X-Signature) ---
-    if (!validateMpSignature(req)) {
+    // Se pasa data.id (el ID real del recurso) para firmar correctamente
+    if (!validateMpSignature(req, data?.id)) {
         console.error('[Webhook] Firma inválida - posible solicitud falsa');
         return;
     }
@@ -241,10 +306,12 @@ router.post('/subscriptions/webhook', async (req, res) => {
                     await db.query(`
                         UPDATE user_subscriptions 
                         SET status = 'active', 
-                            expires_at = DATE_ADD(COALESCE(expires_at, NOW()), INTERVAL ${interval})
+                            expires_at = DATE_ADD(COALESCE(expires_at, NOW()), INTERVAL ${interval}),
+                            mp_subscription_id = ?,
+                            mp_reference = ?
                         WHERE user_id = ? AND module_key = ?
-                    `, [userId, module_key]);
-                    console.log(`✅ Suscripción activada para usuario ${userId} módulo ${module_key} (${frequency})`);
+                    `, [data.id, subscription.external_reference, userId, module_key]);
+                    console.log(`Suscripción activada para usuario ${userId} módulo ${module_key} (${frequency})`);
                 }
             }
 
@@ -257,7 +324,7 @@ router.post('/subscriptions/webhook', async (req, res) => {
                         SET status = 'cancelled' 
                         WHERE user_id = ? AND module_key = ?
                     `, [parts[0], parts[1]]);
-                    console.log(`❌ Suscripción cancelada para usuario ${parts[0]} módulo ${parts[1]}`);
+                    console.log(`Suscripción cancelada para usuario ${parts[0]} módulo ${parts[1]}`);
                 }
             }
         } catch (err) {

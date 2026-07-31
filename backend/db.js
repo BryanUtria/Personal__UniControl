@@ -183,6 +183,8 @@ async function initDB() {
             custom_price_cop DECIMAL(10,2) NULL,
             trial_ends_at DATETIME NULL,
             expires_at DATETIME NULL,
+            mp_subscription_id VARCHAR(255) NULL,
+            mp_reference VARCHAR(255) NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
             FOREIGN KEY (module_key) REFERENCES app_modules(module_key) ON DELETE CASCADE,
