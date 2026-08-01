@@ -2,7 +2,7 @@
   "expo": {
     "name": "UniControl",
     "slug": "UniControl",
-    "version": "1.0.5",
+    "version": "1.0.7",
     "orientation": "portrait",
     "icon": "./assets/App.png",
     "userInterfaceStyle": "light",
@@ -23,7 +23,7 @@
       "edgeToEdgeEnabled": true,
       "googleServicesFile": "./google-services.json",
       "package": "com.castelbrothers.unicontrol",
-      "versionCode": 5
+      "versionCode": 10007
     },
     "web": {
       "favicon": "./assets/Navegador.png"

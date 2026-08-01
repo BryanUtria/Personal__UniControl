@@ -10,6 +10,7 @@ import NetInfo from '@react-native-community/netinfo';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useResponsive } from '../hooks/useResponsive';
 import Button from '../components/Button';
+import AdBanner from '../components/AdBanner';
 
 export default function SidebarLayout({
   children,
@@ -110,6 +111,32 @@ export default function SidebarLayout({
     }
   ];
 
+  // Determinar el estado de suscripción de un módulo ('personal' | 'shop')
+  const getSubStatus = (key) => {
+    const subs = user?.subscriptions || [];
+    const sub = subs.find(s => s.module_key === key);
+    if (!sub || sub.status !== 'active' || !sub.expires_at) return null;
+    if (new Date(sub.expires_at) <= new Date()) return null;
+    const isTrial = sub.trial_ends_at && new Date(sub.trial_ends_at) > new Date();
+    return { isTrial };
+  };
+
+  // Etiqueta del plan según suscripciones activas
+  const getPlanLabel = () => {
+    if (user?.role === 'admin') return 'Administrador';
+    const personal = getSubStatus('personal');
+    const shop = getSubStatus('shop');
+
+    // Suscripciones pagas tienen prioridad sobre trials
+    if (shop && !shop.isTrial) return 'Suscripción Empresarial';
+    if (personal && !personal.isTrial) return 'Suscripción Personal';
+
+    // Cualquier trial activo (mes gratis)
+    if (shop?.isTrial || personal?.isTrial) return 'Mes Gratis';
+
+    return 'Plan Gratis';
+  };
+
   const renderSidebarContent = () => {
     const fullName = user?.name || user?.username || 'Usuario';
     const nameParts = fullName.trim().split(/\s+/);
@@ -152,8 +179,8 @@ export default function SidebarLayout({
                   {lastName}
                 </Text>
               ) : null}
-              <Text style={[styles.profileRole, { color: theme.textSecondary, textTransform: 'capitalize', marginTop: 2 }]}>
-                {user?.role === 'admin' ? 'Administrador' : (user?.role === 'client' ? 'Cliente' : (user?.role || 'Usuario'))}
+              <Text style={[styles.profileRole, { color: theme.accent, textTransform: 'capitalize', marginTop: 2, fontWeight: '600' }]}>
+                {getPlanLabel()}
               </Text>
             </View>
           )}
@@ -408,22 +435,8 @@ export default function SidebarLayout({
             {children}
           </View>
 
-          {/* BANNER DE PUBLICIDAD PARA USUARIOS GRATUITOS */}
-          {(!user?.plan || user?.plan === 'free') && (
-            <View style={{ 
-              width: '100%', 
-              backgroundColor: isDarkMode ? '#1e1e1e' : '#f5f5f5', 
-              borderTopWidth: 1, 
-              borderTopColor: theme.border, 
-              paddingVertical: 24, 
-              paddingHorizontal: 15,
-              alignItems: 'center', 
-              justifyContent: 'center' 
-            }}>
-              <Text style={{ fontSize: 14, fontWeight: 'bold', color: theme.text, letterSpacing: 0.5, marginBottom: 4 }}>Espacio Publicitario</Text>
-              <Text style={{ fontSize: 12, color: theme.textSecondary }}>Actualiza a una Suscripción Premium para eliminar anuncios</Text>
-            </View>
-          )}
+          {/* BANNER DE PUBLICIDAD CON GOOGLE ADMOB (SOLO USUARIOS GRATUITOS) */}
+          {getPlanLabel() === 'Plan Gratis' && <AdBanner />}
         </View>
 
         {/* DRAWER PARA MÓVIL (MENÚ COLAPSIBLE) */}

@@ -25,7 +25,13 @@ export default function VersionCheckModal() {
       const response = await fetch(`${API_URL}/version`);
       const data = await response.json();
 
-      if (data.version && data.version !== localVersion) {
+      // En desarrollo (__DEV__) la versión del frontend se equipara con la del
+      // backend para evitar falsos positivos del modal de actualización.
+      // En producción, se compara contra la versión local incrustada en el build
+      // (localVersion) que es la que realmente tiene el usuario instalada.
+      const effectiveLocalVersion = __DEV__ ? (data.version || localVersion) : localVersion;
+
+      if (data.version && data.version !== effectiveLocalVersion) {
         setServerVersion(data.version);
         if (data.apkUrl) setApkUrl(data.apkUrl);
         setIsVisible(true);

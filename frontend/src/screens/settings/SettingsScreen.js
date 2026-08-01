@@ -383,19 +383,29 @@ export default function SettingsScreen({ navigation }) {
               <Text style={{ color: theme.textSecondary, fontSize: 13 }}>{user?.email}</Text>
             </View>
           </View>
-          <Button
-            title="Editar Datos de Perfil"
-            variant="secondary"
-            onPress={() => {
-              setEditName(user?.name || '');
-              setEditUsername(user?.username || '');
-              setEditEmail(user?.email || '');
-              setEditPassword('');
-              setProfileError('');
-              setProfileModalVisible(true);
-            }}
-            icon={<Ionicons name="create-outline" size={18} color={theme.text} />}
-          />
+          <View style={[styles.profileActions, { flexDirection: isMobile ? 'column' : 'row', justifyContent: isMobile ? 'stretch' : 'flex-end' }]}>
+            <Button
+              title="Editar Datos de Perfil"
+              variant="secondary"
+              style={isMobile ? {} : { width: 220 }}
+              onPress={() => {
+                setEditName(user?.name || '');
+                setEditUsername(user?.username || '');
+                setEditEmail(user?.email || '');
+                setEditPassword('');
+                setProfileError('');
+                setProfileModalVisible(true);
+              }}
+              icon={<Ionicons name="create-outline" size={18} color={theme.text} />}
+            />
+            <Button
+              title="Política de Privacidad"
+              variant="secondary"
+              style={isMobile ? {} : { width: 220 }}
+              onPress={() => navigation.navigate('PrivacyPolicy')}
+              icon={<Ionicons name="shield-checkmark-outline" size={18} color={theme.text} />}
+            />
+          </View>
         </View>
 
         {/* SECCIÓN MÓDULOS PERSONALES */}
@@ -894,6 +904,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  profileActions: {
+    gap: 10,
+    alignItems: 'stretch',
   },
   sectionTitle: {
     fontSize: 16,
