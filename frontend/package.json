@@ -7,6 +7,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "web": "expo start --web",
+    "build:web": "npx expo export --platform web && node copy-app-ads.js",
     "build:apk-dev": "npx expo prebuild --clean && expo run:android",
     "build:apk-prod": "npx expo prebuild --clean && cd android && gradlew assembleRelease && cd .. && move android\\app\\build\\outputs\\apk\\release\\app-release.apk private\\apk\\Unicontrol.apk",
     "build:aab-prod": "npx expo prebuild --clean && cd android && gradlew bundleRelease && cd .. && move android\\app\\build\\outputs\\bundle\\release\\app-release.aab private\\apk\\Unicontrol.aab"
