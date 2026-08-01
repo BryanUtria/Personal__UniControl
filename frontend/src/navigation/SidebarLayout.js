@@ -30,6 +30,9 @@ export default function SidebarLayout({
   const [isOnline, setIsOnline] = useState(true);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [hoveredItem, setHoveredItem] = useState(null);
+  // Tooltip global con posicion fija (sale del flujo del ScrollView,
+  // evitando que se recorte detrás del contenido de las páginas).
+  const [tooltipInfo, setTooltipInfo] = useState(null);
 
   const isSidebarCollapsed = !isMobile && isCollapsed;
 
@@ -111,7 +114,7 @@ export default function SidebarLayout({
     }
   ];
 
-  // Determinar el estado de suscripción de un módulo ('personal' | 'shop')
+  // Determinar el estado de suscripción de un módulo ('personal' | 'business')
   const getSubStatus = (key) => {
     const subs = user?.subscriptions || [];
     const sub = subs.find(s => s.module_key === key);
@@ -125,14 +128,15 @@ export default function SidebarLayout({
   const getPlanLabel = () => {
     if (user?.role === 'admin') return 'Administrador';
     const personal = getSubStatus('personal');
-    const shop = getSubStatus('shop');
+    const business = getSubStatus('business');
 
     // Suscripciones pagas tienen prioridad sobre trials
-    if (shop && !shop.isTrial) return 'Suscripción Empresarial';
+    if (business && !business.isTrial) return 'Suscripción Empresarial';
     if (personal && !personal.isTrial) return 'Suscripción Personal';
 
     // Cualquier trial activo (mes gratis)
-    if (shop?.isTrial || personal?.isTrial) return 'Mes Gratis';
+    if (business?.isTrial) return 'Mes Gratis (Empresarial)';
+    if (personal?.isTrial) return 'Mes Gratis (Personal)';
 
     return 'Plan Gratis';
   };
@@ -195,13 +199,26 @@ export default function SidebarLayout({
           {navItems.map((item, index) => {
             if (!item.visible) return null;
             const isActive = activeRoute === item.route || (item.route === 'ShopMenu' && ['POS', 'Inventory', 'SalesHistory'].includes(activeRoute));
-            const isItemHovered = hoveredItem === index;
             return (
               <Button
                 key={index}
                 onPress={() => handleNavigate(item.route)}
-                onMouseEnter={() => setHoveredItem(index)}
-                onMouseLeave={() => setHoveredItem(null)}
+                onMouseEnter={(e) => {
+                  setHoveredItem(index);
+                  if (isSidebarCollapsed && e && e.currentTarget) {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    setTooltipInfo({
+                      label: item.label,
+                      x: rect.right,
+                      y: rect.top + rect.height / 2,
+                      danger: false
+                    });
+                  }
+                }}
+                onMouseLeave={() => {
+                  setHoveredItem(null);
+                  setTooltipInfo(null);
+                }}
                 variant="secondary"
                 backgroundColor={isActive ? theme.accent + '15' : 'transparent'}
                 hoverBackgroundColor={isActive ? theme.accent + '20' : (isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)')}
@@ -240,22 +257,6 @@ export default function SidebarLayout({
                   <View style={[styles.miniBadge, { backgroundColor: theme.danger }]} />
                 )}
 
-                {/* Tooltip al hacer hover en sidebar colapsado */}
-                {isSidebarCollapsed && isItemHovered && Platform.OS === 'web' && (
-                  <View
-                    style={[
-                      styles.tooltip,
-                      isDarkMode
-                        ? { backgroundColor: '#2D2D2D' }
-                        : { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }
-                    ]}
-                    pointerEvents="none"
-                  >
-                    <Text style={[styles.tooltipText, { color: isDarkMode ? '#FFFFFF' : '#1A1A24' }]}>
-                      {item.label}
-                    </Text>
-                  </View>
-                )}
               </Button>
             );
           })}
@@ -270,8 +271,22 @@ export default function SidebarLayout({
           {/* Settings */}
           <Button
             onPress={() => handleNavigate('Settings')}
-            onMouseEnter={() => setHoveredItem('settings')}
-            onMouseLeave={() => setHoveredItem(null)}
+            onMouseEnter={(e) => {
+              setHoveredItem('settings');
+              if (isSidebarCollapsed && e && e.currentTarget) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setTooltipInfo({
+                  label: 'Configuración',
+                  x: rect.right,
+                  y: rect.top + rect.height / 2,
+                  danger: false
+                });
+              }
+            }}
+            onMouseLeave={() => {
+              setHoveredItem(null);
+              setTooltipInfo(null);
+            }}
             variant="secondary"
             backgroundColor={activeRoute === 'Settings' ? theme.accent + '15' : "transparent"}
             hoverBackgroundColor={activeRoute === 'Settings' ? theme.accent + '20' : (isDarkMode ? 'rgba(255, 255, 255, 0.06)' : 'rgba(0, 0, 0, 0.04)')}
@@ -300,25 +315,26 @@ export default function SidebarLayout({
             {isSidebarCollapsed && queueCount > 0 && (
               <View style={[styles.miniBadge, { backgroundColor: theme.danger, top: 4, right: 4 }]} />
             )}
-            {isSidebarCollapsed && hoveredItem === 'settings' && Platform.OS === 'web' && (
-              <View
-                style={[
-                  styles.tooltip,
-                  isDarkMode
-                    ? { backgroundColor: '#2D2D2D' }
-                    : { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#E5E7EB' }
-                ]}
-                pointerEvents="none"
-              >
-                <Text style={[styles.tooltipText, { color: isDarkMode ? '#FFFFFF' : '#1A1A24' }]}>Configuración</Text>
-              </View>
-            )}
           </Button>
 
           <Button
             onPress={logout}
-            onMouseEnter={() => setHoveredItem('logout')}
-            onMouseLeave={() => setHoveredItem(null)}
+            onMouseEnter={(e) => {
+              setHoveredItem('logout');
+              if (isSidebarCollapsed && e && e.currentTarget) {
+                const rect = e.currentTarget.getBoundingClientRect();
+                setTooltipInfo({
+                  label: 'Cerrar Sesión',
+                  x: rect.right,
+                  y: rect.top + rect.height / 2,
+                  danger: true
+                });
+              }
+            }}
+            onMouseLeave={() => {
+              setHoveredItem(null);
+              setTooltipInfo(null);
+            }}
             variant="danger"
             backgroundColor="transparent"
             hoverBackgroundColor={theme.danger + '10'}
@@ -333,19 +349,6 @@ export default function SidebarLayout({
               <Text style={[styles.footerBtnText, { color: theme.danger }]}>
                 Cerrar Sesión
               </Text>
-            )}
-            {isSidebarCollapsed && hoveredItem === 'logout' && Platform.OS === 'web' && (
-              <View
-                style={[
-                  styles.tooltip,
-                  isDarkMode
-                    ? { backgroundColor: '#2D2D2D' }
-                    : { backgroundColor: '#FFF5F5', borderWidth: 1, borderColor: '#FECACA' }
-                ]}
-                pointerEvents="none"
-              >
-                <Text style={[styles.tooltipText, { color: theme.danger }]}>Cerrar Sesión</Text>
-              </View>
             )}
           </Button>
         </View>
@@ -452,6 +455,35 @@ export default function SidebarLayout({
           </View>
         )}
       </View>
+
+      {/* TOOLTIP GLOBAL CON POSICIÓN FIJA (WEB)
+          Se renderiza fuera del ScrollView y del sidebar, con position:fixed
+          respecto al viewport, para que NO quede atrás del contenido. */}
+      {Platform.OS === 'web' && isSidebarCollapsed && tooltipInfo && (
+        <View
+          style={[
+            styles.tooltipFixed,
+            {
+              left: tooltipInfo.x + 12,
+              top: tooltipInfo.y,
+              backgroundColor: tooltipInfo.danger
+                ? (isDarkMode ? '#2D2D2D' : '#FFF5F5')
+                : (isDarkMode ? '#2D2D2D' : '#FFFFFF'),
+              borderColor: tooltipInfo.danger ? '#FECACA' : (isDarkMode ? '#2D2D2D' : '#E5E7EB'),
+            }
+          ]}
+          pointerEvents="none"
+        >
+          <Text
+            style={[
+              styles.tooltipText,
+              { color: tooltipInfo.danger ? theme.danger : (isDarkMode ? '#FFFFFF' : '#1A1A24') }
+            ]}
+          >
+            {tooltipInfo.label}
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 }
@@ -619,6 +651,21 @@ const styles = StyleSheet.create({
     width: 8,
     height: 8,
     borderRadius: 4,
+  },
+  tooltipFixed: {
+    position: 'fixed',
+    transform: [{ translateY: -14 }],
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 7,
+    zIndex: 999999,
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 8,
+    whiteSpace: 'nowrap',
   },
   tooltip: {
     position: 'absolute',

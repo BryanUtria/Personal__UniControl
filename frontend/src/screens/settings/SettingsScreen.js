@@ -545,11 +545,6 @@ export default function SettingsScreen({ navigation }) {
               <View style={styles.settingTextContainer}>
                 <Text style={[styles.settingTitle, { color: theme.text }]}>Tienda y Punto de Venta</Text>
                 <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Punto de Venta, Inventario e Historial de Ventas.</Text>
-                {user?.role !== 'admin' && (
-                  <Text style={{ fontSize: 10, color: theme.accent, fontWeight: 'bold', marginTop: 2 }}>
-                    Premium
-                  </Text>
-                )}
               </View>
             </View>
             <Switch
@@ -563,33 +558,33 @@ export default function SettingsScreen({ navigation }) {
           {/* Botón Suscripción + Trial / Estado Activo Paquete Empresarial */}
           {user?.role !== 'admin' && (
             <View style={[styles.premiumActionsWrap, { flexDirection: isMobile ? 'column' : 'row' }]}>
-              {getModuleActive('shop') ? (
+              {getModuleActive('business') ? (
                 <View style={[styles.activeBadge, { backgroundColor: '#10B98115', borderColor: '#10B981' }]}>
                   <Ionicons name="checkmark-circle" size={22} color="#10B981" style={{ marginRight: 8 }} />
                   <View>
                     <Text style={[styles.activeBadgeTitle, { color: '#10B981' }]}>
-                      {getModuleActiveInfo('shop')?.isTrial ? 'Prueba Gratis Activa' : 'Suscripción Activa'}
+                      {getModuleActiveInfo('business')?.isTrial ? 'Prueba Gratis Activa' : 'Suscripción Activa'}
                     </Text>
                     <Text style={[styles.activeBadgeSub, { color: theme.textSecondary }]}>
-                      Vence: {getModuleActiveInfo('shop')?.expiresText} ({getModuleActiveInfo('shop')?.remainingDays} días)
+                      Vence: {getModuleActiveInfo('business')?.expiresText} ({getModuleActiveInfo('business')?.remainingDays} días)
                     </Text>
                   </View>
                 </View>
               ) : (
                 <>
-                  {getModuleTrialAvailable('shop') && (
+                  {getModuleTrialAvailable('business') && (
                     <TouchableOpacity
                       style={[
                         styles.actionBtnBase,
                         styles.trialBtn,
                         { borderColor: theme.accent, backgroundColor: theme.card },
-                        !isMobile && getModuleTrialAvailable('shop') && { flex: 1 }
+                        !isMobile && getModuleTrialAvailable('business') && { flex: 1 }
                       ]}
                       activeOpacity={0.8}
-                      onPress={() => handleStartTrial('shop')}
-                      disabled={trialLoading === 'shop'}
+                      onPress={() => handleStartTrial('business')}
+                      disabled={trialLoading === 'business'}
                     >
-                      {trialLoading === 'shop' ? (
+                      {trialLoading === 'business' ? (
                         <ActivityIndicator size="small" color={theme.accent} />
                       ) : (
                         <>
@@ -608,12 +603,12 @@ export default function SettingsScreen({ navigation }) {
                     ]}
                     activeOpacity={0.8}
                     onPress={() => {
-                      setTargetModule('shop');
+                      setTargetModule('business');
                       setSubModalVisible(true);
                     }}
                   >
                     <Ionicons name="briefcase" size={20} color="#FFF" style={{ marginRight: 8 }} />
-                    <Text style={styles.subscribeBtnText}>Desbloquear Paquete Tienda</Text>
+                    <Text style={styles.subscribeBtnText}>Desbloquear Paquete Empresarial</Text>
                   </TouchableOpacity>
                 </>
               )}

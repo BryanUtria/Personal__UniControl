@@ -3,7 +3,7 @@
     "name": "UniControl",
     "slug": "UniControl",
     "version": "1.0.7",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/App.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,

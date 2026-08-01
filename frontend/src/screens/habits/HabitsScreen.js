@@ -8,7 +8,6 @@ import { useToast } from '../../context/ToastContext';
 import SidebarLayout from '../../navigation/SidebarLayout';
 import HabitsCalendar from './HabitsCalendar';
 import HabitFormModal from './HabitFormModal';
-import SubscriptionModal from '../../components/SubscriptionModal';
 import Button from '../../components/Button';
 import { apiFetch } from '../../utils/offlineSync';
 
@@ -37,34 +36,8 @@ export default function HabitsScreen({ navigation }) {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [habitToDelete, setHabitToDelete] = useState(null);
 
-  // Subscription state
-  const [subscriptionStatus, setSubscriptionStatus] = useState('pending'); // 'active', 'pending', 'expired'
-  const [subModalVisible, setSubModalVisible] = useState(false);
-  const [checkingSub, setCheckingSub] = useState(true);
-
-  const checkSubscription = async () => {
-    try {
-      const response = await fetch(`${API_URL}/modules`, {
-        headers: { 'x-user-id': user.id.toString() }
-      });
-      const data = await response.json();
-      const habitMod = data.find(m => m.module_key === 'habits');
-      if (habitMod) {
-        if (habitMod.is_free === 1) {
-          setSubscriptionStatus('active');
-        } else {
-          setSubscriptionStatus(habitMod.status);
-          if (habitMod.status !== 'active') {
-            setSubModalVisible(true);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error checking subscription:', error);
-    } finally {
-      setCheckingSub(false);
-    }
-  };
+  // El módulo de Hábitos es GRATUITO (igual que Deudas/Ahorros y Control de Gastos),
+  // por lo que NO se bloquea ni se solicita suscripción. Se carga directamente.
 
   const fetchHabits = async () => {
     try {
@@ -84,19 +57,12 @@ export default function HabitsScreen({ navigation }) {
   };
 
   useEffect(() => {
-    checkSubscription();
+    fetchHabits();
   }, [user]);
-
-  useEffect(() => {
-    if (subscriptionStatus === 'active') {
-      fetchHabits();
-    }
-  }, [subscriptionStatus]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchHabits();
-    checkSubscription();
   }, []);
 
   const getHabitsForDate = (dateStr) => {
@@ -277,41 +243,6 @@ export default function HabitsScreen({ navigation }) {
   const monthProgress = totalMonthHabits > 0 ? (completedMonthHabits / totalMonthHabits) * 100 : 0;
   // const monthSummaryTitle = `Resumen del Mes (hasta ${getRelativeDateLabel(selectedDate).toLowerCase()})`;
   const monthSummaryTitle = `Resumen del Mes`;
-
-  if (checkingSub) {
-    return (
-      <SidebarLayout title="Hábitos y Tareas" activeRoute="Habits" navigation={navigation}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.background }}>
-          <ActivityIndicator size="large" color={theme.accent} />
-        </View>
-      </SidebarLayout>
-    );
-  }
-
-  if (subscriptionStatus !== 'active') {
-    return (
-      <SidebarLayout title="Hábitos y Tareas" activeRoute="Habits" navigation={navigation}>
-        <View style={styles.lockContainer}>
-          <Ionicons name="lock-closed" size={60} color={theme.textLight} />
-          <Text style={[styles.lockTitle, { color: theme.text }]}>Módulo Premium</Text>
-          <Text style={[styles.lockDesc, { color: theme.textSecondary }]}>
-            Gestiona tus rutinas y haz un seguimiento diario suscribiéndote a este módulo.
-          </Text>
-          <TouchableOpacity
-            style={[styles.unlockBtn, { backgroundColor: theme.accent }]}
-            onPress={() => setSubModalVisible(true)}
-          >
-            <Text style={styles.unlockBtnText}>Ver Planes</Text>
-          </TouchableOpacity>
-        </View>
-        <SubscriptionModal
-          visible={subModalVisible}
-          onClose={() => setSubModalVisible(false)}
-          moduleKey="habits"
-        />
-      </SidebarLayout>
-    );
-  }
 
   return (
     <SidebarLayout title="Hábitos y Tareas" activeRoute="Habits" navigation={navigation}>

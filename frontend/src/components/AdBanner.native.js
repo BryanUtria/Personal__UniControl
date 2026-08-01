@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   placeholderText: {
-    fontSize: 10,
+    fontSize: 12,
     textAlign: 'center',
     paddingHorizontal: 15,
   },
@@ -101,7 +101,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   disclaimer: {
-    fontSize: 10,
+    fontSize: 12,
     marginTop: 4,
     textAlign: 'center',
   },

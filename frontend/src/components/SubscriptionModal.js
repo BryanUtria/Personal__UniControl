@@ -11,7 +11,7 @@ const formatCurrency = (amount) => {
   return `$ ${Math.round(amount).toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`;
 };
 
-export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop' }) {
+export default function SubscriptionModal({ visible, onClose, moduleKey = 'business' }) {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
 
@@ -93,7 +93,7 @@ export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop'
           </View>
 
           <Text style={[styles.title, { color: theme.text }]}>
-            {moduleInfo?.name === 'Paquete Personal' ? 'Suscripción Personal' : 'Módulo Premium'}
+            {moduleInfo?.name === 'Paquete Personal' ? 'Suscripción Personal' : 'Suscripción Empresarial'}
           </Text>
 
           {loading ? (
@@ -109,8 +109,8 @@ export default function SubscriptionModal({ visible, onClose, moduleKey = 'shop'
           ) : moduleInfo ? (
             <View style={styles.content}>
               <Text style={[styles.description, { color: theme.textSecondary }]}>
-                {moduleInfo.module_key === 'shop'
-                  ? 'Activa el Punto de Venta, Gestión de Inventario y Reporte de Ganancias para llevar tu negocio al siguiente nivel.'
+                {moduleInfo.module_key === 'business' || moduleInfo.module_key === 'shop'
+                  ? 'Activa el Paquete Empresarial: Punto de Venta, Gestión de Inventario, Reporte de Ganancias y más módulos de negocio para llevar tu empresa al siguiente nivel.'
                   : moduleInfo.module_key === 'personal'
                     ? 'Desbloquea funcionalidades completas.'
                     : 'Desbloquea este módulo exclusivo.'}

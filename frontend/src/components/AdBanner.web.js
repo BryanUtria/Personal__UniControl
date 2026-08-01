@@ -164,12 +164,12 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   placeholderText: {
-    fontSize: 9,
+    fontSize: 15,
     marginTop: 2,
     textAlign: 'center',
   },
   disclaimer: {
-    fontSize: 9,
+    fontSize: 15,
     marginTop: 2,
     textAlign: 'center',
   },
