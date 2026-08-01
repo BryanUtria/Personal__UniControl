@@ -1,5 +1,1 @@
-# app-ads.txt - Archivo de autorización para monetizar en AdMob
-# Formato: <AD NETWORK DOMAIN>, <PUBLISHER ID>, <RELATIONSHIP TYPE>, <CERTIFICATION AUTHORITY ID>
-# Google AdMob requiere este archivo en la raíz del dominio para verificar la app.
-
 google.com, pub-1350604989236740, DIRECT, f08c47fec0942fa0
