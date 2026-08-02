@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Alert, Pressable } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, ActivityIndicator, KeyboardAvoidingView, useWindowDimensions, Alert, Pressable, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
+import { useShop } from '../../../context/ShopContext';
 import { useToast } from '../../../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
 import { apiFetch } from '../../../utils/offlineSync';
+import { formatDateToLocal } from '../../../utils/dateUtils';
 import SidebarLayout from '../../../navigation/SidebarLayout';
 import Input from '../../../components/Input';
 import Button from '../../../components/Button';
@@ -21,6 +23,7 @@ const formatNumber = (num) => {
 export default function POSScreen({ navigation }) {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
+  const { activeShop } = useShop();
   const { showToast } = useToast();
   const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
@@ -62,10 +65,23 @@ export default function POSScreen({ navigation }) {
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [orderToDelete, setOrderToDelete] = useState(null);
 
+  // Modal de historial/trazabilidad del pedido
+  const [historyModalVisible, setHistoryModalVisible] = useState(false);
+  const [orderHistory, setOrderHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Modal de cantidad (digitar unidades)
+  const [qtyModalVisible, setQtyModalVisible] = useState(false);
+  const [qtyModalMode, setQtyModalMode] = useState('addFromCatalog'); // 'addFromCatalog' | 'add' | 'remove'
+  const [qtyModalProduct, setQtyModalProduct] = useState(null); // Para agregar desde catálogo
+  const [qtyModalTargetItem, setQtyModalTargetItem] = useState(null); // Para líneas del carrito
+  const [qtyInput, setQtyInput] = useState('1');
+  const [qtyMax, setQtyMax] = useState(1);
+
   // Cargar productos del servidor
   const fetchProducts = async () => {
     try {
-      const headers = { 'x-user-id': user ? user.id.toString() : '' };
+      const headers = { 'x-user-id': user ? user.id.toString() : '', 'x-shop-id': activeShop ? activeShop.id.toString() : '' };
       const res = await apiFetch(`${API_URL}/products`, { headers });
       const data = await res.json();
       setProducts(Array.isArray(data) ? data : []);
@@ -78,7 +94,7 @@ export default function POSScreen({ navigation }) {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const headers = { 'x-user-id': user ? user.id.toString() : '' };
+      const headers = { 'x-user-id': user ? user.id.toString() : '', 'x-shop-id': activeShop ? activeShop.id.toString() : '' };
 
       const [resDebtors, resOrders] = await Promise.all([
         apiFetch(`${API_URL}/debtors`, { headers }),
@@ -116,7 +132,7 @@ export default function POSScreen({ navigation }) {
     try {
       setLoadingItems(true);
       const response = await apiFetch(`${API_URL}/orders/${orderId}/items`, {
-        headers: { 'x-user-id': user ? user.id.toString() : '' }
+        headers: { 'x-user-id': user ? user.id.toString() : '', 'x-shop-id': activeShop ? activeShop.id.toString() : '' }
       });
       const data = await response.json();
       if (response.ok) {
@@ -135,7 +151,7 @@ export default function POSScreen({ navigation }) {
     if (isFocused) {
       fetchData();
     }
-  }, [isFocused]);
+  }, [isFocused, activeShop]);
 
   // Manejar selección de orden/mesa
   const handleSelectOrder = (order) => {
@@ -156,7 +172,8 @@ export default function POSScreen({ navigation }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user ? user.id.toString() : ''
+          'x-user-id': user ? user.id.toString() : '',
+          'x-shop-id': activeShop ? activeShop.id.toString() : ''
         },
         body: JSON.stringify({ reference: newOrderReference.trim() })
       });
@@ -167,7 +184,7 @@ export default function POSScreen({ navigation }) {
         setNewOrderModalVisible(false);
 
         // Recargar órdenes y seleccionar la recién creada
-        const headers = { 'x-user-id': user ? user.id.toString() : '' };
+        const headers = { 'x-user-id': user ? user.id.toString() : '', 'x-shop-id': activeShop ? activeShop.id.toString() : '' };
         const resOrders = await apiFetch(`${API_URL}/orders`, { headers });
         const dataOrders = await resOrders.json();
         const updatedOrders = Array.isArray(dataOrders) ? dataOrders : [];
@@ -201,7 +218,7 @@ export default function POSScreen({ navigation }) {
     try {
       const response = await apiFetch(`${API_URL}/orders/${orderToDelete.id}`, {
         method: 'DELETE',
-        headers: { 'x-user-id': user ? user.id.toString() : '' }
+        headers: { 'x-user-id': user ? user.id.toString() : '', 'x-shop-id': activeShop ? activeShop.id.toString() : '' }
       });
       if (response.ok) {
         if (activeOrder && activeOrder.id === orderToDelete.id) {
@@ -222,10 +239,16 @@ export default function POSScreen({ navigation }) {
     }
   };
 
-  // Agregar un producto al pedido activo
-  const addToCart = async (product) => {
+  // Agregar un producto al pedido activo (qty por defecto 1)
+  const addToCart = async (product, qty = 1) => {
     if (!activeOrder) {
       showToast('Por favor, selecciona o crea un pedido primero.', 'warning');
+      return;
+    }
+
+    const qtyToAdd = parseInt(qty, 10) || 1;
+    if (qtyToAdd <= 0) {
+      showToast('La cantidad debe ser mayor a 0.', 'warning');
       return;
     }
 
@@ -234,22 +257,28 @@ export default function POSScreen({ navigation }) {
       return;
     }
 
+    if (qtyToAdd > product.stock) {
+      showToast(`Stock insuficiente. Solo quedan ${product.stock} unidades.`, 'warning');
+      return;
+    }
+
     try {
       const response = await apiFetch(`${API_URL}/orders/${activeOrder.id}/items`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user ? user.id.toString() : ''
+          'x-user-id': user ? user.id.toString() : '',
+          'x-shop-id': activeShop ? activeShop.id.toString() : ''
         },
         body: JSON.stringify({
           product_id: product.id,
-          quantity: 1
+          quantity: qtyToAdd
         })
       });
 
       if (response.ok) {
         fetchOrderItems(activeOrder.id);
-        showToast('Producto agregado al pedido.', 'success');
+        showToast(qtyToAdd > 1 ? `${qtyToAdd} unidades agregadas al pedido.` : 'Producto agregado al pedido.', 'success');
       } else {
         const err = await response.json();
         showToast('Error al agregar item: ' + (err.error || 'Intenta nuevamente.'), 'error');
@@ -284,7 +313,8 @@ export default function POSScreen({ navigation }) {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user ? user.id.toString() : ''
+          'x-user-id': user ? user.id.toString() : '',
+          'x-shop-id': activeShop ? activeShop.id.toString() : ''
         },
         body: JSON.stringify({ quantity: newQty })
       });
@@ -300,6 +330,109 @@ export default function POSScreen({ navigation }) {
     }
   };
 
+  // --- FUNCIONES DEL MODAL DE CANTIDAD ---
+  // Abrir modal para agregar unidades desde el catálogo
+  const openAddFromCatalog = (product) => {
+    if (product.stock <= 0) {
+      showToast('Este producto no tiene stock disponible en el inventario.', 'error');
+      return;
+    }
+    setQtyModalMode('addFromCatalog');
+    setQtyModalProduct(product);
+    setQtyModalTargetItem(null);
+    setQtyMax(product.stock);
+    setQtyInput('1');
+    setQtyModalVisible(true);
+  };
+
+  // Abrir modal para AGREGAR más unidades a una línea existente del carrito
+  const openAddQty = (item) => {
+    if (item.stock <= 0) {
+      showToast('No hay stock libre adicional para este producto.', 'error');
+      return;
+    }
+    setQtyModalMode('add');
+    setQtyModalTargetItem(item);
+    setQtyModalProduct(null);
+    setQtyMax(item.stock);
+    setQtyInput('1');
+    setQtyModalVisible(true);
+  };
+
+  // Abrir modal para QUITAR unidades de una línea existente del carrito
+  const openRemoveQty = (item) => {
+    if (item.quantity <= 1) {
+      // Si solo hay 1, quitarlo directamente
+      removeFromCart(item.id);
+      return;
+    }
+    setQtyModalMode('remove');
+    setQtyModalTargetItem(item);
+    setQtyModalProduct(null);
+    setQtyMax(item.quantity);
+    setQtyInput('1');
+    setQtyModalVisible(true);
+  };
+
+  // Cargar el historial de movimientos del pedido activo
+  const fetchOrderHistory = async () => {
+    if (!activeOrder) {
+      showToast('Selecciona un pedido primero.', 'warning');
+      return;
+    }
+    try {
+      setLoadingHistory(true);
+      const response = await apiFetch(`${API_URL}/orders/${activeOrder.id}/history`, {
+        headers: { 'x-user-id': user ? user.id.toString() : '', 'x-shop-id': activeShop ? activeShop.id.toString() : '' }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setOrderHistory(Array.isArray(data) ? data : []);
+      } else {
+        showToast('No se pudo cargar el historial.', 'error');
+      }
+    } catch (error) {
+      console.error('Error al cargar historial del pedido:', error);
+      showToast('Error de red al cargar el historial.', 'error');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  // Abrir el modal de historial
+  const openHistoryModal = () => {
+    if (!activeOrder) return;
+    setHistoryModalVisible(true);
+    fetchOrderHistory();
+  };
+
+  // Confirmar la cantidad digitada en el modal
+  const handleConfirmQty = () => {
+    const qty = parseInt(qtyInput, 10);
+    if (!qty || qty <= 0) {
+      showToast('Ingresa una cantidad válida.', 'warning');
+      return;
+    }
+    if (qty > qtyMax) {
+      showToast(`La cantidad máxima permitida es ${qtyMax} unidades.`, 'warning');
+      return;
+    }
+
+    if (qtyModalMode === 'addFromCatalog' && qtyModalProduct) {
+      addToCart(qtyModalProduct, qty);
+    } else if (qtyModalMode === 'add' && qtyModalTargetItem) {
+      // Sumar a lo ya consumido: nueva cantidad total = actual + qty
+      const item = qtyModalTargetItem;
+      updateQuantity(item.product_id, item.quantity + qty, item.stock, item.id);
+    } else if (qtyModalMode === 'remove' && qtyModalTargetItem) {
+      // Restar de lo ya consumido: nueva cantidad total = actual - qty
+      const item = qtyModalTargetItem;
+      updateQuantity(item.product_id, item.quantity - qty, item.stock, item.id);
+    }
+
+    setQtyModalVisible(false);
+  };
+
   // Eliminar un artículo de la mesa activa
   const removeFromCart = async (itemId) => {
     if (!activeOrder) return;
@@ -307,7 +440,7 @@ export default function POSScreen({ navigation }) {
     try {
       const response = await apiFetch(`${API_URL}/orders/${activeOrder.id}/items/${itemId}`, {
         method: 'DELETE',
-        headers: { 'x-user-id': user ? user.id.toString() : '' }
+        headers: { 'x-user-id': user ? user.id.toString() : '', 'x-shop-id': activeShop ? activeShop.id.toString() : '' }
       });
 
       if (response.ok) {
@@ -350,7 +483,8 @@ export default function POSScreen({ navigation }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user ? user.id.toString() : ''
+          'x-user-id': user ? user.id.toString() : '',
+          'x-shop-id': activeShop ? activeShop.id.toString() : ''
         },
         body: JSON.stringify({
           debtor_id: saleType === 'credit' ? selectedDebtor.id : null
@@ -391,7 +525,8 @@ export default function POSScreen({ navigation }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user ? user.id.toString() : ''
+          'x-user-id': user ? user.id.toString() : '',
+          'x-shop-id': activeShop ? activeShop.id.toString() : ''
         },
         body: JSON.stringify(payload)
       });
@@ -458,12 +593,20 @@ export default function POSScreen({ navigation }) {
   };
 
   const headerRightComponent = (
-    <Button
-      onPress={handleRefresh}
-      variant="secondary"
-      style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
-      icon={<Ionicons name="refresh-outline" size={20} color={theme.text} />}
-    />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+      <Button
+        onPress={openHistoryModal}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="time-outline" size={20} color={theme.text} />}
+      />
+      <Button
+        onPress={handleRefresh}
+        variant="secondary"
+        style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+        icon={<Ionicons name="refresh-outline" size={20} color={theme.text} />}
+      />
+    </View>
   );
 
   return (
@@ -628,7 +771,7 @@ export default function POSScreen({ navigation }) {
                               { backgroundColor: theme.card, shadowColor: theme.shadow },
                               isDisabled && { opacity: 0.5 }
                             ]}
-                            onPress={() => addToCart(product)}
+                            onPress={() => openAddFromCatalog(product)}
                           >
                             <View style={{ flex: 1 }}>
                               {product.code ? (
@@ -700,7 +843,7 @@ export default function POSScreen({ navigation }) {
                             </View>
                             {/* Botón para agregar 1 más (del lote más barato disponible) */}
                             <TouchableOpacity
-                              onPress={() => addToCart({ id: group.product_id, name: group.name, stock: group.stock, price: group.lines[0]?.price || 0 })}
+                              onPress={() => addToCart({ id: group.product_id, name: group.name, stock: group.stock, price: group.lines[0]?.price || 0 }, 1)}
                               style={[styles.qtyBtn, { backgroundColor: theme.accent + '20', marginRight: 8 }]}
                             >
                               <Ionicons name="add" size={16} color={theme.accent} />
@@ -717,14 +860,16 @@ export default function POSScreen({ navigation }) {
                               </View>
                               <View style={styles.qtyContainer}>
                                 <TouchableOpacity
-                                  onPress={() => updateQuantity(item.product_id, item.quantity - 1, item.stock, item.id)}
+                                  onPress={() => openRemoveQty(item)}
                                   style={[styles.qtyBtn, { backgroundColor: theme.card }]}
                                 >
                                   <Ionicons name="remove" size={15} color={theme.text} />
                                 </TouchableOpacity>
-                                <Text style={[styles.qtyText, { color: theme.text }]}>{item.quantity}</Text>
+                                <TouchableOpacity onPress={() => openAddQty(item)}>
+                                  <Text style={[styles.qtyText, { color: theme.text }]}>{item.quantity}</Text>
+                                </TouchableOpacity>
                                 <TouchableOpacity
-                                  onPress={() => updateQuantity(item.product_id, item.quantity + 1, item.stock, item.id)}
+                                  onPress={() => openAddQty(item)}
                                   style={[styles.qtyBtn, { backgroundColor: theme.card }]}
                                 >
                                   <Ionicons name="add" size={15} color={theme.text} />
@@ -939,6 +1084,209 @@ export default function POSScreen({ navigation }) {
                 <TouchableOpacity style={[styles.modalBtnSave, { backgroundColor: theme.accent }]} onPress={handleCreateDebtor}>
                   <Text style={styles.modalBtnTextSave}>Crear y Seleccionar</Text>
                 </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* MODAL HISTORIAL / TRAZABILIDAD DEL PEDIDO */}
+        <Modal
+          visible={historyModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={() => setHistoryModalVisible(false)}
+        >
+          <Pressable style={styles.modalOverlay} onPress={() => setHistoryModalVisible(false)}>
+            <Pressable style={[
+              styles.historyModalContent,
+              {
+                backgroundColor: theme.card,
+                height: isMobile ? '85%' : '70%',
+              }
+            ]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
+
+              {/* Header del Modal con icono */}
+              <View style={[styles.historyModalHeader, { borderBottomColor: theme.background }]}>
+                <View style={styles.historyModalHeaderLeft}>
+                  <View style={[styles.historyModalIconCircle, { backgroundColor: '#8B5CF615' }]}>
+                    <Ionicons name="time" size={24} color="#8B5CF6" />
+                  </View>
+                  <View>
+                    <Text style={[styles.historyModalTitle, { color: theme.text }]}>Historial del Pedido</Text>
+                    <Text style={{ color: theme.textSecondary, fontSize: 12 }}>
+                      {activeOrder?.reference} · Trazabilidad completa
+                    </Text>
+                  </View>
+                </View>
+                <TouchableOpacity
+                  style={[styles.closeModalBtn]}
+                  onPress={() => setHistoryModalVisible(false)}
+                >
+                  <Ionicons name="close" size={20} color={theme.text} />
+                </TouchableOpacity>
+              </View>
+
+              {/* Contenido */}
+              {loadingHistory ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                  <ActivityIndicator size="large" color={theme.accent} />
+                  <Text style={{ marginTop: 10, color: theme.textSecondary }}>Cargando historial...</Text>
+                </View>
+              ) : orderHistory.length === 0 ? (
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', paddingHorizontal: 20 }}>
+                  <View style={[styles.historyEmptyIcon, { backgroundColor: theme.background }]}>
+                    <Ionicons name="time-outline" size={40} color={theme.textSecondary} />
+                  </View>
+                  <Text style={{ color: theme.text, fontSize: 16, fontWeight: '700', marginTop: 15, marginBottom: 5 }}>
+                    Sin movimientos aún
+                  </Text>
+                  <Text style={{ color: theme.textSecondary, fontSize: 13, textAlign: 'center', lineHeight: 19 }}>
+                    Cuando agregues o quites productos de este pedido, aparecerán aquí los movimientos.
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16, paddingTop: 12 }} showsVerticalScrollIndicator={false}>
+                  {orderHistory.map((log, index) => {
+                    // Determinar icono, color y etiqueta según la acción
+                    let iconName = 'ellipse-outline';
+                    let color = theme.textSecondary;
+                    let actionLabel = 'Movimiento';
+                    if (log.action === 'order_created') { iconName = 'create-outline'; color = '#8B5CF6'; actionLabel = 'Pedido creado'; }
+                    else if (log.action === 'items_added') { iconName = 'add-circle-outline'; color = '#10B981'; actionLabel = 'Productos agregados'; }
+                    else if (log.action === 'items_increased') { iconName = 'add-circle'; color = '#10B981'; actionLabel = 'Suma de unidades'; }
+                    else if (log.action === 'items_decreased') { iconName = 'remove-circle'; color = '#F59E0B'; actionLabel = 'Resta de unidades'; }
+                    else if (log.action === 'item_removed') { iconName = 'trash-outline'; color = theme.danger; actionLabel = 'Producto eliminado'; }
+                    else if (log.action === 'order_completed') { iconName = 'checkmark-circle'; color = theme.accent; actionLabel = 'Pedido cobrado'; }
+
+                    return (
+                      <View key={log.id || index.toString()} style={{ flexDirection: 'row', marginBottom: 4 }}>
+                        {/* Línea temporal */}
+                        <View style={{ alignItems: 'center', marginRight: 12, width: 36 }}>
+                          <View style={[styles.historyNode, { backgroundColor: color + '15', borderColor: color + '40' }]}>
+                            <Ionicons name={iconName} size={17} color={color} />
+                          </View>
+                          {index < orderHistory.length - 1 && (
+                            <View style={[styles.historyLine, { backgroundColor: theme.border }]} />
+                          )}
+                        </View>
+
+                        {/* Card del movimiento */}
+                        <View style={[styles.historyCard, { backgroundColor: theme.background, borderLeftColor: color, marginBottom: index === orderHistory.length - 1 ? 0 : 12 }]}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+                            <Text style={{ color, fontSize: 11, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                              {actionLabel}
+                            </Text>
+                            <Text style={{ color: theme.textSecondary, fontSize: 10 }}>
+                              {formatDateToLocal(log.created_at)}
+                            </Text>
+                          </View>
+                          <Text style={{ color: theme.text, fontSize: 13, fontWeight: '600' }}>
+                            {log.description || 'Movimiento registrado'}
+                          </Text>
+                          {log.product_name ? (
+                            <View style={{ marginTop: 5 }}>
+                              <View style={[styles.historyProductChip, { backgroundColor: color + '12' }]}>
+                                <Ionicons name="cube-outline" size={11} color={color} />
+                                <Text style={{ color: theme.text, fontSize: 11, fontWeight: '600', marginLeft: 4 }}>
+                                  {log.product_name}
+                                </Text>
+                                {log.quantity > 0 && (
+                                  <Text style={{ color, fontSize: 11, fontWeight: '800', marginLeft: 6 }}>
+                                    {log.action === 'items_decreased' || log.action === 'item_removed' ? '−' : '+'}{log.quantity} u.
+                                  </Text>
+                                )}
+                              </View>
+                            </View>
+                          ) : null}
+                        </View>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+              )}
+
+              {/* Pie con botón de cierre */}
+              <View style={[styles.historyModalFooter, { borderTopColor: theme.background }]}>
+                <TouchableOpacity
+                  style={[styles.modalCloseMainBtn, { backgroundColor: theme.accent }]}
+                  onPress={() => setHistoryModalVisible(false)}
+                >
+                  <Text style={styles.modalCloseMainText}>Cerrar Historial</Text>
+                </TouchableOpacity>
+              </View>
+            </Pressable>
+          </Pressable>
+        </Modal>
+
+        {/* MODAL DIGITAR CANTIDAD */}
+        <Modal
+          visible={qtyModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setQtyModalVisible(false)}
+        >
+          <Pressable style={[styles.modalOverlay, { padding: isMobile ? 10 : 20 }]} onPress={() => setQtyModalVisible(false)}>
+            <Pressable style={[styles.modalContent, { backgroundColor: theme.card, padding: isMobile ? 15 : 20 }]} onPress={(e) => { if (Platform.OS === 'web') e.stopPropagation(); }}>
+              <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                <View style={[styles.qtyModalIcon, { backgroundColor: qtyModalMode === 'remove' ? theme.danger + '15' : theme.accent + '15' }]}>
+                  <Ionicons
+                    name={qtyModalMode === 'remove' ? 'remove-circle-outline' : 'add-circle-outline'}
+                    size={36}
+                    color={qtyModalMode === 'remove' ? theme.danger : theme.accent}
+                  />
+                </View>
+                <Text style={[styles.modalTitle, { color: theme.text, marginBottom: 6, marginTop: 8 }]}>
+                  {qtyModalMode === 'remove' ? 'Quitar Unidades' : qtyModalMode === 'add' ? 'Sumar Unidades' : 'Agregar al Pedido'}
+                </Text>
+                <Text style={{ color: theme.textSecondary, fontSize: 14, textAlign: 'center' }}>
+                  {qtyModalMode === 'addFromCatalog' ? qtyModalProduct?.name : qtyModalTargetItem?.name || qtyModalTargetItem?.item?.name}
+                </Text>
+              </View>
+
+              <View style={[styles.qtyInputWrapper, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                <TouchableOpacity
+                  onPress={() => setQtyInput(prev => Math.max(1, (parseInt(prev, 10) || 1) - 1).toString())}
+                  style={[styles.qtyModalStepper, { backgroundColor: theme.danger + '10' }]}
+                >
+                  <Ionicons name="remove" size={22} color={theme.danger} />
+                </TouchableOpacity>
+                <TextInput
+                  value={qtyInput}
+                  onChangeText={setQtyInput}
+                  keyboardType="numeric"
+                  selectTextOnFocus
+                  style={[styles.qtyModalInput, { color: theme.text }]}
+                />
+                <TouchableOpacity
+                  onPress={() => setQtyInput(prev => Math.min(qtyMax, (parseInt(prev, 10) || 0) + 1).toString())}
+                  style={[styles.qtyModalStepper, { backgroundColor: theme.accent + '15' }]}
+                >
+                  <Ionicons name="add" size={22} color={theme.accent} />
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ textAlign: 'center', color: theme.textSecondary, fontSize: 12, marginBottom: 18 }}>
+                {qtyModalMode === 'addFromCatalog' || qtyModalMode === 'add' 
+                  ? `Stock disponible: ${qtyMax} unidades`
+                  : `Consumo actual: ${qtyMax} unidades`}
+              </Text>
+
+              <View style={styles.modalButtons}>
+                <Button
+                  title="Cancelar"
+                  onPress={() => setQtyModalVisible(false)}
+                  variant="secondary"
+                  style={{ flex: 1 }}
+                  loading={false}
+                />
+                <Button
+                  title="Confirmar"
+                  onPress={handleConfirmQty}
+                  variant="primary"
+                  loading={false}
+                  style={{ flex: 1 }}
+                  backgroundColor={qtyModalMode === 'remove' ? theme.danger : theme.accent}
+                />
               </View>
             </Pressable>
           </Pressable>
@@ -1248,6 +1596,132 @@ const styles = StyleSheet.create({
   },
   removeCartBtn: {
     padding: 6,
+  },
+  qtyModalIcon: {
+    width: 64,
+    height: 64,
+    borderRadius: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyLine: {
+    flex: 1,
+    width: 2,
+    minHeight: 24,
+  },
+  // Estilos del modal de historial/trazabilidad
+  historyModalContent: {
+    width: '100%',
+    maxWidth: 450,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    borderBottomRightRadius: 24,
+    borderBottomLeftRadius: 24,
+    elevation: 10,
+    overflow: 'hidden',
+  },
+  historyModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 16,
+    borderBottomWidth: 1,
+  },
+  historyModalHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  historyModalIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+  },
+  historyModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+  },
+  historyEmptyIcon: {
+    width: 80,
+    height: 80,
+    borderRadius: 24,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  historyNode: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+  },
+  historyCard: {
+    flex: 1,
+    borderRadius: 12,
+    padding: 12,
+    borderLeftWidth: 3,
+  },
+  historyProductChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  historyModalFooter: {
+    padding: 16,
+    borderTopWidth: 1,
+  },
+  modalCloseMainBtn: {
+    height: 48,
+    borderRadius: 14,
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  modalCloseMainText: {
+    color: '#FFF',
+    fontSize: 15,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+  },
+  qtyInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 14,
+    borderWidth: 1,
+    marginBottom: 8,
+    padding: 4,
+  },
+  qtyModalStepper: {
+    width: 46,
+    height: 46,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  qtyModalInput: {
+    width: 180,
+    textAlign: 'center',
+    fontSize: 24,
+    fontWeight: '800',
+    paddingVertical: 10,
   },
   checkoutPanel: {
     borderTopWidth: 1,

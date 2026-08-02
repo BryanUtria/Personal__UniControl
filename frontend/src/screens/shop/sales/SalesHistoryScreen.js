@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, FlatList, TouchableOpacity, ActivityIndicator, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
+import { useShop } from '../../../context/ShopContext';
 import { useToast } from '../../../context/ToastContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
@@ -26,6 +27,7 @@ const formatNumber = (num) => {
 export default function SalesHistoryScreen({ navigation }) {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
+  const { activeShop } = useShop();
   const { showToast } = useToast();
   const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
@@ -44,6 +46,10 @@ export default function SalesHistoryScreen({ navigation }) {
   const [loadingItems, setLoadingItems] = useState(false);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
   const [exportModalVisible, setExportModalVisible] = useState(false);
+
+  // Historial del pedido (trazabilidad)
+  const [orderHistory, setOrderHistory] = useState([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
 
   const handleExportSales = async (type) => {
     const listToExport = type === 'all' ? sales : filteredSales;
@@ -74,7 +80,7 @@ export default function SalesHistoryScreen({ navigation }) {
   const fetchSales = async () => {
     try {
       const response = await apiFetch(`${API_URL}/sales`, {
-        headers: { 'x-user-id': user ? user.id.toString() : '' }
+        headers: { 'x-user-id': user ? user.id.toString() : '', 'x-shop-id': activeShop ? activeShop.id.toString() : '' }
       });
       const data = await response.json();
       if (response.ok) {
@@ -94,7 +100,9 @@ export default function SalesHistoryScreen({ navigation }) {
   const fetchSaleItems = async (saleId) => {
     try {
       setLoadingItems(true);
-      const response = await apiFetch(`${API_URL}/sales/${saleId}/items`);
+      const response = await apiFetch(`${API_URL}/sales/${saleId}/items`, {
+        headers: { 'x-shop-id': activeShop ? activeShop.id.toString() : '' }
+      });
       const data = await response.json();
       if (response.ok) {
         setSaleItems(Array.isArray(data) ? data : []);
@@ -109,11 +117,53 @@ export default function SalesHistoryScreen({ navigation }) {
     }
   };
 
+  // Devuelve metadatos de ícono/color/etiqueta para cada acción del historial
+  const getActionMeta = (action) => {
+    switch (action) {
+      case 'order_created':
+        return { icon: 'add-circle-outline', color: '#3B82F6', label: 'Pedido creado' };
+      case 'items_added':
+        return { icon: 'cart-outline', color: '#10B981', label: 'Productos agregados' };
+      case 'items_increased':
+        return { icon: 'arrow-up-circle-outline', color: '#10B981', label: 'Cantidad aumentada' };
+      case 'items_decreased':
+        return { icon: 'arrow-down-circle-outline', color: '#F59E0B', label: 'Cantidad reducida' };
+      case 'items_updated':
+        return { icon: 'create-outline', color: '#8B5CF6', label: 'Cantidad actualizada' };
+      case 'item_removed':
+        return { icon: 'trash-outline', color: '#EF4444', label: 'Artículo eliminado' };
+      case 'order_completed':
+        return { icon: 'checkmark-done-circle-outline', color: '#10B981', label: 'Pedido completado' };
+      default:
+        return { icon: 'time-outline', color: theme.textSecondary, label: action };
+    }
+  };
+
+  const fetchOrderHistory = async (orderId) => {
+    try {
+      setLoadingHistory(true);
+      const response = await apiFetch(`${API_URL}/orders/${orderId}/history`, {
+        headers: { 'x-shop-id': activeShop ? activeShop.id.toString() : '' }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setOrderHistory(Array.isArray(data) ? data : []);
+      } else {
+        showToast('No se pudo cargar el historial del pedido.', 'error');
+      }
+    } catch (error) {
+      console.error('Error al cargar historial del pedido:', error);
+      showToast('Error al conectar con el servidor.', 'error');
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
   useEffect(() => {
     if (isFocused) {
       fetchSales();
     }
-  }, [isFocused]);
+  }, [isFocused, activeShop]);
 
   const handleRefresh = () => {
     setLoading(true);
@@ -124,8 +174,13 @@ export default function SalesHistoryScreen({ navigation }) {
   const handleOpenDetails = (sale) => {
     setSelectedSale(sale);
     setSaleItems([]);
+    setOrderHistory([]);
     setDetailModalVisible(true);
     fetchSaleItems(sale.id);
+    // Si la venta proviene de un pedido, cargar su historial de trazabilidad
+    if (sale.order_id) {
+      fetchOrderHistory(sale.order_id);
+    }
   };
 
   // Filtrado de ventas
@@ -438,6 +493,71 @@ export default function SalesHistoryScreen({ navigation }) {
                 </View>
               )}
 
+              {/* Historial del Pedido (Trazabilidad) */}
+              {selectedSale?.order_id ? (
+                <>
+                  <Text style={[styles.sectionSubtitle, { color: theme.text, marginTop: 20 }]}>
+                    Historial del Pedido
+                  </Text>
+
+                  {loadingHistory ? (
+                    <View style={{ paddingVertical: 20, alignItems: 'center' }}>
+                      <ActivityIndicator size="small" color={theme.accent} />
+                      <Text style={{ marginTop: 8, color: theme.textSecondary, fontSize: 12 }}>Cargando historial...</Text>
+                    </View>
+                  ) : orderHistory.length === 0 ? (
+                    <Text style={{ textAlign: 'center', color: theme.textSecondary, marginVertical: 15, fontSize: 13 }}>
+                      No hay movimientos registrados para este pedido.
+                    </Text>
+                  ) : (
+                    <View style={styles.historyContainer}>
+                      {orderHistory.map((log, index) => {
+                        const meta = getActionMeta(log.action);
+                        const isLast = index === orderHistory.length - 1;
+                        return (
+                          <View key={log.id || index.toString()} style={styles.historyRow}>
+                            {/* Línea de tiempo */}
+                            <View style={styles.timelineColumn}>
+                              <View style={[styles.timelineDot, { backgroundColor: meta.color }]}>
+                                <Ionicons name={meta.icon} size={12} color="#FFF" />
+                              </View>
+                              {!isLast && <View style={[styles.timelineLine, { backgroundColor: theme.border }]} />}
+                            </View>
+
+                            {/* Contenido */}
+                            <View style={[styles.historyCard, { backgroundColor: theme.background, borderColor: theme.border }]}>
+                              <View style={styles.historyCardHeader}>
+                                <Text style={[styles.historyAction, { color: theme.text }]}>
+                                  {meta.label}
+                                </Text>
+                                <Text style={[styles.historyTime, { color: theme.textSecondary }]}>
+                                  {formatDate(log.created_at)}
+                                </Text>
+                              </View>
+
+                              <Text style={[styles.historyDescription, { color: theme.textSecondary }]}>
+                                {log.description}
+                              </Text>
+
+                              {log.product_name ? (
+                                <View style={styles.historyProductRow}>
+                                  <Ionicons name="cube-outline" size={12} color={theme.textSecondary} style={{ marginRight: 4 }} />
+                                  <Text style={[styles.historyProduct, { color: theme.text }]}>
+                                    {log.product_name}
+                                    {log.quantity > 0 && ` × ${log.quantity}`}
+                                    {log.price != null && ` — $ ${formatNumber(log.price)}`}
+                                  </Text>
+                                </View>
+                              ) : null}
+                            </View>
+                          </View>
+                        );
+                      })}
+                    </View>
+                  )}
+                </>
+              ) : null}
+
               {/* Total Final */}
               <View style={[styles.totalSectionDetail, { borderTopColor: theme.background }]}>
                 <View>
@@ -730,6 +850,70 @@ const styles = StyleSheet.create({
   itemSubtotal: {
     fontSize: 14,
     fontWeight: '800',
+  },
+  // Historial del Pedido
+  historyContainer: {
+    marginBottom: 10,
+  },
+  historyRow: {
+    flexDirection: 'row',
+  },
+  timelineColumn: {
+    width: 28,
+    alignItems: 'center',
+  },
+  timelineDot: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1,
+  },
+  timelineLine: {
+    flex: 1,
+    width: 2,
+    marginVertical: 2,
+  },
+  historyCard: {
+    flex: 1,
+    borderRadius: 12,
+    borderWidth: 1,
+    padding: 12,
+    marginBottom: 12,
+  },
+  historyCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  historyAction: {
+    fontSize: 13,
+    fontWeight: '800',
+    flex: 1,
+    marginRight: 8,
+  },
+  historyTime: {
+    fontSize: 10,
+  },
+  historyDescription: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  historyProductRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 8,
+    backgroundColor: 'rgba(0,0,0,0.04)',
+    borderRadius: 8,
+    paddingHorizontal: 8,
+    paddingVertical: 6,
+    alignSelf: 'flex-start',
+  },
+  historyProduct: {
+    fontSize: 12,
+    fontWeight: '600',
   },
   totalSectionDetail: {
     borderTopWidth: 2,

@@ -3,6 +3,7 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Platform, Modal, 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../theme/ThemeContext';
 import { useAuth } from '../../../context/AuthContext';
+import { useShop } from '../../../context/ShopContext';
 import { useToast } from '../../../context/ToastContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,6 +32,7 @@ const formatCompact = (num) => {
 export default function InventoryScreen({ navigation }) {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
+  const { activeShop } = useShop();
   const { showToast } = useToast();
   const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
@@ -213,7 +215,8 @@ export default function InventoryScreen({ navigation }) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-user-id': user ? user.id.toString() : ''
+          'x-user-id': user ? user.id.toString() : '',
+          'x-shop-id': activeShop ? activeShop.id.toString() : ''
         },
         body: JSON.stringify(payload)
       });
@@ -241,7 +244,11 @@ export default function InventoryScreen({ navigation }) {
     setBatchesModalVisible(true);
     setLoadingBatches(true);
     try {
-      const response = await apiFetch(`${API_URL}/products/${product.id}/batches`);
+      const response = await apiFetch(`${API_URL}/products/${product.id}/batches`, {
+        headers: {
+          'x-shop-id': activeShop ? activeShop.id.toString() : ''
+        }
+      });
       const data = await response.json();
       if (response.ok) {
         setProductBatches(Array.isArray(data) ? data : []);
@@ -265,7 +272,8 @@ export default function InventoryScreen({ navigation }) {
     try {
       const response = await apiFetch(`${API_URL}/products`, {
         headers: {
-          'x-user-id': user ? user.id.toString() : ''
+          'x-user-id': user ? user.id.toString() : '',
+          'x-shop-id': activeShop ? activeShop.id.toString() : ''
         }
       });
       const data = await response.json();
@@ -281,7 +289,7 @@ export default function InventoryScreen({ navigation }) {
     if (isFocused) {
       fetchProducts();
     }
-  }, [isFocused]);
+  }, [isFocused, activeShop]);
 
   const { moduleSettings, saveModuleSettings } = useModules();
 
@@ -350,7 +358,8 @@ export default function InventoryScreen({ navigation }) {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'x-user-id': user ? user.id.toString() : ''
+            'x-user-id': user ? user.id.toString() : '',
+            'x-shop-id': activeShop ? activeShop.id.toString() : ''
           },
           body: JSON.stringify(payload),
         });
@@ -367,7 +376,8 @@ export default function InventoryScreen({ navigation }) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-user-id': user ? user.id.toString() : ''
+            'x-user-id': user ? user.id.toString() : '',
+            'x-shop-id': activeShop ? activeShop.id.toString() : ''
           },
           body: JSON.stringify(payload),
         });
@@ -429,7 +439,8 @@ export default function InventoryScreen({ navigation }) {
       const response = await apiFetch(`${API_URL}/products/${itemToDelete.id}`, {
         method: 'DELETE',
         headers: {
-          'x-user-id': user ? user.id.toString() : ''
+          'x-user-id': user ? user.id.toString() : '',
+          'x-shop-id': activeShop ? activeShop.id.toString() : ''
         }
       });
       if (response.ok) {

@@ -6,6 +6,7 @@ const { mapType } = require('../utils/helpers');
 
 router.get('/custom', async (req, res) => {
     const userId = req.headers['x-user-id'] || null;
+    const shopId = req.headers['x-shop-id'] || null;
     const { start, end } = req.query;
     if (!start || !end) {
         return res.status(400).json({ error: 'Las fechas de inicio y fin son requeridas.' });
@@ -16,8 +17,9 @@ router.get('/custom', async (req, res) => {
             `SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS count 
              FROM sales 
              WHERE DATE(created_at) >= ? AND DATE(created_at) <= ? 
-             AND (user_id = ? OR (user_id IS NULL AND ? IS NULL))`,
-            [start, end, userId, userId]
+             AND (user_id = ? OR (user_id IS NULL AND ? IS NULL))
+             AND (shop_id = ? OR (shop_id IS NULL AND ? IS NULL))`,
+            [start, end, userId, userId, shopId, shopId]
         );
 
         const [profitData] = await db.query(
@@ -26,8 +28,9 @@ router.get('/custom', async (req, res) => {
              JOIN sale_items si ON s.id = si.sale_id
              JOIN products p ON si.product_id = p.id
              WHERE DATE(s.created_at) >= ? AND DATE(s.created_at) <= ? 
-             AND (s.user_id = ? OR (s.user_id IS NULL AND ? IS NULL))`,
-            [start, end, userId, userId]
+             AND (s.user_id = ? OR (s.user_id IS NULL AND ? IS NULL))
+             AND (s.shop_id = ? OR (s.shop_id IS NULL AND ? IS NULL))`,
+            [start, end, userId, userId, shopId, shopId]
         );
 
         res.json({
@@ -42,62 +45,63 @@ router.get('/custom', async (req, res) => {
 
 router.get('/', async (req, res) => {
     const userId = req.headers['x-user-id'] || null;
+    const shopId = req.headers['x-shop-id'] || null;
     try {
         const userFilter = userId ? 'AND user_id = ?' : 'AND (user_id IS NULL OR 1=1)';
         const userParam = userId ? [userId] : [];
 
         // Ventas de hoy (total y utilidad)
         const [todaySales] = await db.query(
-            `SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS count FROM sales WHERE DATE(created_at) = CURDATE() AND (user_id = ? OR (user_id IS NULL AND ? IS NULL))`,
-            [userId, userId]
+            `SELECT COALESCE(SUM(total), 0) AS total, COUNT(*) AS count FROM sales WHERE DATE(created_at) = CURDATE() AND (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND (shop_id = ? OR (shop_id IS NULL AND ? IS NULL))`,
+            [userId, userId, shopId, shopId]
         );
         const [todayProfit] = await db.query(
             `SELECT COALESCE(SUM(si.quantity * (si.price - COALESCE(p.cost_price, 0))), 0) AS profit
              FROM sales s
              JOIN sale_items si ON s.id = si.sale_id
              JOIN products p ON si.product_id = p.id
-             WHERE DATE(s.created_at) = CURDATE() AND (s.user_id = ? OR (s.user_id IS NULL AND ? IS NULL))`,
-            [userId, userId]
+             WHERE DATE(s.created_at) = CURDATE() AND (s.user_id = ? OR (s.user_id IS NULL AND ? IS NULL)) AND (s.shop_id = ? OR (s.shop_id IS NULL AND ? IS NULL))`,
+            [userId, userId, shopId, shopId]
         );
 
         // Ventas de esta semana
         const [weekSales] = await db.query(
-            `SELECT COALESCE(SUM(total), 0) AS total FROM sales WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1) AND (user_id = ? OR (user_id IS NULL AND ? IS NULL))`,
-            [userId, userId]
+            `SELECT COALESCE(SUM(total), 0) AS total FROM sales WHERE YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1) AND (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND (shop_id = ? OR (shop_id IS NULL AND ? IS NULL))`,
+            [userId, userId, shopId, shopId]
         );
         const [weekProfit] = await db.query(
             `SELECT COALESCE(SUM(si.quantity * (si.price - COALESCE(p.cost_price, 0))), 0) AS profit
              FROM sales s
              JOIN sale_items si ON s.id = si.sale_id
              JOIN products p ON si.product_id = p.id
-             WHERE YEARWEEK(s.created_at, 1) = YEARWEEK(CURDATE(), 1) AND (s.user_id = ? OR (s.user_id IS NULL AND ? IS NULL))`,
-            [userId, userId]
+             WHERE YEARWEEK(s.created_at, 1) = YEARWEEK(CURDATE(), 1) AND (s.user_id = ? OR (s.user_id IS NULL AND ? IS NULL)) AND (s.shop_id = ? OR (s.shop_id IS NULL AND ? IS NULL))`,
+            [userId, userId, shopId, shopId]
         );
 
         // Ventas del mes
         const [monthSales] = await db.query(
-            `SELECT COALESCE(SUM(total), 0) AS total FROM sales WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) AND (user_id = ? OR (user_id IS NULL AND ? IS NULL))`,
-            [userId, userId]
+            `SELECT COALESCE(SUM(total), 0) AS total FROM sales WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()) AND (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND (shop_id = ? OR (shop_id IS NULL AND ? IS NULL))`,
+            [userId, userId, shopId, shopId]
         );
         const [monthProfit] = await db.query(
             `SELECT COALESCE(SUM(si.quantity * (si.price - COALESCE(p.cost_price, 0))), 0) AS profit
              FROM sales s
              JOIN sale_items si ON s.id = si.sale_id
              JOIN products p ON si.product_id = p.id
-             WHERE MONTH(s.created_at) = MONTH(CURDATE()) AND YEAR(s.created_at) = YEAR(CURDATE()) AND (s.user_id = ? OR (s.user_id IS NULL AND ? IS NULL))`,
-            [userId, userId]
+             WHERE MONTH(s.created_at) = MONTH(CURDATE()) AND YEAR(s.created_at) = YEAR(CURDATE()) AND (s.user_id = ? OR (s.user_id IS NULL AND ? IS NULL)) AND (s.shop_id = ? OR (s.shop_id IS NULL AND ? IS NULL))`,
+            [userId, userId, shopId, shopId]
         );
 
         // Pedidos en curso (pending)
         const [pendingOrders] = await db.query(
-            `SELECT COUNT(*) AS count FROM orders WHERE status = 'pending' AND (user_id = ? OR (user_id IS NULL AND ? IS NULL))`,
-            [userId, userId]
+            `SELECT COUNT(*) AS count FROM orders WHERE status = 'pending' AND (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND (shop_id = ? OR (shop_id IS NULL AND ? IS NULL))`,
+            [userId, userId, shopId, shopId]
         );
 
         // Total deuda pendiente y saldo a favor (deudores)
         const debtRows = await db.query(
-            `SELECT d.debtor_id, d.type, d.amount, d.quantity, dr.type AS debtor_type FROM debts d JOIN debtors dr ON d.debtor_id = dr.id WHERE (dr.user_id = ? OR (dr.user_id IS NULL AND ? IS NULL)) AND dr.active = 1`,
-            [userId, userId]
+            `SELECT d.debtor_id, d.type, d.amount, d.quantity, dr.type AS debtor_type FROM debts d JOIN debtors dr ON d.debtor_id = dr.id WHERE (dr.user_id = ? OR (dr.user_id IS NULL AND ? IS NULL)) AND dr.active = 1 AND (dr.shop_id = ? OR (dr.shop_id IS NULL AND ? IS NULL))`,
+            [userId, userId, shopId, shopId]
         );
 
         // Agrupar por deudor para calcular saldo individual
@@ -143,26 +147,26 @@ router.get('/', async (req, res) => {
 
         // Productos con stock bajo o agotado
         const lowStockProducts = await db.query(
-            `SELECT id, name, stock, min_stock FROM products WHERE (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND active = 1 AND stock <= COALESCE(min_stock, 5) ORDER BY stock ASC LIMIT 5`,
-            [userId, userId]
+            `SELECT id, name, stock, min_stock FROM products WHERE (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND active = 1 AND stock <= COALESCE(min_stock, 5) AND (shop_id = ? OR (shop_id IS NULL AND ? IS NULL)) ORDER BY stock ASC LIMIT 5`,
+            [userId, userId, shopId, shopId]
         );
 
         // Total de productos únicos
         const [totalProducts] = await db.query(
-            `SELECT COUNT(*) AS count FROM products WHERE (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND active = 1`,
-            [userId, userId]
+            `SELECT COUNT(*) AS count FROM products WHERE (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND active = 1 AND (shop_id = ? OR (shop_id IS NULL AND ? IS NULL))`,
+            [userId, userId, shopId, shopId]
         );
 
         // Valor estimado total del inventario (suma stock * precio)
         const [inventoryValue] = await db.query(
-            `SELECT COALESCE(SUM(stock * price), 0) AS total FROM products WHERE (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND active = 1`,
-            [userId, userId]
+            `SELECT COALESCE(SUM(stock * price), 0) AS total FROM products WHERE (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND active = 1 AND (shop_id = ? OR (shop_id IS NULL AND ? IS NULL))`,
+            [userId, userId, shopId, shopId]
         );
 
         // Últimas 5 ventas
         const recentSales = await db.query(
-            `SELECT id, total, debtor_id, created_at FROM sales WHERE (user_id = ? OR (user_id IS NULL AND ? IS NULL)) ORDER BY created_at DESC LIMIT 5`,
-            [userId, userId]
+            `SELECT id, total, debtor_id, created_at FROM sales WHERE (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND (shop_id = ? OR (shop_id IS NULL AND ? IS NULL)) ORDER BY created_at DESC LIMIT 5`,
+            [userId, userId, shopId, shopId]
         );
 
         // Hábitos y tareas

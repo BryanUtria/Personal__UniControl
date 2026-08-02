@@ -44,6 +44,34 @@ async function initDB() {
     `;
     await pool.query(usersTable);
 
+    const shopsTable = `
+        CREATE TABLE IF NOT EXISTS shops (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            code VARCHAR(20) NOT NULL UNIQUE,
+            name VARCHAR(255) NOT NULL,
+            owner_user_id INT NOT NULL,
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE,
+            INDEX idx_shops_code (code)
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(shopsTable);
+
+    const shopMembersTable = `
+        CREATE TABLE IF NOT EXISTS shop_members (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            shop_id INT NOT NULL,
+            user_id INT NOT NULL,
+            role VARCHAR(20) NOT NULL DEFAULT 'member',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE KEY shop_user (shop_id, user_id)
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(shopMembersTable);
+
     const verificationCodesTable = `
         CREATE TABLE IF NOT EXISTS verification_codes (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -61,7 +89,15 @@ async function initDB() {
             description TEXT,
             price DECIMAL(10, 2) NOT NULL,
             stock INT NOT NULL DEFAULT 0,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            user_id INT NULL,
+            code VARCHAR(100) NULL,
+            cost_price DECIMAL(10, 2) NULL,
+            profit_margin DECIMAL(5, 2) NULL,
+            min_stock INT NULL DEFAULT 5,
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            shop_id INT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE SET NULL
         ) ENGINE=InnoDB;
     `;
 
@@ -69,7 +105,13 @@ async function initDB() {
         CREATE TABLE IF NOT EXISTS sales (
             id INT AUTO_INCREMENT PRIMARY KEY,
             total DECIMAL(10, 2) NOT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            user_id INT NULL,
+            debtor_id INT NULL,
+            order_id INT NULL,
+            order_reference VARCHAR(255) NULL,
+            shop_id INT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE SET NULL
         ) ENGINE=InnoDB;
     `;
 
@@ -92,7 +134,9 @@ async function initDB() {
             reference VARCHAR(255) NOT NULL,
             status VARCHAR(50) DEFAULT 'pending',
             user_id INT NULL,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            shop_id INT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE SET NULL
         ) ENGINE=InnoDB;
     `;
 
@@ -109,6 +153,24 @@ async function initDB() {
         ) ENGINE=InnoDB;
     `;
 
+    const orderHistoryLogsTable = `
+        CREATE TABLE IF NOT EXISTS order_history_logs (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            order_id INT NOT NULL,
+            product_id INT NULL,
+            product_name VARCHAR(255) NULL,
+            action VARCHAR(50) NOT NULL,
+            quantity INT NOT NULL DEFAULT 0,
+            price DECIMAL(10, 2) NULL,
+            item_id INT NULL,
+            description VARCHAR(255) NULL,
+            user_id INT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+            INDEX idx_order_logs (order_id)
+        ) ENGINE=InnoDB;
+    `;
+
     const debtorsTable = `
         CREATE TABLE IF NOT EXISTS debtors (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -119,7 +181,11 @@ async function initDB() {
             address VARCHAR(255),
             notes TEXT,
             type VARCHAR(20) NOT NULL DEFAULT 'client',
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            user_id INT NULL,
+            active TINYINT(1) NOT NULL DEFAULT 1,
+            shop_id INT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (shop_id) REFERENCES shops(id) ON DELETE SET NULL
         ) ENGINE=InnoDB;
     `;
 
@@ -137,12 +203,15 @@ async function initDB() {
     `;
 
     await pool.query(usersTable);
+    await pool.query(shopsTable);
+    await pool.query(shopMembersTable);
     await pool.query(verificationCodesTable);
     await pool.query(productsTable);
     await pool.query(salesTable);
     await pool.query(saleItemsTable);
     await pool.query(ordersTable);
     await pool.query(orderItemsTable);
+    await pool.query(orderHistoryLogsTable);
     await pool.query(debtorsTable);
     await pool.query(debtsTable);
 

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { StyleSheet, Text, View, TouchableOpacity, StatusBar, ScrollView, Platform, useWindowDimensions, ActivityIndicator, RefreshControl, Alert, Modal, TextInput } from 'react-native';
 import { useTheme } from '../theme/ThemeContext';
 import { useAuth } from '../context/AuthContext';
+import { useShop } from '../context/ShopContext';
 import { useModules } from '../context/ModuleContext';
 import { Ionicons } from '@expo/vector-icons';
 import { useIsFocused } from '@react-navigation/native';
@@ -25,6 +26,7 @@ const formatCompact = (num) => {
 export default function DashboardScreen({ navigation }) {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
+  const { activeShop } = useShop();
   const { moduleSettings } = useModules();
   const { width } = useWindowDimensions();
   const isFocused = useIsFocused();
@@ -50,7 +52,7 @@ export default function DashboardScreen({ navigation }) {
     try {
       setLoadingCustom(true);
       const res = await apiFetch(`${API_URL}/dashboard/custom?start=${customStartDate}&end=${customEndDate}`, {
-        headers: { 'x-user-id': user ? user.id.toString() : '' }
+        headers: { 'x-user-id': user ? user.id.toString() : '', 'x-shop-id': activeShop ? activeShop.id.toString() : '' }
       });
       const data = await res.json();
       if (res.ok) {
@@ -83,7 +85,7 @@ export default function DashboardScreen({ navigation }) {
   const fetchDashboard = useCallback(async () => {
     try {
       const res = await apiFetch(`${API_URL}/dashboard`, {
-        headers: { 'x-user-id': user ? user.id.toString() : '' }
+        headers: { 'x-user-id': user ? user.id.toString() : '', 'x-shop-id': activeShop ? activeShop.id.toString() : '' }
       });
       const data = await res.json();
       if (res.ok) setStats(data);
@@ -93,14 +95,14 @@ export default function DashboardScreen({ navigation }) {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [user]);
+  }, [user, activeShop]);
 
   useEffect(() => {
     if (isFocused) {
       setLoading(true);
       fetchDashboard();
     }
-  }, [isFocused]);
+  }, [isFocused, activeShop]);
 
   const onRefresh = () => {
     setRefreshing(true);

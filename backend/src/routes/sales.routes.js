@@ -8,6 +8,7 @@ const { discountStock } = require('../utils/helpers');
 router.post('/', async (req, res) => {
     const { items, debtor_id } = req.body; // items es un array de { product_id, quantity, price }, debtor_id es opcional
     const userId = req.headers['x-user-id'] || null;
+    const shopId = req.headers['x-shop-id'] || null;
 
     if (!items || items.length === 0) {
         return res.status(400).json({ error: 'La venta debe tener al menos un producto.' });
@@ -23,8 +24,8 @@ router.post('/', async (req, res) => {
         await db.query('START TRANSACTION');
 
         const saleResult = await db.query(
-            'INSERT INTO sales (total, user_id, debtor_id) VALUES (?, ?, ?)',
-            [total, userId, debtor_id || null]
+            'INSERT INTO sales (total, user_id, debtor_id, shop_id) VALUES (?, ?, ?, ?)',
+            [total, userId, debtor_id || null, shopId]
         );
         const sale_id = saleResult.insertId;
 
@@ -59,6 +60,7 @@ router.post('/', async (req, res) => {
 // Obtener todas las ventas con nombre de deudor
 router.get('/', async (req, res) => {
     const userId = req.headers['x-user-id'] || null;
+    const shopId = req.headers['x-shop-id'] || null;
     const sql = `
         SELECT s.*, d.name as debtor_name,
                (SELECT COALESCE(SUM(si.quantity * (si.price - COALESCE(p.cost_price, 0))), 0) 
@@ -67,11 +69,12 @@ router.get('/', async (req, res) => {
                 WHERE si.sale_id = s.id) as profit
         FROM sales s 
         LEFT JOIN debtors d ON s.debtor_id = d.id 
-        WHERE s.user_id = ? OR (s.user_id IS NULL AND ? IS NULL) 
+        WHERE (s.user_id = ? OR (s.user_id IS NULL AND ? IS NULL)) 
+          AND (s.shop_id = ? OR (s.shop_id IS NULL AND ? IS NULL))
         ORDER BY s.created_at DESC
     `;
     try {
-        const rows = await db.query(sql, [userId, userId]);
+        const rows = await db.query(sql, [userId, userId, shopId, shopId]);
         // Formatear tipos DECIMAL de MySQL a número
         const formatted = rows.map(r => ({
             id: r.id.toString(),

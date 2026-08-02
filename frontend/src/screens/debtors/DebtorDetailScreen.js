@@ -795,31 +795,6 @@ export default function DebtorDetailScreen({ route, navigation }) {
                   : (debtor.type === 'deuda' ? 'Nuevo Pago' : 'Nuevo Abono'))}
             </Text>
 
-            {editingId && (
-              <View style={{
-                alignSelf: 'flex-start',
-                marginBottom: 15,
-                paddingHorizontal: 12,
-                paddingVertical: 6,
-                borderRadius: 20,
-                backgroundColor: type === 'debt'
-                  ? (debtor.type === 'deuda' ? '#8B5CF620' : theme.danger + '20')
-                  : (debtor.type === 'deuda' ? '#10B98120' : theme.accent + '20')
-              }}>
-                <Text style={{
-                  fontSize: 13,
-                  fontWeight: '700',
-                  color: type === 'debt'
-                    ? (debtor.type === 'deuda' ? '#8B5CF6' : theme.danger)
-                    : (debtor.type === 'deuda' ? '#10B981' : theme.accent)
-                }}>
-                  Tipo: {type === 'debt'
-                    ? 'Deuda'
-                    : (debtor.type === 'deuda' ? 'Pago' : 'Abono')}
-                </Text>
-              </View>
-            )}
-
             <Text style={[styles.inputLabel, { color: theme.textSecondary }]}>Descripción del ítem</Text>
             <Input
               placeholder="Ej. Pantalón o Materiales"
@@ -849,33 +824,32 @@ export default function DebtorDetailScreen({ route, navigation }) {
               </View>
             </View>
 
-            {/* Selector de Tipo (Solo editable al crear nuevo) */}
-            {!editingId && (
-              <View style={styles.typeSelector}>
-                <TouchableOpacity
-                  style={[
-                    styles.typeBtn,
-                    type === 'debt' && { backgroundColor: debtor.type === 'ahorro' ? '#EF4444' : (debtor.type === 'deuda' ? '#EF4444' : '#8B5CF6') }
-                  ]}
-                  onPress={() => setType('debt')}
-                >
-                  <Text style={[styles.typeBtnText, { color: type === 'debt' ? '#FFF' : theme.textSecondary }]}>
-                    {debtor.type === 'ahorro' ? 'Retiro' : 'Deuda'}
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[
-                    styles.typeBtn,
-                    type === 'payment' && { backgroundColor: debtor.type === 'ahorro' ? '#10B981' : (debtor.type === 'deuda' ? '#10B981' : theme.accent) }
-                  ]}
-                  onPress={() => setType('payment')}
-                >
-                  <Text style={[styles.typeBtnText, { color: type === 'payment' ? '#FFF' : theme.textSecondary }]}>
-                    {debtor.type === 'ahorro' ? 'Ahorro' : (debtor.type === 'deuda' ? 'Pago' : 'Abono')}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            )}
+            {/* Selector de Tipo (editable al crear Y al editar) */}
+            <Text style={[styles.inputLabel, { color: theme.textSecondary, marginTop: 12 }]}>Tipo de movimiento</Text>
+            <View style={styles.typeSelector}>
+              <TouchableOpacity
+                style={[
+                  styles.typeBtn,
+                  type === 'debt' && { backgroundColor: debtor.type === 'ahorro' ? '#EF4444' : (debtor.type === 'deuda' ? '#EF4444' : '#8B5CF6') }
+                ]}
+                onPress={() => setType('debt')}
+              >
+                <Text style={[styles.typeBtnText, { color: type === 'debt' ? '#FFF' : theme.textSecondary }]}>
+                  {debtor.type === 'ahorro' ? 'Retiro' : 'Deuda'}
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.typeBtn,
+                  type === 'payment' && { backgroundColor: debtor.type === 'ahorro' ? '#10B981' : (debtor.type === 'deuda' ? '#10B981' : theme.accent) }
+                ]}
+                onPress={() => setType('payment')}
+              >
+                <Text style={[styles.typeBtnText, { color: type === 'payment' ? '#FFF' : theme.textSecondary }]}>
+                  {debtor.type === 'ahorro' ? 'Ahorro' : (debtor.type === 'deuda' ? 'Pago' : 'Abono')}
+                </Text>
+              </TouchableOpacity>
+            </View>
 
             <View style={styles.modalButtons}>
               <Button

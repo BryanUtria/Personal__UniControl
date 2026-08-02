@@ -10,6 +10,7 @@ import NetInfo from '@react-native-community/netinfo';
 import { syncOfflineQueue, getOfflineQueue, isConnected } from './src/utils/offlineSync';
 import { Ionicons } from '@expo/vector-icons';
 import { ModuleProvider } from './src/context/ModuleContext';
+import { ShopProvider } from './src/context/ShopContext';
 import VersionCheckModal from './src/components/VersionCheckModal';
 
 function OfflineSyncManager() {
@@ -213,15 +214,17 @@ export default function App() {
       <AuthProvider>
         <NotificationInitializer />
         <ModuleProvider>
-          <ThemeProvider>
-            <ToastProvider>
-              <NavigationContainer>
-                <AppNavigator />
-              </NavigationContainer>
-              <OfflineSyncManager />
-              <VersionCheckModal />
-            </ToastProvider>
-          </ThemeProvider>
+          <ShopProvider>
+            <ThemeProvider>
+              <ToastProvider>
+                <NavigationContainer>
+                  <AppNavigator />
+                </NavigationContainer>
+                <OfflineSyncManager />
+                <VersionCheckModal />
+              </ToastProvider>
+            </ThemeProvider>
+          </ShopProvider>
         </ModuleProvider>
       </AuthProvider>
     </SafeAreaProvider>

@@ -7,14 +7,16 @@ const db = require('../../db');
 // Obtener todos los productos activos
 router.get('/', async (req, res) => {
     const userId = req.headers['x-user-id'] || null;
+    const shopId = req.headers['x-shop-id'] || null;
     try {
         const rows = await db.query(
             `SELECT p.*, 
                     (SELECT COUNT(*) FROM product_batches b WHERE b.product_id = p.id) AS total_batches,
                     (SELECT COUNT(*) FROM product_batches b WHERE b.product_id = p.id AND b.quantity > 0) AS available_batches
              FROM products p 
-             WHERE (p.user_id = ? OR (p.user_id IS NULL AND ? IS NULL)) AND p.active = 1`,
-            [userId, userId]
+             WHERE (p.user_id = ? OR (p.user_id IS NULL AND ? IS NULL)) AND p.active = 1
+               AND (p.shop_id = ? OR (p.shop_id IS NULL AND ? IS NULL))`,
+            [userId, userId, shopId, shopId]
         );
         res.json(rows);
     } catch (err) {
@@ -26,10 +28,11 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     const { name, description, price, stock, cost_price, profit_margin, code, min_stock } = req.body;
     const userId = req.headers['x-user-id'] || null;
+    const shopId = req.headers['x-shop-id'] || null;
     try {
         const result = await db.query(
-            'INSERT INTO products (name, description, price, stock, user_id, cost_price, profit_margin, code, min_stock) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [name, description, price, stock || 0, userId, cost_price || null, profit_margin || null, code || null, min_stock !== undefined ? min_stock : 5]
+            'INSERT INTO products (name, description, price, stock, user_id, cost_price, profit_margin, code, min_stock, shop_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [name, description, price, stock || 0, userId, cost_price || null, profit_margin || null, code || null, min_stock !== undefined ? min_stock : 5, shopId]
         );
         const productId = result.insertId;
 

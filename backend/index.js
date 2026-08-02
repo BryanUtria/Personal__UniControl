@@ -24,6 +24,7 @@ app.get('/api/version', (req, res) => {
 app.use('/', require('./src/routes/success.routes'));
 
 app.use('/api/auth', require('./src/routes/auth.routes'));
+app.use('/api/shops', require('./src/routes/shops.routes'));
 app.use('/api/dashboard', require('./src/routes/dashboard.routes'));
 app.use('/api/products', require('./src/routes/products.routes'));
 app.use('/api/sales', require('./src/routes/sales.routes'));

@@ -4,13 +4,27 @@ const db = require('../../db');
 const { discountStock, returnStock, returnStockByPrice } = require('../utils/helpers');
 // --- PEDIDOS EN COLA (MESAS / CUENTAS PENDIENTES) ---
 
+// Helper para registrar un movimiento en el historial de trazabilidad del pedido
+async function addOrderHistoryLog({ order_id, product_id, product_name, action, quantity, price, item_id, description, user_id }) {
+    try {
+        await db.query(
+            `INSERT INTO order_history_logs (order_id, product_id, product_name, action, quantity, price, item_id, description, user_id)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+            [order_id, product_id || null, product_name || null, action, quantity || 0, price != null ? parseFloat(price) : null, item_id || null, description || null, user_id || null]
+        );
+    } catch (err) {
+        console.error('Error registrando log de pedido:', err.message);
+    }
+}
+
 // Obtener todas las órdenes pendientes (en cola)
 router.get('/', async (req, res) => {
     const userId = req.headers['x-user-id'] || null;
+    const shopId = req.headers['x-shop-id'] || null;
     try {
         const rows = await db.query(
-            "SELECT * FROM orders WHERE status = 'pending' AND (user_id = ? OR (user_id IS NULL AND ? IS NULL)) ORDER BY created_at DESC",
-            [userId, userId]
+            "SELECT * FROM orders WHERE status = 'pending' AND (user_id = ? OR (user_id IS NULL AND ? IS NULL)) AND (shop_id = ? OR (shop_id IS NULL AND ? IS NULL)) ORDER BY created_at DESC",
+            [userId, userId, shopId, shopId]
         );
         res.json(rows);
     } catch (err) {
@@ -22,15 +36,24 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     const { reference } = req.body;
     const userId = req.headers['x-user-id'] || null;
+    const shopId = req.headers['x-shop-id'] || null;
     if (!reference || !reference.trim()) {
         return res.status(400).json({ error: 'La referencia o mesa es obligatoria.' });
     }
     try {
         const result = await db.query(
-            "INSERT INTO orders (reference, status, user_id) VALUES (?, 'pending', ?)",
-            [reference.trim(), userId]
+            "INSERT INTO orders (reference, status, user_id, shop_id) VALUES (?, 'pending', ?, ?)",
+            [reference.trim(), userId, shopId]
         );
-        res.json({ id: result.insertId, reference: reference.trim(), status: 'pending' });
+        const orderId = result.insertId;
+        // Registrar log de creación del pedido
+        await addOrderHistoryLog({
+            order_id: orderId,
+            action: 'order_created',
+            description: `Pedido "${reference.trim()}" creado`,
+            user_id: userId
+        });
+        res.json({ id: orderId, reference: reference.trim(), status: 'pending' });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
@@ -134,6 +157,22 @@ router.post('/:id/items', async (req, res) => {
         }
 
         await db.query('COMMIT');
+        // Registrar log de adición de productos
+        const productInfo = await db.query('SELECT name FROM products WHERE id = ?', [product_id]);
+        const productName = productInfo.length > 0 ? productInfo[0].name : null;
+        const orderInfo = await db.query('SELECT user_id FROM orders WHERE id = ?', [order_id]);
+        const orderUserId = orderInfo.length > 0 ? orderInfo[0].user_id : null;
+        await addOrderHistoryLog({
+            order_id,
+            product_id,
+            product_name: productName,
+            action: 'items_added',
+            quantity: qtyInt,
+            price: discountedDetails.length > 0 ? discountedDetails[0].price : null,
+            item_id: lastId,
+            description: `Se agregaron ${qtyInt} unidades al pedido`,
+            user_id: orderUserId
+        });
         res.json({ success: true, id: lastId });
     } catch (err) {
         try { await db.query('ROLLBACK'); } catch (e) { }
@@ -198,6 +237,27 @@ router.put('/:id/items/:itemId', async (req, res) => {
         }
 
         await db.query('COMMIT');
+        // Registrar log de modificación de cantidad
+        const orderId = req.params.id;
+        const productInfo = await db.query('SELECT p.name FROM products p JOIN order_items oi ON oi.product_id = p.id WHERE oi.id = ?', [itemId]);
+        const productName = productInfo.length > 0 ? productInfo[0].name : null;
+        const action = diff > 0 ? 'items_increased' : diff < 0 ? 'items_decreased' : 'items_updated';
+        const actionDesc = diff > 0
+            ? `Se sumaron ${diff} unidades (total ${newQty})`
+            : diff < 0
+                ? `Se restaron ${Math.abs(diff)} unidades (total ${newQty})`
+                : `Cantidad actualizada a ${newQty}`;
+        await addOrderHistoryLog({
+            order_id: orderId,
+            product_id: product_id,
+            product_name: productName,
+            action,
+            quantity: Math.abs(diff),
+            price: parseFloat(price),
+            item_id: itemId,
+            description: actionDesc,
+            user_id: req.headers['x-user-id'] || null
+        });
         res.json({ success: true });
     } catch (err) {
         try { await db.query('ROLLBACK'); } catch (e) { }
@@ -218,9 +278,54 @@ router.delete('/:id/items/:itemId', async (req, res) => {
             await db.query('DELETE FROM order_items WHERE id = ?', [itemId]);
         }
         await db.query('COMMIT');
+        // Registrar log de eliminación de artículo
+        if (existing.length > 0) {
+            const { product_id: pid, quantity: qty, price: pprice } = existing[0];
+            const productInfo = await db.query('SELECT name FROM products WHERE id = ?', [pid]);
+            const productName = productInfo.length > 0 ? productInfo[0].name : null;
+            await addOrderHistoryLog({
+                order_id: req.params.id,
+                product_id: pid,
+                product_name: productName,
+                action: 'item_removed',
+                quantity: qty,
+                price: parseFloat(pprice),
+                item_id: itemId,
+                description: `Se eliminó ${qty} unidades del pedido (devolución de stock)`,
+                user_id: req.headers['x-user-id'] || null
+            });
+        }
         res.json({ success: true });
     } catch (err) {
         try { await db.query('ROLLBACK'); } catch (e) { }
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// Obtener el historial de movimientos/trazabilidad de un pedido
+router.get('/:id/history', async (req, res) => {
+    try {
+        const rows = await db.query(
+            `SELECT id, product_id, product_name, action, quantity, price, item_id, description, user_id, created_at
+             FROM order_history_logs
+             WHERE order_id = ?
+             ORDER BY id ASC`,
+            [req.params.id]
+        );
+        const formatted = rows.map(r => ({
+            id: r.id.toString(),
+            product_id: r.product_id,
+            product_name: r.product_name,
+            action: r.action,
+            quantity: parseInt(r.quantity, 10),
+            price: r.price ? parseFloat(r.price) : null,
+            item_id: r.item_id,
+            description: r.description,
+            user_id: r.user_id,
+            created_at: r.created_at
+        }));
+        res.json(formatted);
+    } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
@@ -230,6 +335,7 @@ router.post('/:id/checkout', async (req, res) => {
     const { debtor_id } = req.body;
     const order_id = req.params.id;
     const userId = req.headers['x-user-id'] || null;
+    const shopId = req.headers['x-shop-id'] || null;
 
     try {
         await db.query('START TRANSACTION');
@@ -256,8 +362,8 @@ router.post('/:id/checkout', async (req, res) => {
 
         // 3. Crear el registro oficial en sales incluyendo el id, referencia del pedido y debtor_id
         const saleResult = await db.query(
-            'INSERT INTO sales (total, user_id, order_id, order_reference, debtor_id) VALUES (?, ?, ?, ?, ?)',
-            [total, userId, order_id, order_reference, debtor_id || null]
+            'INSERT INTO sales (total, user_id, order_id, order_reference, debtor_id, shop_id) VALUES (?, ?, ?, ?, ?, ?)',
+            [total, userId, order_id, order_reference, debtor_id || null, shopId]
         );
         const sale_id = saleResult.insertId;
 
@@ -281,6 +387,13 @@ router.post('/:id/checkout', async (req, res) => {
         await db.query("UPDATE orders SET status = 'completed' WHERE id = ?", [order_id]);
 
         await db.query('COMMIT');
+        // Registrar log de cierre del pedido
+        await addOrderHistoryLog({
+            order_id,
+            action: 'order_completed',
+            description: `Pedido cobrado y facturado - Venta #${sale_id} por $${total}`,
+            user_id: userId
+        });
         res.json({ success: true, sale_id, total });
     } catch (err) {
         try {

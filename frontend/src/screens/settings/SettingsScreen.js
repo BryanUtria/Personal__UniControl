@@ -616,6 +616,73 @@ export default function SettingsScreen({ navigation }) {
           )}
         </View>
 
+        {/* SECCIÓN PREFERENCIAS Y AYUDA */}
+        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20 }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={[styles.sectionTitle, { color: theme.text }]}>Preferencias y Ayuda</Text>
+          </View>
+
+          <View style={[styles.settingRow, { borderBottomWidth: 1, borderColor: theme.border }]}>
+            <View style={styles.settingLabelWrap}>
+              <View style={[styles.iconContainer, { backgroundColor: isDarkMode ? '#F59E0B15' : '#4F46E515' }]}>
+                <Ionicons name={isDarkMode ? 'color-palette' : 'color-palette-outline'} size={22} color={isDarkMode ? '#F59E0B' : '#4F46E5'} />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Apariencia y Temas</Text>
+                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Personaliza los colores de la aplicación.</Text>
+              </View>
+            </View>
+            <Button
+              title="Personalizar"
+              variant="secondary"
+              style={{ paddingHorizontal: 15, height: 35 }}
+              onPress={() => navigation.navigate('Appearance')}
+            />
+          </View>
+
+          <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
+            <View style={styles.settingLabelWrap}>
+              <View style={[styles.iconContainer, { backgroundColor: '#10B98115' }]}>
+                <Ionicons name="mail" size={22} color="#10B981" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Buzón de Sugerencias</Text>
+                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Ayúdanos a mejorar enviando tus ideas.</Text>
+              </View>
+            </View>
+            <Button
+              title="Ir a Sugerencias"
+              variant="secondary"
+              style={{ paddingHorizontal: 15, height: 35 }}
+              onPress={() => navigation.navigate('Suggestions')}
+            />
+          </View>
+        </View>
+
+        {/* SECCIÓN DESCARGAS/WEB */}
+        {appVersionInfo && (
+          <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20, marginBottom: 40 }]}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: theme.text }]}>Plataformas UniControl</Text>
+            </View>
+            <Text style={[styles.sectionDesc, { color: theme.textSecondary, marginBottom: 15 }]}>
+              {Platform.OS === 'web'
+                ? 'Descarga nuestra aplicación para Android y lleva UniControl en tu bolsillo.'
+                : 'Accede a la versión web de UniControl desde cualquier computadora.'}
+            </Text>
+
+            <Button
+              title={Platform.OS === 'web' ? 'Descargar APK para Android' : 'Ir a la Versión Web'}
+              icon={<Ionicons name={Platform.OS === 'web' ? 'logo-android' : 'globe-outline'} size={20} color="#FFF" />}
+              variant="primary"
+              onPress={() => {
+                const url = Platform.OS === 'web' ? appVersionInfo.apkUrl : appVersionInfo.webUrl;
+                if (url) Linking.openURL(url);
+              }}
+            />
+          </View>
+        )}
+
         {/* SECCIÓN SINCRONIZACIÓN */}
         <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20 }]}>
           <View style={styles.sectionHeader}>
@@ -705,73 +772,6 @@ export default function SettingsScreen({ navigation }) {
             moduleKey={targetModule}
           />
         </View>
-
-        {/* SECCIÓN PREFERENCIAS Y AYUDA */}
-        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20 }]}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: theme.text }]}>Preferencias y Ayuda</Text>
-          </View>
-
-          <View style={[styles.settingRow, { borderBottomWidth: 1, borderColor: theme.border }]}>
-            <View style={styles.settingLabelWrap}>
-              <View style={[styles.iconContainer, { backgroundColor: isDarkMode ? '#F59E0B15' : '#4F46E515' }]}>
-                <Ionicons name={isDarkMode ? 'color-palette' : 'color-palette-outline'} size={22} color={isDarkMode ? '#F59E0B' : '#4F46E5'} />
-              </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Apariencia y Temas</Text>
-                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Personaliza los colores de la aplicación.</Text>
-              </View>
-            </View>
-            <Button
-              title="Personalizar"
-              variant="secondary"
-              style={{ paddingHorizontal: 15, height: 35 }}
-              onPress={() => navigation.navigate('Appearance')}
-            />
-          </View>
-
-          <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
-            <View style={styles.settingLabelWrap}>
-              <View style={[styles.iconContainer, { backgroundColor: '#10B98115' }]}>
-                <Ionicons name="mail" size={22} color="#10B981" />
-              </View>
-              <View style={styles.settingTextContainer}>
-                <Text style={[styles.settingTitle, { color: theme.text }]}>Buzón de Sugerencias</Text>
-                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Ayúdanos a mejorar enviando tus ideas.</Text>
-              </View>
-            </View>
-            <Button
-              title="Ir a Sugerencias"
-              variant="secondary"
-              style={{ paddingHorizontal: 15, height: 35 }}
-              onPress={() => navigation.navigate('Suggestions')}
-            />
-          </View>
-        </View>
-
-        {/* SECCIÓN DESCARGAS/WEB */}
-        {appVersionInfo && (
-          <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20, marginBottom: 40 }]}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { color: theme.text }]}>Plataformas UniControl</Text>
-            </View>
-            <Text style={[styles.sectionDesc, { color: theme.textSecondary, marginBottom: 15 }]}>
-              {Platform.OS === 'web'
-                ? 'Descarga nuestra aplicación para Android y lleva UniControl en tu bolsillo.'
-                : 'Accede a la versión web de UniControl desde cualquier computadora.'}
-            </Text>
-
-            <Button
-              title={Platform.OS === 'web' ? 'Descargar APK para Android' : 'Ir a la Versión Web'}
-              icon={<Ionicons name={Platform.OS === 'web' ? 'logo-android' : 'globe-outline'} size={20} color="#FFF" />}
-              variant="primary"
-              onPress={() => {
-                const url = Platform.OS === 'web' ? appVersionInfo.apkUrl : appVersionInfo.webUrl;
-                if (url) Linking.openURL(url);
-              }}
-            />
-          </View>
-        )}
       </ScrollView>
 
 
