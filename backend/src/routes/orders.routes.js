@@ -340,6 +340,21 @@ router.post('/:id/checkout', async (req, res) => {
     try {
         await db.query('START TRANSACTION');
 
+        // 0. Validar que solo el dueño de la tienda puede vender a crédito (deuda)
+        if (debtor_id) {
+            if (!shopId) {
+                throw new Error('Se requiere una tienda activa para registrar ventas a crédito.');
+            }
+            const memberRows = await db.query(
+                'SELECT role FROM shop_members WHERE shop_id = ? AND user_id = ?',
+                [shopId, userId]
+            );
+            const role = memberRows.length > 0 ? memberRows[0].role : null;
+            if (role !== 'owner') {
+                throw new Error('Solo el dueño de la tienda puede registrar ventas a crédito.');
+            }
+        }
+
         // Obtener la referencia de la orden antes de completarla
         const orderData = await db.query('SELECT reference FROM orders WHERE id = ?', [order_id]);
         const order_reference = orderData.length > 0 ? orderData[0].reference : null;

@@ -76,8 +76,9 @@ router.post('/', async (req, res) => {
         );
 
         // Migrar datos existentes del usuario a la nueva tienda
-        // (productos, ventas, pedidos y deudores sin tienda asignada)
-        const tablesToMigrate = ['products', 'sales', 'orders', 'debtors'];
+        // (productos, ventas y pedidos sin tienda asignada)
+        // NOTA: Los deudores/deudas/ahorros son personales del usuario y NO se migran a tiendas.
+        const tablesToMigrate = ['products', 'sales', 'orders'];
         for (const table of tablesToMigrate) {
             await db.query(
                 `UPDATE \`${table}\` SET shop_id = ? WHERE user_id = ? AND shop_id IS NULL`,

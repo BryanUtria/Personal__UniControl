@@ -56,6 +56,9 @@ export default function POSScreen({ navigation }) {
   const [debtorDropdownVisible, setDebtorDropdownVisible] = useState(false);
   const [savingSale, setSavingSale] = useState(false);
 
+  // Solo el dueño de la tienda puede vender a crédito (deuda)
+  const canSellOnCredit = !!activeShop && (activeShop.is_owner === true || activeShop.member_role === 'owner');
+
   // Modal para agregar deudor rápido
   const [newDebtorModalVisible, setNewDebtorModalVisible] = useState(false);
   const [newDebtorName, setNewDebtorName] = useState('');
@@ -462,6 +465,14 @@ export default function POSScreen({ navigation }) {
     setSelectedDebtor(null);
     setDebtorSearch('');
   };
+
+  // Si el usuario NO es dueño, forzar siempre venta en efectivo
+  useEffect(() => {
+    if (!canSellOnCredit && saleType === 'credit') {
+      setSaleType('cash');
+      setSelectedDebtor(null);
+    }
+  }, [canSellOnCredit, saleType]);
 
   // Registrar venta final (Checkout de la mesa activa)
   const handleCheckout = async () => {
@@ -906,23 +917,25 @@ export default function POSScreen({ navigation }) {
                       </Text>
                     </TouchableOpacity>
 
-                    <TouchableOpacity
-                      style={[
-                        styles.saleTypeBtn,
-                        { borderColor: theme.border },
-                        saleType === 'credit' && { backgroundColor: theme.danger, borderColor: theme.danger }
-                      ]}
-                      onPress={() => setSaleType('credit')}
-                    >
-                      <Ionicons name="people" size={18} color={saleType === 'credit' ? '#FFF' : theme.text} style={{ marginRight: 6 }} />
-                      <Text style={[styles.saleTypeBtnText, { color: saleType === 'credit' ? '#FFF' : theme.text }]}>
-                        Crédito (Deuda)
-                      </Text>
-                    </TouchableOpacity>
+                    {canSellOnCredit && (
+                      <TouchableOpacity
+                        style={[
+                          styles.saleTypeBtn,
+                          { borderColor: theme.border },
+                          saleType === 'credit' && { backgroundColor: theme.danger, borderColor: theme.danger }
+                        ]}
+                        onPress={() => setSaleType('credit')}
+                      >
+                        <Ionicons name="people" size={18} color={saleType === 'credit' ? '#FFF' : theme.text} style={{ marginRight: 6 }} />
+                        <Text style={[styles.saleTypeBtnText, { color: saleType === 'credit' ? '#FFF' : theme.text }]}>
+                          Crédito (Deuda)
+                        </Text>
+                      </TouchableOpacity>
+                    )}
                   </View>
 
-                  {/* Selección de Deudor si es crédito */}
-                  {saleType === 'credit' && (
+                  {/* Selección de Deudor si es crédito (solo visible para el dueño) */}
+                  {saleType === 'credit' && canSellOnCredit && (
                     <View style={{ marginTop: 15, zIndex: 999 }}>
                       <Text style={[styles.checkoutLabel, { color: theme.textSecondary }]}>Cliente / Deudor *</Text>
 

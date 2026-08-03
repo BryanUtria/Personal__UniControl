@@ -6,19 +6,19 @@ const { mapType } = require('../utils/helpers');
 
 router.get('/', async (req, res) => {
     const userId = req.headers['x-user-id'] || null;
-    const shopId = req.headers['x-shop-id'] || null;
+    // Los deudores, deudas y ahorros son personales del usuario y NO dependen de la tienda activa.
     const sql = `
         SELECT d.id, d.name, d.phone, d.email, d.identification, d.address, d.notes, d.type, d.created_at as createdAt,
                COALESCE(SUM(CASE WHEN t.type = 'debt' THEN t.amount * t.quantity ELSE -(t.amount * t.quantity) END), 0) as totalDebt
         FROM debtors d
         LEFT JOIN debts t ON d.id = t.debtor_id
-        WHERE (d.user_id = ? OR (d.user_id IS NULL AND ? IS NULL)) AND d.active = 1
-          AND (d.shop_id = ? OR (d.shop_id IS NULL AND ? IS NULL))
+        WHERE d.active = 1
+          AND (d.user_id = ? OR (d.user_id IS NULL AND ? IS NULL))
         GROUP BY d.id
         ORDER BY d.id DESC
     `;
     try {
-        const rows = await db.query(sql, [userId, userId, shopId, shopId]);
+        const rows = await db.query(sql, [userId, userId]);
         // Formatear tipos DECIMAL de MySQL a número
         const formatted = rows.map(r => ({
             id: r.id.toString(),
@@ -42,13 +42,13 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
     const { name, phone, email, identification, address, notes, type } = req.body;
     const userId = req.headers['x-user-id'] || null;
-    const shopId = req.headers['x-shop-id'] || null;
+    // Los deudores son personales del usuario: NO se asocian a ninguna tienda.
     if (!name) return res.status(400).json({ error: 'El nombre es obligatorio.' });
 
     try {
         const result = await db.query(
             'INSERT INTO debtors (name, phone, email, identification, address, notes, type, user_id, shop_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-            [name, phone || null, email || null, identification || null, address || null, notes || null, mapType(type), userId, shopId]
+            [name, phone || null, email || null, identification || null, address || null, notes || null, mapType(type), userId, null]
         );
         res.json({
             id: result.insertId.toString(),

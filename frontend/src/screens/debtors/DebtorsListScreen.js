@@ -13,6 +13,7 @@ import { Ionicons } from '@expo/vector-icons';
 import SidebarLayout from '../../navigation/SidebarLayout';
 import Input from '../../components/Input';
 import { useModules } from '../../context/ModuleContext';
+import { useShop } from '../../context/ShopContext';
 
 const formatNumber = (num) => {
   if (num === null || num === undefined || isNaN(num)) return '0';
@@ -36,6 +37,7 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
 export default function DebtorsListScreen({ navigation }) {
   const { theme, isDarkMode } = useTheme();
   const { user } = useAuth();
+  const { activeShop } = useShop();
   const { moduleSettings, saveModuleSettings } = useModules();
   const isFocused = useIsFocused();
   const { width } = useWindowDimensions();
@@ -73,7 +75,8 @@ export default function DebtorsListScreen({ navigation }) {
     try {
       const response = await apiFetch(`${API_URL}/debtors`, {
         headers: {
-          'x-user-id': user ? user.id.toString() : ''
+          'x-user-id': user ? user.id.toString() : '',
+          'x-shop-id': activeShop ? activeShop.id.toString() : ''
         }
       });
       const data = await response.json();
@@ -89,7 +92,7 @@ export default function DebtorsListScreen({ navigation }) {
     if (isFocused) {
       fetchDebtors();
     }
-  }, [isFocused]);
+  }, [isFocused, activeShop]);
 
   // Estados para filtros y ordenación
   const [filterMenuVisible, setFilterMenuVisible] = useState(false);
@@ -224,7 +227,8 @@ export default function DebtorsListScreen({ navigation }) {
           method: 'PUT',
           headers: {
             'Content-Type': 'application/json',
-            'x-user-id': user ? user.id.toString() : ''
+            'x-user-id': user ? user.id.toString() : '',
+            'x-shop-id': activeShop ? activeShop.id.toString() : ''
           },
           body: JSON.stringify({ name, phone, email, identification, address, notes, type }),
         });
@@ -235,7 +239,8 @@ export default function DebtorsListScreen({ navigation }) {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-user-id': user ? user.id.toString() : ''
+            'x-user-id': user ? user.id.toString() : '',
+            'x-shop-id': activeShop ? activeShop.id.toString() : ''
           },
           body: JSON.stringify({ name, phone, email, identification, address, notes, type }),
         });
