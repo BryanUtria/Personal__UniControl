@@ -119,7 +119,7 @@ export default function DashboardScreen({ navigation }) {
         contentContainerStyle={[
           styles.scrollContent,
           {
-            padding: isMobile ? 10 : 20
+            padding: 10
           }
         ]}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}

@@ -252,7 +252,7 @@ export default function HabitsScreen({ navigation }) {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[theme.accent]} />
         }
       >
-        <View style={[styles.content, { padding: isMobile ? 10 : 20 }]}>
+        <View style={[styles.content, { padding: 10 }]}>
 
           <View style={styles.headerRow}>
             <Text style={[styles.pageTitle, { color: theme.text }]}>Mi Progreso</Text>

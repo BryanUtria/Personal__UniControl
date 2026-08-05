@@ -16,7 +16,8 @@ router.get('/settings', async (req, res) => {
             showShop: true,
             showDebtors: true,
             showHabits: true,
-            showExpenses: true
+            showExpenses: true,
+            showBoards: true
         };
 
         // Sobrescribir con lo que haya en la base de datos

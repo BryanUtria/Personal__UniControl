@@ -626,7 +626,7 @@ export default function POSScreen({ navigation }) {
 
         {/* --- SECCIÓN DE PEDIDOS / CUENTAS PENDIENTES --- */}
         <View style={[styles.ordersBar, { backgroundColor: theme.card, borderBottomColor: theme.border }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: isMobile ? 10 : 15, paddingBottom: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 10, paddingBottom: 10 }}>
             <Button
               onPress={() => navigation.goBack()}
               variant="secondary"
@@ -720,7 +720,7 @@ export default function POSScreen({ navigation }) {
           </View>
         ) : !activeOrder ? (
           /* PANTALLA DE INVITACIÓN A SELECCIONAR PEDIDO */
-          <View style={[styles.noActiveOrderContainer, { padding: isMobile ? 10 : 20 }]}>
+          <View style={[styles.noActiveOrderContainer, { padding: 10 }]}>
             <Ionicons name="receipt-outline" size={80} color={theme.textSecondary} style={{ marginBottom: 15 }} />
             <Text style={[styles.noActiveOrderTitle, { color: theme.text }]}>¡Bienvenido al POS!</Text>
             <Text style={[styles.noActiveOrderSub, { color: theme.textSecondary }]}>
@@ -739,7 +739,7 @@ export default function POSScreen({ navigation }) {
 
             {/* LADO DE PRODUCTOS (Catálogo) */}
             {(!isMobile || activeTab === 'products') && (
-              <View style={[styles.productsPane, isMobile ? { width: '100%', flex: 1 } : { width: '60%' }, { padding: isMobile ? 10 : 20 }]}>
+              <View style={[styles.productsPane, isMobile ? { width: '100%', flex: 1 } : { width: '60%' }, { padding: 10 }]}>
 
                 {/* Buscador de Productos */}
                 <Input
@@ -827,7 +827,7 @@ export default function POSScreen({ navigation }) {
               <View style={[styles.cartPane, isMobile ? { width: '100%', flex: 1 } : { width: '40%', borderLeftColor: theme.card, borderLeftWidth: 1 }]}>
 
                 {/* Lista del Carrito */}
-                <View style={{ flex: 1, padding: isMobile ? 10 : 15 }}>
+                <View style={{ flex: 1, padding: 10 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
                     <Text style={[styles.paneTitle, { color: theme.text }]}>Consumo: {activeOrder.reference}</Text>
                     {loadingItems && <ActivityIndicator size="small" color={theme.accent} />}
@@ -898,7 +898,7 @@ export default function POSScreen({ navigation }) {
                 </View>
 
                 {/* Formulario de Checkout */}
-                <View style={[styles.checkoutPanel, { backgroundColor: theme.card, borderTopColor: theme.border, padding: isMobile ? 10 : 15 }]}>
+                <View style={[styles.checkoutPanel, { backgroundColor: theme.card, borderTopColor: theme.border, padding: 10 }]}>
 
                   {/* Tipo de Venta */}
                   <Text style={[styles.checkoutLabel, { color: theme.textSecondary }]}>Método de Pago</Text>
@@ -1384,7 +1384,7 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
   },
   ordersScroll: {
-    paddingHorizontal: 15,
+    paddingHorizontal: 10,
     alignItems: 'center',
     gap: 10,
   },

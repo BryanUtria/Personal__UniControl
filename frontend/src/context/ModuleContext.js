@@ -11,6 +11,7 @@ export const ModuleProvider = ({ children }) => {
     showDebtors: true,
     showHabits: true,
     showExpenses: true,
+    showBoards: true,
   });
   const [loadingModules, setLoadingModules] = useState(true);
 

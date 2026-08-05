@@ -156,7 +156,7 @@ git push
 **Paso 2: Crea el Release en GitHub**
 Asegúrate de estar en la carpeta raíz del proyecto (la carpeta principal, no dentro del frontend) y ejecuta el siguiente comando, ajustando el número de versión (ej. `v1.0.1`):
 ```bash
-gh release create v1.0.9 frontend/private/apk/Unicontrol.apk --title "Versión 1.0.9" --notes "Nueva actualización disponible"
+gh release create v1.0.10 frontend/private/apk/Unicontrol.apk --title "Versión 1.0.10" --notes "Nueva actualización disponible"
 ```
 
 **Paso 3: Actualizar Backend**

@@ -37,6 +37,7 @@ app.use('/api/habits', require('./src/routes/habits.routes'));
 app.use('/api/expenses', require('./src/routes/expenses.routes'));
 app.use('/api/push', require('./src/routes/push.routes'));
 app.use('/api/suggestions', require('./src/routes/suggestions.routes'));
+app.use('/api/boards', require('./src/routes/boards.routes'));
 
 // Inicializar el scheduler de notificaciones
 require('./src/utils/notificationScheduler');

@@ -481,7 +481,7 @@ export default function DebtorsListScreen({ navigation }) {
   return (
     <SidebarLayout navigation={navigation} title="Deudas y Ahorros" activeRoute="DebtorsList" headerRight={headerRightComponent}>
 
-      <View style={{ paddingHorizontal: isMobile ? 10 : 20, paddingTop: 8, paddingBottom: 10 }}>
+      <View style={{ paddingHorizontal: 10, paddingTop: 8, paddingBottom: 10 }}>
         <Input
           icon="search-outline"
           placeholder="Buscar deudor o deuda..."
@@ -509,7 +509,7 @@ export default function DebtorsListScreen({ navigation }) {
           data={filteredDebtors}
           keyExtractor={item => item.id}
           renderItem={renderItem}
-          contentContainerStyle={[styles.list, { paddingHorizontal: isMobile ? 10 : 20, paddingBottom: isMobile ? 10 : 20, paddingTop: 5 }]}
+          contentContainerStyle={[styles.list, { paddingHorizontal: 10, paddingBottom: isMobile ? 10 : 20, paddingTop: 5 }]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}

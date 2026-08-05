@@ -385,6 +385,142 @@ async function initDB() {
     `;
     await pool.query(suggestionsTable);
 
+    // --- MÓDULO PROYECTOS Y TABLEROS (Kanban colaborativo) ---
+    const taskBoardsTable = `
+        CREATE TABLE IF NOT EXISTS task_boards (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(255) NOT NULL,
+            description TEXT NULL,
+            color VARCHAR(50) DEFAULT '#6366F1',
+            owner_user_id INT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(taskBoardsTable);
+
+    const taskBoardMembersTable = `
+        CREATE TABLE IF NOT EXISTS task_board_members (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            board_id INT NOT NULL,
+            user_id INT NOT NULL,
+            role VARCHAR(20) DEFAULT 'member',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (board_id) REFERENCES task_boards(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE KEY board_user (board_id, user_id)
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(taskBoardMembersTable);
+
+    const taskSubboardsTable = `
+        CREATE TABLE IF NOT EXISTS task_subboards (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            board_id INT NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            description TEXT NULL,
+            color VARCHAR(50) DEFAULT '#3B82F6',
+            position INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (board_id) REFERENCES task_boards(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(taskSubboardsTable);
+
+    const taskColumnsTable = `
+        CREATE TABLE IF NOT EXISTS task_columns (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            board_id INT NULL,
+            subboard_id INT NULL,
+            name VARCHAR(255) NOT NULL,
+            position INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (board_id) REFERENCES task_boards(id) ON DELETE CASCADE,
+            FOREIGN KEY (subboard_id) REFERENCES task_subboards(id) ON DELETE CASCADE,
+            INDEX idx_cols_board (board_id),
+            INDEX idx_cols_subboard (subboard_id)
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(taskColumnsTable);
+
+    const taskCardsTable = `
+        CREATE TABLE IF NOT EXISTS task_cards (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            column_id INT NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            description TEXT NULL,
+            start_date DATETIME NULL,
+            due_date DATETIME NULL,
+            position INT NOT NULL DEFAULT 0,
+            created_by INT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (column_id) REFERENCES task_columns(id) ON DELETE CASCADE,
+            FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL,
+            INDEX idx_cards_column (column_id)
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(taskCardsTable);
+
+    const taskLabelsTable = `
+        CREATE TABLE IF NOT EXISTS task_labels (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            board_id INT NOT NULL,
+            name VARCHAR(255) NOT NULL,
+            color VARCHAR(50) DEFAULT '#EF4444',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (board_id) REFERENCES task_boards(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(taskLabelsTable);
+
+    const taskCardLabelsTable = `
+        CREATE TABLE IF NOT EXISTS task_card_labels (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            card_id INT NOT NULL,
+            label_id INT NOT NULL,
+            FOREIGN KEY (card_id) REFERENCES task_cards(id) ON DELETE CASCADE,
+            FOREIGN KEY (label_id) REFERENCES task_labels(id) ON DELETE CASCADE,
+            UNIQUE KEY card_label (card_id, label_id)
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(taskCardLabelsTable);
+
+    const taskChecklistsTable = `
+        CREATE TABLE IF NOT EXISTS task_checklists (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            card_id INT NOT NULL,
+            title VARCHAR(255) NOT NULL,
+            position INT NOT NULL DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY (card_id) REFERENCES task_cards(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(taskChecklistsTable);
+
+    const taskChecklistItemsTable = `
+        CREATE TABLE IF NOT EXISTS task_checklist_items (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            checklist_id INT NOT NULL,
+            text VARCHAR(255) NOT NULL,
+            checked TINYINT(1) NOT NULL DEFAULT 0,
+            position INT NOT NULL DEFAULT 0,
+            FOREIGN KEY (checklist_id) REFERENCES task_checklists(id) ON DELETE CASCADE
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(taskChecklistItemsTable);
+
+    const taskCardMembersTable = `
+        CREATE TABLE IF NOT EXISTS task_card_members (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            card_id INT NOT NULL,
+            user_id INT NOT NULL,
+            FOREIGN KEY (card_id) REFERENCES task_cards(id) ON DELETE CASCADE,
+            FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+            UNIQUE KEY card_user (card_id, user_id)
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(taskCardMembersTable);
+
     console.log('Conectado a MySQL y tablas inicializadas con éxito.');
 }
 

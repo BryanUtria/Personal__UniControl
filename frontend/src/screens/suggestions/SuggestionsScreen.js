@@ -129,7 +129,7 @@ export default function SuggestionsScreen({ navigation }) {
     const filtered = suggestions.filter(s => s.status === filter);
 
     return (
-      <View style={{ flex: 1, paddingHorizontal: isMobile ? 10 : 20 }}>
+      <View style={{ flex: 1, paddingHorizontal: 10 }}>
         <View style={{ flexDirection: 'row', gap: 10, marginBottom: 15 }}>
           <Button
             title="Pendientes"
@@ -175,7 +175,7 @@ export default function SuggestionsScreen({ navigation }) {
 
   const renderClientView = () => {
     return (
-      <View style={{ flex: 1, paddingHorizontal: isMobile ? 10 : 20 }}>
+      <View style={{ flex: 1, paddingHorizontal: 10 }}>
         <View style={[styles.card, { backgroundColor: theme.card, borderColor: theme.border, marginBottom: 20 }]}>
           <Text style={{ fontSize: 16, fontWeight: 'bold', color: theme.text, marginBottom: 10 }}>Enviar Sugerencia, Queja o Reclamo</Text>
           <Input
@@ -189,7 +189,7 @@ export default function SuggestionsScreen({ navigation }) {
           <Button title="Enviar Mensaje" variant="primary" onPress={handleSubmitSuggestion} style={{ marginTop: 10 }} />
         </View>
 
-        <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text, marginBottom: 10 }}>Mi Historial</Text>
+        <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text, marginBottom: 10, marginLeft: 5 }}>Mi Historial</Text>
         {suggestions.length === 0 ? (
           <Text style={{ color: theme.textSecondary, textAlign: 'center', marginTop: 20 }}>Aún no has enviado sugerencias.</Text>
         ) : (
@@ -223,7 +223,7 @@ export default function SuggestionsScreen({ navigation }) {
         renderItem={null}
         ListHeaderComponent={
           <>
-            <View style={[styles.header, { paddingHorizontal: isMobile ? 10 : 20, paddingTop: isMobile ? 10 : 20 }]}>
+            <View style={[styles.header, { paddingHorizontal: 15, paddingTop: 10 }]}>
               <Text style={[styles.title, { color: theme.text }]}>Buzón de Sugerencias</Text>
             </View>
 
@@ -231,7 +231,7 @@ export default function SuggestionsScreen({ navigation }) {
           </>
         }
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={theme.accent} />}
-        contentContainerStyle={{ paddingBottom: 100 }}
+        contentContainerStyle={{ paddingBottom: 30 }}
       />
 
       {/* Modal de Respuesta Admin */}

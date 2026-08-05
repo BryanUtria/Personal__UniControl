@@ -616,7 +616,7 @@ export default function ExpensesScreen({ navigation }) {
       <FlatList
         ListHeaderComponent={
           <>
-            <View style={[styles.header, { paddingHorizontal: isMobile ? 10 : 20, paddingTop: isMobile ? 10 : 20 }]}>
+            <View style={[styles.header, { paddingHorizontal: 10, paddingTop: 10 }]}>
               <Text style={[styles.title, { color: theme.text }]}>Control de Gastos</Text>
               <Button
                 title="Categorías"
@@ -628,7 +628,7 @@ export default function ExpensesScreen({ navigation }) {
               />
             </View>
 
-            <View style={[styles.monthSelector, { backgroundColor: theme.card, padding: isMobile ? 10 : 15, marginHorizontal: isMobile ? 10 : 20 }]}>
+            <View style={[styles.monthSelector, { backgroundColor: theme.card, padding: isMobile ? 10 : 15, marginHorizontal: 10 }]}>
               <TouchableOpacity onPress={prevMonth} style={styles.monthBtn}>
                 <Ionicons name="chevron-back" size={24} color={theme.text} />
               </TouchableOpacity>
@@ -638,7 +638,7 @@ export default function ExpensesScreen({ navigation }) {
               </TouchableOpacity>
             </View>
 
-            <View style={[styles.summaryContainer, { paddingHorizontal: isMobile ? 10 : 20, marginBottom: 10 }]}>
+            <View style={[styles.summaryContainer, { paddingHorizontal: 10, marginBottom: 10 }]}>
               <View style={[styles.summaryCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]}>Ingresos</Text>
                 <Text style={[styles.summaryValue, { color: '#10B981', fontSize: 14 }]}>{formatCurrency(totalIncomes)}</Text>
@@ -653,7 +653,7 @@ export default function ExpensesScreen({ navigation }) {
               </View>
             </View>
 
-            <View style={[styles.summaryContainer, { paddingHorizontal: isMobile ? 10 : 20 }]}>
+            <View style={[styles.summaryContainer, { paddingHorizontal: 10 }]}>
               <View style={[styles.summaryCard, { backgroundColor: theme.card, shadowColor: theme.shadow }]}>
                 <Text style={[styles.summaryLabel, { color: theme.textSecondary }]} numberOfLines={1}>Pagado</Text>
                 <Text style={[styles.summaryValue, { color: '#10B981', fontSize: 14 }]} numberOfLines={1}>{formatCurrency(paidExpenses)}</Text>
@@ -675,7 +675,7 @@ export default function ExpensesScreen({ navigation }) {
               </View>
             ) : (
               <>
-                <View style={{ marginBottom: 10, paddingHorizontal: isMobile ? 10 : 20 }}>
+                <View style={{ marginBottom: 10, paddingHorizontal: 10 }}>
                   <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
                     <Text style={{ fontSize: 18, fontWeight: 'bold', color: theme.text }}>Ingresos del Mes</Text>
                     <Button
@@ -712,7 +712,7 @@ export default function ExpensesScreen({ navigation }) {
                   )}
                 </View>
 
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingHorizontal: isMobile ? 10 : 20 }}>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10, paddingHorizontal: 10 }}>
                   <Button
                     title={isMobile ? "Importar" : "Importar Mes Anterior"}
                     variant="secondary"
@@ -729,7 +729,7 @@ export default function ExpensesScreen({ navigation }) {
                 </View>
 
                 {/* FILTROS */}
-                <View style={{ paddingHorizontal: isMobile ? 10 : 20, marginBottom: 15 }}>
+                <View style={{ paddingHorizontal: 10, marginBottom: 15 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: theme.card, borderRadius: 8, borderWidth: 1, borderColor: theme.border, paddingHorizontal: 10, marginBottom: 10 }}>
                     <Ionicons name="search" size={18} color={theme.textSecondary} />
                     <TextInput
@@ -819,12 +819,12 @@ export default function ExpensesScreen({ navigation }) {
           return (
             <View>
               {showHeader && (
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: isMobile ? 10 : 20, marginTop: index === 0 ? 0 : 15, marginBottom: 10 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginHorizontal: 10, marginTop: index === 0 ? 0 : 15, marginBottom: 10 }}>
                   <Text style={{ color: theme.textSecondary, fontWeight: 'bold', fontSize: 13, textTransform: 'uppercase', marginRight: 10 }}>{headerText}</Text>
                   <View style={{ flex: 1, height: 1, backgroundColor: theme.border }} />
                 </View>
               )}
-              <TouchableOpacity activeOpacity={0.8} onPress={() => togglePaidStatus(item)} style={[styles.expenseCard, { backgroundColor: theme.card, borderColor: theme.border, padding: isMobile ? 10 : 15, marginHorizontal: isMobile ? 10 : 20 }]}>
+              <TouchableOpacity activeOpacity={0.8} onPress={() => togglePaidStatus(item)} style={[styles.expenseCard, { backgroundColor: theme.card, borderColor: theme.border, padding: isMobile ? 10 : 15, marginHorizontal: 10 }]}>
                 <TouchableOpacity onPress={() => togglePaidStatus(item)} style={styles.checkbox}>
                   <Ionicons
                     name={item.is_paid ? "checkmark-circle" : "ellipse-outline"}

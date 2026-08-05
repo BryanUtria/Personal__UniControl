@@ -248,6 +248,7 @@ export default function SettingsScreen({ navigation }) {
     if (key === 'showDebtors') moduleName = 'Deudas';
     if (key === 'showHabits') moduleName = 'Hábitos';
     if (key === 'showExpenses') moduleName = 'Gastos';
+    if (key === 'showBoards') moduleName = 'Proyectos y Tableros';
     showToast(`Módulo ${moduleName} ${updated[key] ? 'habilitado' : 'deshabilitado'}`, 'info', 2000);
   };
 
@@ -365,7 +366,7 @@ export default function SettingsScreen({ navigation }) {
       title="Configuración"
       activeRoute="Settings"
     >
-      <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={[styles.scrollContent, { padding: isMobile ? 10 : 16 }]}>
+      <ScrollView style={[styles.container, { backgroundColor: theme.background }]} contentContainerStyle={[styles.scrollContent, { padding: 10 }]}>
         {/* SECCIÓN MI PERFIL */}
         <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginBottom: isMobile ? 10 : 20 }]}>
           <View style={styles.sectionHeader}>
@@ -537,6 +538,24 @@ export default function SettingsScreen({ navigation }) {
             Lleva el control de tu negocio, inventario y ventas.
           </Text>
 
+          <View style={[styles.settingRow, { borderBottomWidth: 1, borderColor: theme.border }]}>
+            <View style={styles.settingLabelWrap}>
+              <View style={[styles.iconContainer, { backgroundColor: '#8B5CF615' }]}>
+                <Ionicons name="albums" size={22} color="#8B5CF6" />
+              </View>
+              <View style={styles.settingTextContainer}>
+                <Text style={[styles.settingTitle, { color: theme.text }]}>Proyectos y Tableros</Text>
+                <Text style={[styles.settingDesc, { color: theme.textSecondary }]}>Tableros Kanban colaborativos, subtableros, tarjetas, checklists y trabajo en equipo.</Text>
+              </View>
+            </View>
+            <Switch
+              value={moduleSettings.showBoards}
+              onValueChange={() => handleToggleModule('showBoards')}
+              trackColor={{ false: '#767577', true: theme.accent }}
+              thumbColor={Platform.OS === 'ios' ? undefined : (moduleSettings.showBoards ? '#FFF' : '#f4f3f4')}
+            />
+          </View>
+
           <View style={[styles.settingRow, { borderBottomWidth: 0 }]}>
             <View style={styles.settingLabelWrap}>
               <View style={[styles.iconContainer, { backgroundColor: '#3B82F615' }]}>
@@ -661,7 +680,7 @@ export default function SettingsScreen({ navigation }) {
 
         {/* SECCIÓN DESCARGAS/WEB */}
         {appVersionInfo && (
-          <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20, marginBottom: 40 }]}>
+          <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20 }]}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { color: theme.text }]}>Plataformas UniControl</Text>
             </View>
@@ -684,7 +703,7 @@ export default function SettingsScreen({ navigation }) {
         )}
 
         {/* SECCIÓN SINCRONIZACIÓN */}
-        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20 }]}>
+        <View style={[styles.section, { backgroundColor: theme.card, shadowColor: theme.shadow, marginTop: isMobile ? 10 : 20, marginBottom: 30 }]}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: theme.text }]}>Sincronización Offline</Text>
             <View style={[styles.networkBadge, { backgroundColor: networkOnline ? '#10B98120' : theme.danger + '15' }]}>

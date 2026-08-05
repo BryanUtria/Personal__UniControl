@@ -96,11 +96,14 @@ export default function AppearanceScreen({ navigation }) {
 
   return (
     <SidebarLayout activeRoute="Settings" navigation={navigation}>
-      <ScrollView contentContainerStyle={[styles.container, { paddingHorizontal: isMobile ? 10 : 20 }]}>
+      <ScrollView contentContainerStyle={[styles.container, { paddingHorizontal: 10 }]}>
         <View style={[styles.header]}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
-          </TouchableOpacity>
+          <Button
+            onPress={() => navigation.goBack()}
+            variant="secondary"
+            style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+            icon={<Ionicons name="chevron-back" size={22} color={theme.text} />}
+          />
           <Text style={[styles.title, { color: theme.text }]}>Apariencia y Temas</Text>
           <View style={{ width: 40 }} />
         </View>
@@ -219,11 +222,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  backButton: {
+  backCircleBtn: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   title: {
     fontSize: 18,

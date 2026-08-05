@@ -208,7 +208,7 @@ export default function ShopMenuScreen({ navigation }) {
     >
       <ScrollView 
         style={[styles.container, { backgroundColor: theme.background }]} 
-        contentContainerStyle={[styles.scrollContent, { padding: isMobile ? 10 : 20 }]}
+        contentContainerStyle={[styles.scrollContent, { padding: 10 }]}
         onScroll={() => setDropdownVisible(false)}
         scrollEventThrottle={16}
       >

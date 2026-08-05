@@ -107,6 +107,12 @@ export default function SidebarLayout({
       visible: moduleSettings.showExpenses === true || moduleSettings.showExpenses === 'true'
     },
     {
+      label: 'Proyectos y Tableros',
+      icon: 'albums',
+      route: 'Boards',
+      visible: moduleSettings.showBoards === true || moduleSettings.showBoards === 'true'
+    },
+    {
       label: 'Tienda',
       icon: 'storefront',
       route: 'ShopMenu',

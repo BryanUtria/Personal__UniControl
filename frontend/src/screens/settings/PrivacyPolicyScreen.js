@@ -1,8 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, useWindowDimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTheme } from '../../theme/ThemeContext';
 import SidebarLayout from '../../navigation/SidebarLayout';
+import Button from '../../components/Button';
 
 export default function PrivacyPolicyScreen({ navigation }) {
   const { theme } = useTheme();
@@ -33,11 +34,14 @@ export default function PrivacyPolicyScreen({ navigation }) {
 
   return (
     <SidebarLayout activeRoute="Settings" navigation={navigation}>
-      <ScrollView contentContainerStyle={[styles.container, { padding: isMobile ? 10 : 20 }]}>
+      <ScrollView contentContainerStyle={[styles.container, { padding: 10 }]}>
         <View style={styles.header}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
-          </TouchableOpacity>
+          <Button
+            onPress={() => navigation.goBack()}
+            variant="secondary"
+            style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, borderWidth: 0 }]}
+            icon={<Ionicons name="chevron-back" size={22} color={theme.text} />}
+          />
           <Text style={[styles.title, { color: theme.text }]}>Política de Privacidad</Text>
           <View style={{ width: 40 }} />
         </View>
@@ -198,11 +202,16 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 12,
   },
-  backButton: {
+  backCircleBtn: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   title: {
     fontSize: 18,

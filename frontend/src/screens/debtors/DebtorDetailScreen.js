@@ -606,7 +606,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
           />
         }
       >
-        <View style={{ flexDirection: 'row', alignItems: 'center', padding: isMobile ? 10 : 20 }}>
+        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 10 }}>
           <Button
             onPress={() => navigation.goBack()}
             variant="secondary"
@@ -618,7 +618,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
           </Text>
         </View>
 
-        <View style={[styles.clientHeader, { paddingHorizontal: isMobile ? 10 : 20 }]}>
+        <View style={[styles.clientHeader, { paddingHorizontal: 10 }]}>
           <Text style={[styles.clientName, { color: theme.text }]}>{debtor.name}</Text>
           <Text style={[styles.clientPhone, { color: theme.textSecondary }]}>{debtor.phone || 'Sin teléfono'}</Text>
 
@@ -707,7 +707,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
           )}
         </View>
 
-        <Text style={[styles.historyTitle, { color: theme.text, paddingHorizontal: isMobile ? 10 : 20 }]}>Historial de Movimientos</Text>
+        <Text style={[styles.historyTitle, { color: theme.text, paddingHorizontal: 10 }]}>Historial de Movimientos</Text>
 
 
 
@@ -717,7 +717,7 @@ export default function DebtorDetailScreen({ route, navigation }) {
             <Text style={{ color: theme.textSecondary, marginTop: 12, fontSize: 14 }}>Cargando datos...</Text>
           </View>
         ) : (
-          <View style={[styles.list, { paddingHorizontal: isMobile ? 10 : 20 }]}>
+          <View style={[styles.list, { paddingHorizontal: 10 }]}>
             {filteredTransactions.length === 0 ? (
               <Text style={{ color: theme.textSecondary, textAlign: 'center', marginVertical: 30, fontSize: 16 }}>
                 No hay movimientos para este filtro.

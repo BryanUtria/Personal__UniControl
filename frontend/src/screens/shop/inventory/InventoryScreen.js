@@ -545,7 +545,7 @@ export default function InventoryScreen({ navigation }) {
       >
 
         <ScrollView
-          contentContainerStyle={[styles.scrollContent, { paddingHorizontal: isMobile ? 10 : 15 }]}
+          contentContainerStyle={[styles.scrollContent, { paddingHorizontal: 10 }]}
           keyboardShouldPersistTaps="handled"
           refreshControl={
             <RefreshControl
@@ -557,7 +557,7 @@ export default function InventoryScreen({ navigation }) {
           }
         >
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: isMobile ? 10 : 20 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 10 }}>
             <Button
               onPress={() => navigation.goBack()}
               variant="secondary"
@@ -1321,7 +1321,7 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 30,
   },
   statsRow: {
     flexDirection: 'row',

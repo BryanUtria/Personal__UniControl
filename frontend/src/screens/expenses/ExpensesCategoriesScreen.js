@@ -123,12 +123,15 @@ export default function ExpensesCategoriesScreen({ navigation }) {
 
   return (
     <SidebarLayout navigation={navigation} activeRoute="Expenses">
-      <ScrollView contentContainerStyle={{ paddingHorizontal: isMobile ? 10 : 20, paddingTop: 10 }} showsVerticalScrollIndicator={false}>
-        {/* Header with Back Button */}
-        <View style={[styles.header]}>
-          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
-            <Ionicons name="arrow-back" size={24} color={theme.text} />
-          </TouchableOpacity>
+      <ScrollView contentContainerStyle={{ paddingBottom: 30 }} showsVerticalScrollIndicator={false}>
+        {/* Header with Back Button (igual que DebtorDetailScreen) */}
+        <View style={[styles.header, { padding: 10 }]}>
+          <Button
+            onPress={() => navigation.goBack()}
+            variant="secondary"
+            style={[styles.backCircleBtn, { paddingHorizontal: 0, shadowColor: theme.shadow, marginRight: 10, borderWidth: 0 }]}
+            icon={<Ionicons name="chevron-back" size={22} color={theme.text} />}
+          />
           <Text style={[styles.title, { color: theme.text }]}>Mis Categorías</Text>
           <View style={{ width: 40 }} />
         </View>
@@ -175,8 +178,8 @@ export default function ExpensesCategoriesScreen({ navigation }) {
         </View>
 
         {/* Existing Categories */}
-        <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 0, marginBottom: 15 }]}>Categorías Existentes</Text>
-        <View style={[styles.listContainer, { backgroundColor: theme.card, borderColor: theme.border }]}>
+        <Text style={[styles.sectionTitle, { color: theme.text, marginTop: 0, marginHorizontal: 15 }]}>Categorías Existentes</Text>
+        <View style={[styles.listContainer, { backgroundColor: theme.card, borderColor: theme.border, marginHorizontal: 10 }]}>
           {categories.map((cat, index) => (
             <View key={cat.id} style={[styles.categoryItem, { borderBottomColor: index === categories.length - 1 ? 'transparent' : theme.border }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
@@ -212,17 +215,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 10,
   },
-  backButton: {
+  backCircleBtn: {
     width: 40,
     height: 40,
+    borderRadius: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   title: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
   },
   formContainer: {
+    marginHorizontal: 10,
     padding: 20,
     borderRadius: 16,
     borderWidth: 1,
@@ -244,7 +253,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     overflow: 'hidden',
     elevation: 1,
-    marginBottom: 100,
   },
   categoryItem: {
     flexDirection: 'row',

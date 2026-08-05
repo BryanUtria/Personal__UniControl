@@ -298,7 +298,7 @@ export default function SalesHistoryScreen({ navigation }) {
   return (
     <SidebarLayout navigation={navigation} title="Historial de Ventas" activeRoute="SalesHistory" headerRight={headerRightComponent}>
 
-      <View style={{ flexDirection: 'row', alignItems: 'center', padding: isMobile ? 10 : 20 }}>
+      <View style={{ flexDirection: 'row', alignItems: 'center', padding: 10 }}>
         <Button
           onPress={() => navigation.goBack()}
           variant="secondary"
@@ -311,7 +311,7 @@ export default function SalesHistoryScreen({ navigation }) {
       </View>
 
       {/* Buscador */}
-      <View style={[styles.filterSection, { paddingHorizontal: isMobile ? 10 : 15, paddingTop: 0 }]}>
+      <View style={[styles.filterSection, { paddingHorizontal: 10, paddingTop: 0 }]}>
         <Input
           icon="search"
           placeholder="Buscar por # venta, pedido o deudor..."
@@ -328,7 +328,7 @@ export default function SalesHistoryScreen({ navigation }) {
         />
 
         {/* Filtros Rápidos */}
-        <View style={[styles.filterButtonsRow, { marginTop: isMobile ? 10 : 20 }]}>
+        <View style={[styles.filterButtonsRow, { marginTop: 10 }]}>
           <TouchableOpacity
             style={[
               styles.filterTab,
@@ -389,7 +389,7 @@ export default function SalesHistoryScreen({ navigation }) {
           data={filteredSales}
           keyExtractor={(item) => item.id}
           renderItem={renderSaleItem}
-          contentContainerStyle={[styles.listContainer, { paddingHorizontal: isMobile ? 10 : 15 }]}
+          contentContainerStyle={[styles.listContainer, { paddingHorizontal: 10 }]}
           refreshing={refreshing}
           onRefresh={handleRefresh}
         />

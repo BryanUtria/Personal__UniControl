@@ -18,6 +18,9 @@ import HabitsScreen from '../screens/habits/HabitsScreen';
 import ExpensesScreen from '../screens/expenses/ExpensesScreen';
 import ExpensesCategoriesScreen from '../screens/expenses/ExpensesCategoriesScreen';
 import SuggestionsScreen from '../screens/suggestions/SuggestionsScreen';
+import BoardsScreen from '../screens/boards/BoardsScreen';
+import BoardDetailScreen from '../screens/boards/BoardDetailScreen';
+import CardDetailScreen from '../screens/boards/CardDetailScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -53,6 +56,9 @@ export default function AppNavigator() {
           <Stack.Screen name="Expenses" component={ExpensesScreen} />
           <Stack.Screen name="ExpensesCategories" component={ExpensesCategoriesScreen} />
           <Stack.Screen name="Suggestions" component={SuggestionsScreen} />
+          <Stack.Screen name="Boards" component={BoardsScreen} />
+          <Stack.Screen name="BoardDetail" component={BoardDetailScreen} />
+          <Stack.Screen name="CardDetail" component={CardDetailScreen} />
         </>
       )}
     </Stack.Navigator>
