@@ -521,6 +521,31 @@ async function initDB() {
     `;
     await pool.query(taskCardMembersTable);
 
+    // --- VERSIONES DE LA APLICACIÓN (backend y frontend) ---
+    // Fuente única de verdad para que backend y frontend lean su versión desde la BD.
+    const appVersionsTable = `
+        CREATE TABLE IF NOT EXISTS app_versions (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            app_key VARCHAR(50) NOT NULL UNIQUE,
+            version VARCHAR(50) NOT NULL,
+            apk_url VARCHAR(500) NULL,
+            web_url VARCHAR(500) NULL,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+        ) ENGINE=InnoDB;
+    `;
+    await pool.query(appVersionsTable);
+
+    // Sembrar filas por defecto si no existen (INSERT IGNORE no pisa valores ya guardados)
+    await pool.query(`
+        INSERT IGNORE INTO app_versions (app_key, version)
+        VALUES (?, ?)
+    `, ['backend', process.env.VERSION || '1.0.0']);
+
+    await pool.query(`
+        INSERT IGNORE INTO app_versions (app_key, version, apk_url, web_url)
+        VALUES (?, ?, ?, ?)
+    `, ['frontend', process.env.VERSION || '1.0.0', process.env.APK_URL || null, process.env.WEB_URL || null]);
+
     console.log('Conectado a MySQL y tablas inicializadas con éxito.');
 }
 

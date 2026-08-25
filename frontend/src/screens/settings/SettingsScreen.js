@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { StyleSheet, Text, View, Switch, ScrollView, Platform, Alert, useWindowDimensions, Modal, Linking, TouchableOpacity, ActivityIndicator } from 'react-native';
+import Constants from 'expo-constants';
 import { useTheme } from '../../theme/ThemeContext';
 import { useAuth } from '../../context/AuthContext';
 import { useModules } from '../../context/ModuleContext';
@@ -18,6 +19,9 @@ export default function SettingsScreen({ navigation }) {
   const { showToast } = useToast();
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
+
+  // Versión local de la app (incrustada en el build desde package.json)
+  const localVersion = Constants.expoConfig?.version || '1.0.0';
 
   const [pendingQueue, setPendingQueue] = useState([]);
   const [syncingManual, setSyncingManual] = useState(false);
@@ -690,10 +694,26 @@ export default function SettingsScreen({ navigation }) {
                 : 'Accede a la versión web de UniControl desde cualquier computadora.'}
             </Text>
 
+            <View style={[styles.versionInfoBox, { backgroundColor: theme.background, borderColor: theme.border }]}>
+              <View style={styles.versionInfoRow}>
+                <Text style={[styles.versionInfoLabel, { color: theme.textSecondary }]}>App instalada</Text>
+                <Text style={[styles.versionInfoValue, { color: theme.text }]}>v{localVersion}</Text>
+              </View>
+              <View style={styles.versionInfoRow}>
+                <Text style={[styles.versionInfoLabel, { color: theme.textSecondary }]}>Versión publicada</Text>
+                <Text style={[styles.versionInfoValue, { color: theme.text }]}>v{appVersionInfo.frontendVersion || appVersionInfo.version}</Text>
+              </View>
+              <View style={styles.versionInfoRow}>
+                <Text style={[styles.versionInfoLabel, { color: theme.textSecondary }]}>Backend</Text>
+                <Text style={[styles.versionInfoValue, { color: theme.text }]}>v{appVersionInfo.backendVersion}</Text>
+              </View>
+            </View>
+
             <Button
               title={Platform.OS === 'web' ? 'Descargar APK para Android' : 'Ir a la Versión Web'}
               icon={<Ionicons name={Platform.OS === 'web' ? 'logo-android' : 'globe-outline'} size={20} color="#FFF" />}
               variant="primary"
+              style={{ marginTop: 15 }}
               onPress={() => {
                 const url = Platform.OS === 'web' ? appVersionInfo.apkUrl : appVersionInfo.webUrl;
                 if (url) Linking.openURL(url);
@@ -931,6 +951,27 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginBottom: 16,
     lineHeight: 18,
+  },
+  versionInfoBox: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    gap: 8,
+    marginBottom: 15,
+  },
+  versionInfoRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  versionInfoLabel: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  versionInfoValue: {
+    fontSize: 13,
+    fontWeight: '700',
   },
   settingRow: {
     flexDirection: 'row',

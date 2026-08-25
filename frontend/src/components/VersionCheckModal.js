@@ -13,6 +13,7 @@ export default function VersionCheckModal() {
   const { theme, isDarkMode } = useTheme();
   const [isVisible, setIsVisible] = useState(false);
   const [serverVersion, setServerVersion] = useState('');
+  const [backendVersion, setBackendVersion] = useState('');
   const [apkUrl, setApkUrl] = useState('');
   const localVersion = Constants.expoConfig?.version || '1.0.0';
 
@@ -25,14 +26,19 @@ export default function VersionCheckModal() {
       const response = await fetch(`${API_URL}/version`);
       const data = await response.json();
 
+      // La versión publicada del frontend viene de la tabla app_versions
+      // (campo frontendVersion), con fallback a "version" por compatibilidad.
+      const latestVersion = data.frontendVersion || data.version;
+
       // En desarrollo (__DEV__) la versión del frontend se equipara con la del
       // backend para evitar falsos positivos del modal de actualización.
       // En producción, se compara contra la versión local incrustada en el build
       // (localVersion) que es la que realmente tiene el usuario instalada.
-      const effectiveLocalVersion = __DEV__ ? (data.version || localVersion) : localVersion;
+      const effectiveLocalVersion = __DEV__ ? (latestVersion || localVersion) : localVersion;
 
-      if (data.version && data.version !== effectiveLocalVersion) {
-        setServerVersion(data.version);
+      if (latestVersion && latestVersion !== effectiveLocalVersion) {
+        setServerVersion(latestVersion);
+        setBackendVersion(data.backendVersion || '');
         if (data.apkUrl) setApkUrl(data.apkUrl);
         setIsVisible(true);
       }
@@ -79,6 +85,12 @@ export default function VersionCheckModal() {
               <Text style={[styles.versionLabel, { color: theme.textSecondary }]}>Nueva versión:</Text>
               <Text style={[styles.versionValue, { color: theme.success || '#10B981' }]}>v{serverVersion}</Text>
             </View>
+            {backendVersion ? (
+              <View style={styles.versionRow}>
+                <Text style={[styles.versionLabel, { color: theme.textSecondary }]}>Servidor (backend):</Text>
+                <Text style={[styles.versionValue, { color: theme.textSecondary }]}>v{backendVersion}</Text>
+              </View>
+            ) : null}
           </View>
 
           <Button

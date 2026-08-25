@@ -97,7 +97,7 @@ const styles = StyleSheet.create({
     width: '100%',
     // Altura máxima del anuncio adaptativo (ajústala a tu gusto).
     // El exceso se recorta con el overflow:hidden del contenedor.
-    maxHeight: 180,
+    maxHeight: 90,
     overflow: 'hidden',
   },
   disclaimer: {

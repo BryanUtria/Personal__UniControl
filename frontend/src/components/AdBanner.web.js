@@ -102,7 +102,7 @@ export default function AdBanner() {
           maxWidth: 728,
           width: '100%',
           alignItems: 'center',
-          maxHeight: 90,
+          maxHeight: 50,
           overflow: 'hidden',
         }}
       >
